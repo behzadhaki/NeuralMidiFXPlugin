@@ -1,23 +1,17 @@
 cmake_minimum_required(VERSION 3.16)
 project(JUCECMakeRepo)
 
-#First, we'll add the CMake folder, incase we'll need to find_package later:
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake")
+#including CPM.cmake, a package manager:
+#https://github.com/TheLartians/CPM.cmake
+include(CMake/CPM.cmake)
+
+list(APPEND CMAKE_PREFIX_PATH "~/libtorch/share/cmake")
 
 #Compile commands, useful for some IDEs like VS-Code
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
 #Minimum MacOS target, set globally
-
-if (${CMAKE_SYSTEM_NAME} STREQUAL "iOS")
-    set(CMAKE_OSX_DEPLOYMENT_TARGET 11.0 CACHE STRING "Minimum OS X deployment version" FORCE)
-
-    #code signing to run on an iOS device:
-#    set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "iPhone Developer" CACHE STRING "" FORCE)
-#    set(CMAKE_XCODE_ATTRIBUTE_DEVELOPMENT_TEAM "XXXXXXXXXX" CACHE STRING "" FORCE)
-else()
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.11" CACHE STRING "Minimum OS X deployment version" FORCE)
-endif()
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.10" CACHE STRING "Minimum OS X deployment version" FORCE)
 
 option(UniversalBinary "Build universal binary for mac" OFF)
 
@@ -28,9 +22,22 @@ endif()
 #static linking in Windows
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-#We 'require' that we need juce. If JUCE isn't found, it will revert to what's in
-#CMake/Findjuce.cmake, where you can see how JUCE is brought in/configured
-find_package(juce REQUIRED)
+#Adds all the module sources so they appear correctly in the IDE
+set_property(GLOBAL PROPERTY USE_FOLDERS YES)
+option(JUCE_ENABLE_MODULE_SOURCE_GROUPS "Enable Module Source Groups" ON)
+
+#set any of these to "ON" if you want to build one of the juce examples
+#or extras (Projucer/AudioPluginHost, etc):
+option(JUCE_BUILD_EXTRAS "Build JUCE Extras" OFF)
+option(JUCE_BUILD_EXAMPLES "Build JUCE Examples" OFF)
+
+#Fetching JUCE from git
+#IF you want to instead point it to a local version, you can invoke CMake with
+#-DCPM_JUCE_SOURCE="Path_To_JUCE"
+# use following for Latest JUCE version
+# CPMAddPackage("gh:juce-framework/JUCE#develop")
+# rn I'm using version 7.0.1 on commit # b08520c
+CPMAddPackage("gh:juce-framework/JUCE#b08520c")
 
 #By default, we are building the provided plugin/app examples:
 option(BUILD_JUCE_PROTOTYPE_EXAMPLES "Build JUCE prototype examples" ON)
@@ -40,14 +47,8 @@ add_subdirectory(Modules)
 
 if (${BUILD_JUCE_PROTOTYPE_EXAMPLES})
     #adding project folders:
-    add_subdirectory(Apps)
-    add_subdirectory(Plugins)
+    add_subdirectory(NeuralMidiFXPlugin)
 endif()
 
-#optionally, we're also adding the unit tests:
 option(BUILD_UNIT_TESTS "Build JUCE prototype examples" ON)
 
-if (BUILD_UNIT_TESTS)
-    enable_testing()
-    add_subdirectory(Tests)
-endif()
