@@ -2,17 +2,17 @@
 #include "PluginEditor.h"
 #include "settings.h"
 
-MidiFXProcessorEditor::MidiFXProcessorEditor(MidiFXProcessor& MidiFXProcessorPointer)
-    : AudioProcessorEditor(&MidiFXProcessorPointer)
+NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& NeuralMidiFXPluginProcessorPointer)
+    : AudioProcessorEditor(&NeuralMidiFXPluginProcessorPointer)
 {
-    MidiFXProcessorPointer_ = &MidiFXProcessorPointer;
+    NeuralMidiFXPluginProcessorPointer_ = &NeuralMidiFXPluginProcessorPointer;
 
 
     // initialize widgets
     GeneratedDrumsWidget = make_unique<FinalUIWidgets::GeneratedDrums::GeneratedDrumsWidget>(
-        &MidiFXProcessorPointer_->apvts);
+        &NeuralMidiFXPluginProcessorPointer_->apvts);
     {   // re-draw events if Editor reconstructed mid-session
-        auto ptr_ = MidiFXProcessorPointer_->ModelThreadToDrumPianoRollWidgetQue.get();
+        auto ptr_ = NeuralMidiFXPluginProcessorPointer_->ModelThreadToDrumPianoRollWidgetQue.get();
         if (ptr_->getNumberOfWrites() > 0)
         {
             auto latest_score =
@@ -22,9 +22,9 @@ MidiFXProcessorEditor::MidiFXProcessorEditor(MidiFXProcessor& MidiFXProcessorPoi
     }
 
     MonotonicGrooveWidget = make_unique<FinalUIWidgets::MonotonicGrooves::MonotonicGrooveWidget>
-        (MidiFXProcessorPointer_->get_pointer_GroovePianoRollWidget2GrooveThread_manually_drawn_noteQue());
+        (NeuralMidiFXPluginProcessorPointer_->get_pointer_GroovePianoRollWidget2GrooveThread_manually_drawn_noteQue());
     {   // re-draw events if Editor reconstructed mid-session
-        auto ptr_ = MidiFXProcessorPointer_->GrooveThread2GGroovePianoRollWidgetQue.get();
+        auto ptr_ = NeuralMidiFXPluginProcessorPointer_->GrooveThread2GGroovePianoRollWidgetQue.get();
         if (ptr_->getNumberOfWrites() > 0)
         {
             auto latest_groove =
@@ -38,23 +38,23 @@ MidiFXProcessorEditor::MidiFXProcessorEditor(MidiFXProcessor& MidiFXProcessorPoi
     addAndMakeVisible(MonotonicGrooveWidget.get());
 
     // Progress Bar
-    playhead_pos = MidiFXProcessorPointer_->get_playhead_pos();
+    playhead_pos = NeuralMidiFXPluginProcessorPointer_->get_playhead_pos();
     PlayheadProgressBar.setColour(PlayheadProgressBar.foregroundColourId, playback_progressbar_color);
     addAndMakeVisible(PlayheadProgressBar);
 
     // add buttons
-    ButtonsWidget = make_unique<FinalUIWidgets::ButtonsWidget>(&MidiFXProcessorPointer_->apvts);
+    ButtonsWidget = make_unique<FinalUIWidgets::ButtonsWidget>(&NeuralMidiFXPluginProcessorPointer_->apvts);
     addAndMakeVisible (ButtonsWidget.get());
     // ButtonsWidget->addListener(this);
 
     // initialize GrooveControlSliders
-    ControlsWidget = make_unique<FinalUIWidgets::ControlsWidget> (&MidiFXProcessorPointer_->apvts);
+    ControlsWidget = make_unique<FinalUIWidgets::ControlsWidget> (&NeuralMidiFXPluginProcessorPointer_->apvts);
     addAndMakeVisible (ControlsWidget.get());
 
     // model selector
-    ModelSelectorWidget = make_unique<FinalUIWidgets::ModelSelectorWidget> (&MidiFXProcessorPointer_->apvts,
-                                                                           "MODEL",
-                                                                           MidiFXProcessorPointer_->model_paths);
+    ModelSelectorWidget = make_unique<FinalUIWidgets::ModelSelectorWidget> (&NeuralMidiFXPluginProcessorPointer_->apvts,
+                                                                            "MODEL",
+                                                                            NeuralMidiFXPluginProcessorPointer_->model_paths);
     addAndMakeVisible (ModelSelectorWidget.get());
 
 
@@ -66,13 +66,13 @@ MidiFXProcessorEditor::MidiFXProcessorEditor(MidiFXProcessor& MidiFXProcessorPoi
 
 }
 
-MidiFXProcessorEditor::~MidiFXProcessorEditor()
+NeuralMidiFXPluginEditor::~NeuralMidiFXPluginEditor()
 {
     //ButtonsWidget->removeListener(this);
     // ModelSelectorWidget->removeListener(this);
 }
 
-void MidiFXProcessorEditor::resized()
+void NeuralMidiFXPluginEditor::resized()
 {
     auto area = getLocalBounds();
     setBounds(area);                            // bounds for main Editor GUI
@@ -100,18 +100,18 @@ void MidiFXProcessorEditor::resized()
 
 }
 
-void MidiFXProcessorEditor::paint(juce::Graphics& g)
+void NeuralMidiFXPluginEditor::paint(juce::Graphics& g)
 {
     g.fillAll(getLookAndFeel().findColour(
         juce::ResizableWindow::backgroundColourId));
 
 }
 
-void MidiFXProcessorEditor::timerCallback()
+void NeuralMidiFXPluginEditor::timerCallback()
 {
     // get Generations and probs from model thread to display on drum piano rolls
     {
-        auto ptr_ = MidiFXProcessorPointer_->ModelThreadToDrumPianoRollWidgetQue.get();
+        auto ptr_ = NeuralMidiFXPluginProcessorPointer_->ModelThreadToDrumPianoRollWidgetQue.get();
         if (ptr_->getNumReady() > 0)
         {
             GeneratedDrumsWidget->updateWithNewScore(
@@ -121,7 +121,7 @@ void MidiFXProcessorEditor::timerCallback()
 
     // get Grooves from GrooveThread to display in Groove Piano Rolls
     {
-        auto ptr_ = MidiFXProcessorPointer_->GrooveThread2GGroovePianoRollWidgetQue.get();
+        auto ptr_ = NeuralMidiFXPluginProcessorPointer_->GrooveThread2GGroovePianoRollWidgetQue.get();
 
         if (ptr_->getNumReady() > 0)
         {
@@ -132,6 +132,6 @@ void MidiFXProcessorEditor::timerCallback()
     }
 
     // get playhead position to display on progress bar
-    playhead_pos = MidiFXProcessorPointer_->get_playhead_pos();
+    playhead_pos = NeuralMidiFXPluginProcessorPointer_->get_playhead_pos();
     GeneratedDrumsWidget->UpdatePlayheadLocation(playhead_pos);
 }

@@ -349,7 +349,7 @@ private:
 
 
     // ============================================================================================================
-    // ===          pointer to MidiFXProcessor
+    // ===          pointer to NeuralMidiFXPluginProcessor
     // ============================================================================================================
     GrooveThread* grooveThread;
     ModelThread* modelThread;

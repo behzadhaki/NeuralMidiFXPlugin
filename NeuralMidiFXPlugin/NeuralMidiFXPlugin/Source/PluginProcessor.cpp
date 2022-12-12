@@ -6,7 +6,7 @@ using namespace std;
 
 
 
-MidiFXProcessor::MidiFXProcessor():
+NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor():
     apvts(*this, nullptr, "PARAMETERS", createParameterLayout())
 {
     //////////////////////////////////////////////////////////////////
@@ -62,7 +62,7 @@ MidiFXProcessor::MidiFXProcessor():
                                                           APVTS2ModelThread_midi_mappings_Que.get());
 }
 
-MidiFXProcessor::~MidiFXProcessor(){
+NeuralMidiFXPluginProcessor::~NeuralMidiFXPluginProcessor(){
     if (!modelThread->readyToStop)
     {
         modelThread->prepareToStop();
@@ -80,8 +80,8 @@ MidiFXProcessor::~MidiFXProcessor(){
 
 }
 
-void MidiFXProcessor::processBlock(juce::AudioBuffer<float>& buffer,
-                                   juce::MidiBuffer& midiMessages)
+void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
+                                               juce::MidiBuffer& midiMessages)
 {
     tempBuffer.clear();
 
@@ -160,25 +160,25 @@ void MidiFXProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     buffer.clear(); //
 }
 
-juce::AudioProcessorEditor* MidiFXProcessor::createEditor()
+juce::AudioProcessorEditor* NeuralMidiFXPluginProcessor::createEditor()
 {
-    auto editor = new MidiFXProcessorEditor(*this);
+    auto editor = new NeuralMidiFXPluginEditor(*this);
     /*modelThread.addChangeListener(editor);*/
     return editor;
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
-    return new MidiFXProcessor();
+    return new NeuralMidiFXPluginProcessor();
 }
 
-float MidiFXProcessor::get_playhead_pos()
+float NeuralMidiFXPluginProcessor::get_playhead_pos()
 {
     return playhead_pos;
 }
 
 
-juce::AudioProcessorValueTreeState::ParameterLayout MidiFXProcessor::createParameterLayout()
+juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor::createParameterLayout()
 {
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
@@ -224,20 +224,20 @@ juce::AudioProcessorValueTreeState::ParameterLayout MidiFXProcessor::createParam
 
     return layout;
 }
-LockFreeQueue<BasicNote, GeneralSettings::gui_io_queue_size>* MidiFXProcessor::
+LockFreeQueue<BasicNote, GeneralSettings::gui_io_queue_size>* NeuralMidiFXPluginProcessor::
     get_pointer_GroovePianoRollWidget2GrooveThread_manually_drawn_noteQue()
 {
     return GroovePianoRollWidget2GrooveThread_manually_drawn_noteQue.get();
 }
 
-void MidiFXProcessor::getStateInformation (juce::MemoryBlock& destData)
+void NeuralMidiFXPluginProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
     auto state = apvts.copyState();
     std::unique_ptr<juce::XmlElement> xml (state.createXml());
     copyXmlToBinary (*xml, destData);
 }
 
-void MidiFXProcessor::setStateInformation (const void* data, int sizeInBytes)
+void NeuralMidiFXPluginProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary (data, sizeInBytes));
 

@@ -6,7 +6,7 @@
 // #include <utility>
 
 #include "../settings.h"
-#include <torch/torch.h>
+#include <torch/script.h> // One-stop header.
 
 #include <utility>
 
@@ -269,6 +269,160 @@ struct onset_time{
 
 };
 
+struct Time{
+
+    double ppq = 0;
+    double seconds = 0;
+
+    Time ()
+    {
+        ppq = 0.0f;
+        seconds = 0.0f;
+    }
+    Time (double ppq_, double seconds_): ppq(ppq_), seconds(seconds_) {}
+    Time (double frameStartPpq, double frameStartSeconds, double audioSamplePos, double qpm, double sample_rate)
+    {
+        // calculate ppq from fram start ppq using
+        ppq = frameStartPpq + audioSamplePos * qpm / (60 * sample_rate);
+
+        // calculate seconds from frame start seconds using
+        seconds = frameStartSeconds + audioSamplePos / sample_rate;
+    }
+
+};
+
+struct Tempos{
+    std::vector<double> qpms {};
+    std::vector<Time> times {};
+
+    Tempos() = default;
+
+    void add_tempo(double frameStartPpq, double frameStartSeconds, double audioSamplePos, double qpm, double sample_rate)
+    {
+        // make sure that new qpm is different from the last one
+        if (not qpms.empty())
+        {
+            if (qpm == qpms.back())
+            {
+                return;
+            }
+        }
+
+        // make sure that time is greater equal than the last one
+        if (not times.empty())
+        {
+            if (frameStartPpq + audioSamplePos * qpm / (60 * sample_rate) < times.back().ppq)
+            {
+                return;
+            }
+        }
+
+        qpms.push_back(qpm);
+        times.emplace_back(frameStartPpq, frameStartSeconds, audioSamplePos, qpm, sample_rate);
+    }
+
+    std::size_t get_number_of_changes()
+    {
+        return qpms.size();
+    }
+
+    void clear()
+    {
+        qpms.clear();
+        times.clear();
+    }
+
+};
+
+struct TimeSignatures{
+    std::vector<int> numerators {};
+    std::vector<int> denominators {};
+    std::vector<Time> times {};
+
+    TimeSignatures() = default;
+
+    void add_time_signature(int numerator, int denominator, double frameStartPpq, double frameStartSeconds, double audioSamplePos, double qpm, double sample_rate)
+    {
+        // make sure that new qpm is different from the last one
+        if (not numerators.empty())
+        {
+            if (numerator == numerators.back() and denominator == denominators.back())
+            {
+                return;
+            }
+        }
+
+        // make sure that time is greater equal than the last one
+        if (not times.empty())
+        {
+            if (frameStartPpq + audioSamplePos * 120 / (60 * sample_rate) < times.back().ppq)
+            {
+                return;
+            }
+        }
+
+        numerators.push_back(numerator);
+        denominators.push_back(denominator);
+        times.emplace_back(frameStartPpq, frameStartSeconds, audioSamplePos, 120, sample_rate);
+    }
+
+    std::size_t get_number_of_changes()
+    {
+        return numerators.size();
+    }
+
+    void clear()
+    {
+        numerators.clear();
+        denominators.clear();
+        times.clear();
+    }
+
+};
+
+struct ReceivedNote{
+    int midi_number = 0;
+    int velocity = 0;
+    Time time = Time();
+    int channel = 0;
+    bool is_onset = true;
+
+    ReceivedNote() = default;
+    ReceivedNote (int midi_number_, int velocity_, Time time_, int channel_, bool is_onset_): midi_number(midi_number_), velocity(velocity_), time(time_), channel(channel_), is_onset(is_onset_) {}
+    ReceivedNote (int midi_number_, int velocity_, int channel_, bool is_onset_, double frameStartPpq, double frameStartSeconds, double audioSamplePos, double qpm, double sample_rate)
+    {
+        midi_number = midi_number_;
+        velocity = velocity_;
+        time = Time(frameStartPpq, frameStartSeconds, audioSamplePos, qpm, sample_rate);
+        channel = channel_;
+        is_onset = is_onset_;
+    }
+};
+
+struct PlaybackNote{
+    int midi_number = 0;
+    int velocity = 0;
+    Time time = Time();
+    int channel = 0;
+    bool is_onset = true;
+    bool play_using_ppq;
+
+    PlaybackNote() = default;
+
+    // constructor for received timing of midi messages
+    PlaybackNote(int midi_number_, int velocity_, Time time_, int channel_, bool is_onset_, bool play_using_ppq_)
+    {
+        midi_number = midi_number_;
+        velocity = velocity_;
+        time = time_;
+        channel = channel_;
+        is_onset = is_onset_;
+        play_using_ppq = play_using_ppq_;
+    }
+
+};
+
+
 /**
      * A note structure holding the note number for an onset along with
      * ppq position -->  defined as the ration of quarter note
@@ -288,6 +442,7 @@ struct onset_time{
      * \param time (onset_time): structure for onset time of the note (see onset_time)
      *
      */
+
 struct BasicNote{
 
     int note =0 ;
@@ -1553,5 +1708,3 @@ public:
 
 
 };
-
-

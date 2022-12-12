@@ -14,13 +14,13 @@
 using namespace std;
 
 
-class MidiFXProcessor : public PluginHelpers::ProcessorBase
+class NeuralMidiFXPluginProcessor : public PluginHelpers::ProcessorBase
 {
 public:
 
-    MidiFXProcessor();
+    NeuralMidiFXPluginProcessor();
 
-    ~MidiFXProcessor() override;
+    ~NeuralMidiFXPluginProcessor() override;
 
     void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
 

@@ -5,18 +5,18 @@
 
 using namespace std;
 
-class MidiFXProcessorEditor : public juce::AudioProcessorEditor, public juce::Timer
+class NeuralMidiFXPluginEditor : public juce::AudioProcessorEditor, public juce::Timer
 {
 public:
-    explicit MidiFXProcessorEditor(MidiFXProcessor&) ;
-    ~MidiFXProcessorEditor() override;
+    explicit NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor&) ;
+    ~NeuralMidiFXPluginEditor() override;
     void paint(juce::Graphics&) override;
     void resized() override;
     void timerCallback() override;
     /*void comboBoxChanged(juce::ComboBox* comboBox) override;*/
 
 private:
-    MidiFXProcessor* MidiFXProcessorPointer_;
+    NeuralMidiFXPluginProcessor* NeuralMidiFXPluginProcessorPointer_;
 
     // gui widgets
     unique_ptr<FinalUIWidgets::GeneratedDrums::GeneratedDrumsWidget> GeneratedDrumsWidget;

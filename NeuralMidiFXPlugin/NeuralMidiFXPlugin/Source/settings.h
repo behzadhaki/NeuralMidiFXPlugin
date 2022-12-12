@@ -6,6 +6,63 @@
 
 #include <torch/script.h> // One-stop header.
 
+// ======================================================================================
+// ==================     UI Settings                      ==============================
+// ======================================================================================
+
+// GUI settings
+namespace UIObjects
+{
+    namespace Sliders
+    {
+        // labels
+        const std::array<const char*, 4> labels {"Slider 1", "Slider 2", "Slider 3", "Slider 4"};
+        constexpr int N_per_row {2};    // number of sliders per row
+    }
+
+    namespace Rotaries
+    {
+        const std::array<const char*, 4> labels {"Rotary 1", "Rotary 2", "Rotary 3", "Rotary 4"};
+        constexpr int N_per_row {2};    // number of rotaries per row
+    }
+
+    namespace Buttons
+    {
+        const std::array<const char*, 4> labels {"Button 1", "Button 2", "Button 3", "Button 4"};
+        constexpr int N_per_row {2};    // number of buttons per row
+    }
+}
+
+namespace GenerationTimeUnit
+{
+
+    constexpr bool isSeconds {true};            // if false, time unit is in terms of quarter notes (ppq)
+}
+
+namespace GenerationSettingDefaults
+{
+    constexpr bool should_generate_every_n_notes {false};
+    constexpr int n_notes {1};
+
+    constexpr bool should_generate_every_T_seconds {false};
+    constexpr float T_seconds {1.0f};
+
+    constexpr bool should_generate_every_P_quarter_notes {false};
+    constexpr float P_quarter_notes {0.5f};
+
+    constexpr bool should_generate_once_only {true};   // if true, if there is a backlog of generation requests, only one generation is performed
+}
+
+
+
+
+
+
+
+
+
+
+
 
 // ======================================================================================
 // ==================     Drum Kit Defaults                ==============================
@@ -117,4 +174,5 @@ namespace gui_settings{
         constexpr float completeMonotonicGrooveHeight {0.9f};
     }
 }
+
 

@@ -1014,7 +1014,7 @@ namespace FinalUIWidgets {
     {
     public:
 
-        MidiFXProcessor* MidiFXProcessorPntr;
+        NeuralMidiFXPluginProcessor* MidiFXProcessorPntr;
 
         juce::StringArray model_paths;
         // Model selector
