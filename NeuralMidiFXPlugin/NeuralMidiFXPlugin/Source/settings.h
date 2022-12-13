@@ -17,18 +17,35 @@ namespace UIObjects
     {
         // labels
         const std::array<const char*, 4> labels {"Slider 1", "Slider 2", "Slider 3", "Slider 4"};
+        // default values
+        const std::array<float, 4> default_values {0.0f, 0.0f, 0.0f, 0.0f};
+
         constexpr int N_per_row {2};    // number of sliders per row
     }
 
     namespace Rotaries
     {
         const std::array<const char*, 4> labels {"Rotary 1", "Rotary 2", "Rotary 3", "Rotary 4"};
+        const std::array<float, 4> default_values {0.0f, 0.0f, 0.0f, 0.0f};
+
         constexpr int N_per_row {2};    // number of rotaries per row
     }
 
     namespace Buttons
     {
         const std::array<const char*, 4> labels {"Button 1", "Button 2", "Button 3", "Button 4"};
+        constexpr int N_per_row {2};    // number of buttons per row
+    }
+
+    namespace Drag_in_regions
+    {
+        const std::array<const char*, 4> labels {"Drag-in 1", "Drag-in 2", "Drag-in 3", "Drag-in 4"};
+        constexpr int N_per_row {2};    // number of buttons per row
+    }
+
+    namespace Drag_out_regions
+    {
+        const std::array<const char*, 4> labels {"Drag-out 1", "Drag-out 2", "Drag-out 3", "Drag-out 4"};
         constexpr int N_per_row {2};    // number of buttons per row
     }
 }
