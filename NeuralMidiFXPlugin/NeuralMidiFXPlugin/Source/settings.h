@@ -58,6 +58,7 @@ namespace GenerationTimeUnit
 
 namespace GenerationSettingDefaults
 {
+
     constexpr bool should_generate_every_n_notes {false};
     constexpr int n_notes {1};
 
@@ -68,11 +69,22 @@ namespace GenerationSettingDefaults
     constexpr float P_quarter_notes {0.5f};
 
     constexpr bool should_generate_once_only {true};   // if true, if there is a backlog of generation requests, only one generation is performed
+
+
 }
 
+namespace playbackSettings
+{
+    constexpr bool should_play_notes_using_ppq_time_stamp {true};    // if false, notes will be played in terms of seconds
+}
 
-
-
+namespace thread_configurations
+{
+    namespace InputTensorPreparator
+    {
+        constexpr int waitTimeBtnIters {5}; //ms between two consecutive iterations of the thread loop in run()
+    }
+}
 
 
 

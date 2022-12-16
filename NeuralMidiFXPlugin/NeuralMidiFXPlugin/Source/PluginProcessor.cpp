@@ -1,6 +1,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 #include "Includes/UtilityMethods.h"
+#include "Includes/EventTracker.h"
 
 using namespace std;
 
@@ -12,72 +13,27 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor():
     //////////////////////////////////////////////////////////////////
     //// Make_unique pointers for Queues
     //////////////////////////////////////////////////////////////////
-    // GuiIOFifos
-    GrooveThread2GGroovePianoRollWidgetQue = make_unique<MonotonicGrooveQueue<HVO_params::time_steps, GeneralSettings::gui_io_queue_size>>();
-    ModelThreadToDrumPianoRollWidgetQue = make_unique<HVOLightQueue<HVO_params::time_steps, HVO_params::num_voices, GeneralSettings::gui_io_queue_size>>();
-
-    // Intra Processor Threads
-    ProcessBlockToGrooveThreadQue = make_shared<LockFreeQueue<BasicNote, GeneralSettings::processor_io_queue_size>>();
-    GrooveThreadToModelThreadQue = make_shared<MonotonicGrooveQueue<HVO_params::time_steps, GeneralSettings::processor_io_queue_size>>();
-    ModelThreadToProcessBlockQue = make_shared<GeneratedDataQueue<HVO_params::time_steps, HVO_params::num_voices, GeneralSettings::processor_io_queue_size>>();
-    APVTS2GrooveThread_groove_vel_offset_ranges_Que = make_shared<LockFreeQueue<std::array<float, 4>, GeneralSettings::gui_io_queue_size>>();
-    APVTS2GrooveThread_groove_record_overdubToggles_Que = make_shared<LockFreeQueue<std::array<int, 2>, GeneralSettings::gui_io_queue_size>>();
-    APVTS2ModelThread_max_num_hits_Que = make_shared<LockFreeQueue<std::array<float, HVO_params::num_voices>, GeneralSettings::gui_io_queue_size>>();
-    APVTS2ModelThread_sampling_thresholds_and_temperature_Que = make_shared<LockFreeQueue<std::array<float, HVO_params::num_voices+1>, GeneralSettings::gui_io_queue_size>>();
-    GroovePianoRollWidget2GrooveThread_manually_drawn_noteQue = make_shared<LockFreeQueue<BasicNote, GeneralSettings::gui_io_queue_size>>();
-    APVTS2ModelThread_midi_mappings_Que = make_shared<LockFreeQueue<std::array<int, HVO_params::num_voices>, GeneralSettings::gui_io_queue_size>>();
 
 
     //////////////////////////////////////////////////////////////////
     //// Create shared pointers for Threads (shared with APVTSMediator)
     //////////////////////////////////////////////////////////////////
-    grooveThread = make_shared<GrooveThread>();
-    modelThread = make_shared<ModelThread>();
-    apvtsMediatorThread = make_unique<APVTSMediatorThread>(grooveThread.get(), modelThread.get());
-        
+    inputTensorPreparatorThread = make_shared<InputTensorPreparatorThread>();
+
     /////////////////////////////////
     //// Start Threads
     /////////////////////////////////
 
     // give access to resources and run threads
-    modelThread->startThreadUsingProvidedResources(GrooveThreadToModelThreadQue.get(),
-                                                  ModelThreadToProcessBlockQue.get(),
-                                                  ModelThreadToDrumPianoRollWidgetQue.get(),
-                                                  APVTS2ModelThread_max_num_hits_Que.get(),
-                                                  APVTS2ModelThread_sampling_thresholds_and_temperature_Que.get(),
-                                                  APVTS2ModelThread_midi_mappings_Que.get());
 
-    grooveThread->startThreadUsingProvidedResources(ProcessBlockToGrooveThreadQue.get(),
-                                                   GrooveThreadToModelThreadQue.get(),
-                                                   GrooveThread2GGroovePianoRollWidgetQue.get(),
-                                                   GroovePianoRollWidget2GrooveThread_manually_drawn_noteQue.get(),
-                                                   APVTS2GrooveThread_groove_vel_offset_ranges_Que.get(),
-                                                   APVTS2GrooveThread_groove_record_overdubToggles_Que.get());
-
-    apvtsMediatorThread->startThreadUsingProvidedResources(&apvts,
-                                                          APVTS2GrooveThread_groove_vel_offset_ranges_Que.get(),
-                                                          APVTS2GrooveThread_groove_record_overdubToggles_Que.get(),
-                                                          APVTS2ModelThread_max_num_hits_Que.get(),
-                                                          APVTS2ModelThread_sampling_thresholds_and_temperature_Que.get(),
-                                                          APVTS2ModelThread_midi_mappings_Que.get());
+    inputTensorPreparatorThread->startThreadUsingProvidedResources();
 }
 
 NeuralMidiFXPluginProcessor::~NeuralMidiFXPluginProcessor(){
-    if (!modelThread->readyToStop)
+    if (!inputTensorPreparatorThread->readyToStop)
     {
-        modelThread->prepareToStop();
+        inputTensorPreparatorThread->prepareToStop();
     }
-
-    if (!grooveThread->readyToStop)
-    {
-        grooveThread->prepareToStop();
-    }
-
-    if (!apvtsMediatorThread->readyToStop)
-    {
-        apvtsMediatorThread->prepareToStop();
-    }
-
 }
 
 void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
@@ -92,27 +48,21 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     auto fs = getSampleRate();
     auto buffSize = buffer.getNumSamples();
 
-
     // STEP 2
     // check if new pattern is generated and available for playback
-    if (ModelThreadToProcessBlockQue != nullptr)
-    {
-        if (ModelThreadToProcessBlockQue->getNumReady() > 0)
-        {
-            latestGeneratedData = ModelThreadToProcessBlockQue->getLatestOnly();
-        }
-    }
+
 
     // Step 3
     // In playback mode, add drum note to the buffer if the time is right
     if (Pinfo->getIsPlaying())
     {
+
         if (*Pinfo->getPpqPosition() < startPpq)
         {
             // if playback head moved backwards or playback paused and restarted
             // change the registration_times of groove events to ensure the
             // groove properly overdubs
-            modelThread->scaled_groove.registeration_times.index({None, None}) = -100;
+
         }
 
         startPpq = *Pinfo->getPpqPosition();
@@ -121,37 +71,20 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         playhead_pos = fmod(float(startPpq + HVO_params::_32_note_ppq), float(HVO_params::time_steps/4.0f)) / (HVO_params::time_steps/4.0f);
 
         auto new_grid = floor(start_/HVO_params::_16_note_ppq);
-        if (new_grid != current_grid)
-        {
+        if (new_grid != current_grid) {
             current_grid = new_grid;
-            grooveThread->clearStep((int) current_grid, startPpq);
+
         }
 
-        //juce::MidiMessage msg = juce::MidiMessage::noteOn((int)1, (int)36, (float)100.0);
-        if (latestGeneratedData.numberOfGenerations() > 0)
-        {
-            for (size_t idx = 0; idx < (size_t) latestGeneratedData.numberOfGenerations(); idx++)
-            {
-                auto ppqs_from_start_ = latestGeneratedData.ppqs[idx] - start_;
-                auto samples_from_start_ = ppqs_from_start_ * (60 * fs) / qpm;
-
-                if (ppqs_from_start_>=0 and samples_from_start_<buffSize)
-                {
-                    // send note on
-                    tempBuffer.addEvent(latestGeneratedData.midiMessages[idx], (int) samples_from_start_);
-                    // send note off
-                    tempBuffer.addEvent(juce::MidiMessage::noteOff((int) 1, (int) latestGeneratedData.midiMessages[idx].getNoteNumber(), (float) 0), (int) samples_from_start_);
-                }
-            }
-        }
     }
 
     // Step 4. see if new notes are played on the input side
     if (not midiMessages.isEmpty() /*and groove_thread_ready*/)
     {
+
         // send BasicNotes to the GrooveThread and also gui logger for notes
-        place_BasicNote_in_queue<GeneralSettings::processor_io_queue_size>(midiMessages, Pinfo, ProcessBlockToGrooveThreadQue.get(), fs);
-        // place_BasicNote_in_queue<GeneralSettings::gui_io_queue_size>(midiMessages, Pinfo, ProcessBlockToGrooveThreadQue, fs);
+
+
     }
 
     midiMessages.swapWith(tempBuffer);
@@ -188,8 +121,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
     layout.add (std::make_unique<juce::AudioParameterInt> (juce::ParameterID("RECORD", version_hint), "RECORD", 0, 1, 1));
 
     // model selector combobox
-    auto modelfiles = get_pt_files_in_default_path();
-    layout.add (std::make_unique<juce::AudioParameterInt> (juce::ParameterID("MODEL", version_hint), "MODEL", 0, modelfiles.size()-1, 0));
+    // auto modelfiles = get_pt_files_in_default_path();
+    // layout.add (std::make_unique<juce::AudioParameterInt> (juce::ParameterID("MODEL", version_hint), "MODEL", 0, modelfiles.size()-1, 0));
 
     // buttons
     layout.add (std::make_unique<juce::AudioParameterInt> (juce::ParameterID("RESET_GROOVE", version_hint), "RESET_GROOVE", 0, 1, 0));
@@ -223,11 +156,6 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
     }
 
     return layout;
-}
-LockFreeQueue<BasicNote, GeneralSettings::gui_io_queue_size>* NeuralMidiFXPluginProcessor::
-    get_pointer_GroovePianoRollWidget2GrooveThread_manually_drawn_noteQue()
-{
-    return GroovePianoRollWidget2GrooveThread_manually_drawn_noteQue.get();
 }
 
 void NeuralMidiFXPluginProcessor::getStateInformation (juce::MemoryBlock& destData)

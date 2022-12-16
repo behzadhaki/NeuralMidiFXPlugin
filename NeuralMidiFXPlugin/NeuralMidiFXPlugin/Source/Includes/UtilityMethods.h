@@ -80,7 +80,6 @@ inline void place_BasicNote_in_queue(
  * @param note_que  (LockFreeQueue<Note, que_size>*)
  *
  */
-template<int que_size>
 inline void place_BasicNote_in_queue(
     juce::MidiBuffer& midiMessages,
     juce::Optional<juce::AudioPlayHead::PositionInfo > pinfo,
@@ -186,3 +185,5 @@ inline std::string torch2string (const torch::Tensor& tensor)
     std::string tensor_string = stream.str();
     return tensor_string;
 }
+
+

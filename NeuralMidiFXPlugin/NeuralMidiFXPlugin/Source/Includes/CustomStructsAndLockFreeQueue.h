@@ -13,6 +13,107 @@
 
 using namespace std;
 
+// Structs for passing note on, note off, cc, tempo and time sig data to other threads (no time info embedded)
+struct TimeLessNoteOn {
+    int channel {0};
+    int number {0};
+    float velocity {0.0f};
+
+    TimeLessNoteOn() = default;
+
+    TimeLessNoteOn(int channel_, int number_, float velocity_) : channel(channel_), number(number_), velocity(velocity_) {}
+
+
+    // extracts note on data from a midi message if it is a note on message
+    // returns false if the message is not a note on message
+
+    bool fromMidiMessage(juce::MidiMessage m)
+    {
+        if (m.isNoteOn()) {
+            channel = m.getChannel();
+            number = m.getNoteNumber();
+            velocity = m.getFloatVelocity();
+            return true;
+        }
+        return false;
+    }
+};
+
+
+struct TimeLessNoteOff {
+    int channel {0};
+    int number {0};
+    float velocity {0.0f};
+
+    TimeLessNoteOff() = default;
+
+    TimeLessNoteOff(int channel_, int number_, float velocity_) : channel(channel_), number(number_), velocity(velocity_) {}
+
+    // extracts note off data from a midi message if it is a note off message
+    // returns false if the message is not a note off message
+    bool fromMidiMessage(juce::MidiMessage m)
+    {
+        if (m.isNoteOff()) {
+            channel = m.getChannel();
+            number = m.getNoteNumber();
+            velocity = m.getFloatVelocity();
+            return true;
+        }
+        return false;
+    }
+};
+
+
+struct TimeLessCC {
+    int channel {0};
+    int number {0};
+    int value {0};
+
+    TimeLessCC() = default;
+
+    TimeLessCC(int channel_, int number_, int value_) : channel(channel_), number(number_), value(value_) {}
+
+    // extracts cc data from a midi message if it is a cc message
+    // returns false if the message is not a cc message
+    bool fromMidiMessage(juce::MidiMessage m)
+    {
+        if (m.isController()) {
+            channel = m.getChannel();
+            number = m.getControllerNumber();
+            value = m.getControllerValue();
+            return true;
+        }
+        return false;
+    }
+};
+
+
+struct TimeLessTempo
+{
+    double qpm {0.0f};
+    int microseconds_per_quarter {0};
+
+    TimeLessTempo() = default;
+
+    TimeLessTempo(double qpm_, int microseconds_per_quarter_) : qpm(qpm_), microseconds_per_quarter(microseconds_per_quarter_) {}
+
+    TimeLessTempo(double qpm_) : qpm(qpm_), microseconds_per_quarter() {
+        microseconds_per_quarter = int(60000000.0 / qpm);
+    }
+
+    TimeLessTempo(int microseconds_per_quarter_) : qpm(), microseconds_per_quarter(microseconds_per_quarter_) {
+        qpm = int(60000000.0 / microseconds_per_quarter);
+    }
+};
+
+struct TimeLessTimeSignature
+{
+    int numerator {0};
+    int denominator {0};
+
+    TimeLessTimeSignature(int numerator_, int denominator_) : numerator(numerator_), denominator(denominator_) {}
+};
+
 // ============================================================================================================
 // ==========          LockFreeQueue used for general data such as arrays, ints, floats and...   =============
 // ==========          !!!! NOT TO BE USED WITH Vectors or                  !!!!
@@ -269,158 +370,7 @@ struct onset_time{
 
 };
 
-struct Time{
 
-    double ppq = 0;
-    double seconds = 0;
-
-    Time ()
-    {
-        ppq = 0.0f;
-        seconds = 0.0f;
-    }
-    Time (double ppq_, double seconds_): ppq(ppq_), seconds(seconds_) {}
-    Time (double frameStartPpq, double frameStartSeconds, double audioSamplePos, double qpm, double sample_rate)
-    {
-        // calculate ppq from fram start ppq using
-        ppq = frameStartPpq + audioSamplePos * qpm / (60 * sample_rate);
-
-        // calculate seconds from frame start seconds using
-        seconds = frameStartSeconds + audioSamplePos / sample_rate;
-    }
-
-};
-
-struct Tempos{
-    std::vector<double> qpms {};
-    std::vector<Time> times {};
-
-    Tempos() = default;
-
-    void add_tempo(double frameStartPpq, double frameStartSeconds, double audioSamplePos, double qpm, double sample_rate)
-    {
-        // make sure that new qpm is different from the last one
-        if (not qpms.empty())
-        {
-            if (qpm == qpms.back())
-            {
-                return;
-            }
-        }
-
-        // make sure that time is greater equal than the last one
-        if (not times.empty())
-        {
-            if (frameStartPpq + audioSamplePos * qpm / (60 * sample_rate) < times.back().ppq)
-            {
-                return;
-            }
-        }
-
-        qpms.push_back(qpm);
-        times.emplace_back(frameStartPpq, frameStartSeconds, audioSamplePos, qpm, sample_rate);
-    }
-
-    std::size_t get_number_of_changes()
-    {
-        return qpms.size();
-    }
-
-    void clear()
-    {
-        qpms.clear();
-        times.clear();
-    }
-
-};
-
-struct TimeSignatures{
-    std::vector<int> numerators {};
-    std::vector<int> denominators {};
-    std::vector<Time> times {};
-
-    TimeSignatures() = default;
-
-    void add_time_signature(int numerator, int denominator, double frameStartPpq, double frameStartSeconds, double audioSamplePos, double qpm, double sample_rate)
-    {
-        // make sure that new qpm is different from the last one
-        if (not numerators.empty())
-        {
-            if (numerator == numerators.back() and denominator == denominators.back())
-            {
-                return;
-            }
-        }
-
-        // make sure that time is greater equal than the last one
-        if (not times.empty())
-        {
-            if (frameStartPpq + audioSamplePos * 120 / (60 * sample_rate) < times.back().ppq)
-            {
-                return;
-            }
-        }
-
-        numerators.push_back(numerator);
-        denominators.push_back(denominator);
-        times.emplace_back(frameStartPpq, frameStartSeconds, audioSamplePos, 120, sample_rate);
-    }
-
-    std::size_t get_number_of_changes()
-    {
-        return numerators.size();
-    }
-
-    void clear()
-    {
-        numerators.clear();
-        denominators.clear();
-        times.clear();
-    }
-
-};
-
-struct ReceivedNote{
-    int midi_number = 0;
-    int velocity = 0;
-    Time time = Time();
-    int channel = 0;
-    bool is_onset = true;
-
-    ReceivedNote() = default;
-    ReceivedNote (int midi_number_, int velocity_, Time time_, int channel_, bool is_onset_): midi_number(midi_number_), velocity(velocity_), time(time_), channel(channel_), is_onset(is_onset_) {}
-    ReceivedNote (int midi_number_, int velocity_, int channel_, bool is_onset_, double frameStartPpq, double frameStartSeconds, double audioSamplePos, double qpm, double sample_rate)
-    {
-        midi_number = midi_number_;
-        velocity = velocity_;
-        time = Time(frameStartPpq, frameStartSeconds, audioSamplePos, qpm, sample_rate);
-        channel = channel_;
-        is_onset = is_onset_;
-    }
-};
-
-struct PlaybackNote{
-    int midi_number = 0;
-    int velocity = 0;
-    Time time = Time();
-    int channel = 0;
-    bool is_onset = true;
-    bool play_using_ppq;
-
-    PlaybackNote() = default;
-
-    // constructor for received timing of midi messages
-    PlaybackNote(int midi_number_, int velocity_, Time time_, int channel_, bool is_onset_, bool play_using_ppq_)
-    {
-        midi_number = midi_number_;
-        velocity = velocity_;
-        time = time_;
-        channel = channel_;
-        is_onset = is_onset_;
-        play_using_ppq = play_using_ppq_;
-    }
-
-};
 
 
 /**
