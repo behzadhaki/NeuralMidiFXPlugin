@@ -8,9 +8,21 @@ InputTensorPreparatorThread::InputTensorPreparatorThread():
 juce::Thread("InputPreparatorThread") {
 }
 
-void InputTensorPreparatorThread::startThreadUsingProvidedResources() {
+void InputTensorPreparatorThread::startThreadUsingProvidedResources(
+        LockFreeQueue<NoteOn, 512>* NMP2ITP_NoteOn_Que_ptr_,
+        LockFreeQueue<NoteOff, 512>* NMP2ITP_NoteOff_Que_ptr_,
+        LockFreeQueue<CC, 512>* NMP2ITP_Controller_Que_ptr_,
+        LockFreeQueue<Tempo, 512>* NMP2ITP_Tempo_Que_ptr_,
+        LockFreeQueue<TimeSignature, 512>* NMP2ITP_TimeSignature_Que_ptr_) {
+
     // Provide access to resources needed to communicate with other threads
     // ---------------------------------------------------------------------------------------------
+    NMP2ITP_NoteOn_Que_ptr = NMP2ITP_NoteOn_Que_ptr_;
+    NMP2ITP_NoteOff_Que_ptr = NMP2ITP_NoteOff_Que_ptr_;
+    NMP2ITP_Controller_Que_ptr = NMP2ITP_Controller_Que_ptr_;
+    NMP2ITP_Tempo_Que_ptr = NMP2ITP_Tempo_Que_ptr_;
+    NMP2ITP_TimeSignature_Que_ptr = NMP2ITP_TimeSignature_Que_ptr_;
+
 
     // Start the thread. This function internally calls run() method. DO NOT CALL run() DIRECTLY.
     // ---------------------------------------------------------------------------------------------
@@ -28,8 +40,13 @@ void InputTensorPreparatorThread::run() {
         }
 
         // Update Local Event Tracker
-        // if fifo.available() > 0
-        //      get event from fifo
+        if (NMP2ITP_NoteOn_Que_ptr->getNumReady() > 0) {
+            auto noteOn = NMP2ITP_NoteOn_Que_ptr->pop();
+            DBG("NoteOn time_sec_relative: " + juce::String(noteOn.time_sec_relative));
+            DBG("NoteOn time_sec_absolute: " + juce::String(noteOn.time_sec_absolute));
+            DBG("NoteOn time_ppq_absolute: " + juce::String(noteOn.time_ppq_absolute));
+            DBG("NoteOn time_ppq_relative: " + juce::String(noteOn.time_ppq_relative));
+        }
 
 
 
@@ -38,7 +55,6 @@ void InputTensorPreparatorThread::run() {
         // ===          Prepare the Input Tensor Using the Events Registered in the Event Tracker
         // ============================================================================================================
 
-        // PLACE CODE HERE
 
         // ============================================================================================================
 

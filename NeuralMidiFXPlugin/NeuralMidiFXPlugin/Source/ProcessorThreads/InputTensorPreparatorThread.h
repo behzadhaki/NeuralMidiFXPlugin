@@ -24,7 +24,12 @@ public:
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 2 . give access to resources needed to communicate with other threads
     // ------------------------------------------------------------------------------------------------------------
-    void startThreadUsingProvidedResources();
+    void startThreadUsingProvidedResources(
+            LockFreeQueue<NoteOn, 512>* NMP2ITP_NoteOn_Que_ptr,
+            LockFreeQueue<NoteOff, 512>* NMP2ITP_NoteOff_Que_ptr,
+            LockFreeQueue<CC, 512>* NMP2ITP_Controller_Que_ptr,
+            LockFreeQueue<Tempo, 512>* NMP2ITP_Tempo_Que_ptr,
+            LockFreeQueue<TimeSignature, 512>* NMP2ITP_TimeSignature_Que_ptr);
 
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 3 . start run() thread by calling startThread().
@@ -64,10 +69,12 @@ private:
     // ------------------------------------------------------------------------------------------------------------
     // ---          Input Queues
     // ------------------------------------------------------------------------------------------------------------
+    LockFreeQueue<NoteOn, 512>* NMP2ITP_NoteOn_Que_ptr;
+    LockFreeQueue<NoteOff, 512>* NMP2ITP_NoteOff_Que_ptr;
+    LockFreeQueue<CC, 512>* NMP2ITP_Controller_Que_ptr;
+    LockFreeQueue<Tempo, 512>* NMP2ITP_Tempo_Que_ptr;
+    LockFreeQueue<TimeSignature, 512>* NMP2ITP_TimeSignature_Que_ptr;
 
-    // Note Queue
-    // qpm change queue
-    // meter queue
 
     // ------------------------------------------------------------------------------------------------------------
     // ---          Output to Model Thread
@@ -82,7 +89,7 @@ private:
     // Torch.note
     // ============================================================================================================
 
-    InputEventTracker eventTracker {};
+    EventTracker eventTracker {};
 
 };
 

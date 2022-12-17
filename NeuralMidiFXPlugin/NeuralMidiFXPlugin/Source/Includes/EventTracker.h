@@ -19,10 +19,10 @@ inline int microseconds_per_quarter_to_qpm(double microseconds_per_quarter)
     return int(60000000.0 / microseconds_per_quarter);
 }
 
-class InputEventTracker {
+class EventTracker {
 public:
     // Constructor
-    InputEventTracker() {
+    EventTracker() {
         TrackedEvents = make_shared<juce::MidiMessageSequence>();
         TrackedTempos = make_shared<juce::MidiMessageSequence>();
         TrackedTimeSignatures = make_shared<juce::MidiMessageSequence>();
