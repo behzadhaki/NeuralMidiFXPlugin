@@ -16,8 +16,7 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor():
     NMP2ITP_NoteOn_Que = make_unique<LockFreeQueue<NoteOn, 512>>();
     NMP2ITP_NoteOff_Que = make_unique<LockFreeQueue<NoteOff, 512>>();
     NMP2ITP_Controller_Que = make_unique<LockFreeQueue<CC, 512>>();
-    NMP2ITP_Tempo_Que = make_unique<LockFreeQueue<Tempo, 512>>();
-    NMP2ITP_TimeSignature_Que = make_unique<LockFreeQueue<TimeSignature, 512>>();
+    NMP2ITP_TempoTimeSignature_Que = make_unique<LockFreeQueue<TempoTimeSignature, 512>>();
 
 
 
@@ -36,8 +35,7 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor():
             NMP2ITP_NoteOn_Que.get(),
             NMP2ITP_NoteOff_Que.get(),
             NMP2ITP_Controller_Que.get(),
-            NMP2ITP_Tempo_Que.get(),
-            NMP2ITP_TimeSignature_Que.get());
+            NMP2ITP_TempoTimeSignature_Que.get());
 }
 
 NeuralMidiFXPluginProcessor::~NeuralMidiFXPluginProcessor(){
@@ -111,15 +109,15 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         auto timeSigDenominator = Pinfo->getTimeSignature()->denominator;
 
         if (qpm != last_qpm || timeSigNumerator != last_numerator || timeSigDenominator != last_denominator) {
+
+            NMP2ITP_TempoTimeSignature_Que->push(
+                    TempoTimeSignature(qpm, timeSigNumerator, timeSigDenominator,
+                                       frameStartPpq_absolute, frameStartSec_absolute,
+                                       frameStartPpq_relative, frameStartSec_relative));
+
             last_qpm = qpm;
-            NMP2ITP_Tempo_Que->push(
-                    Tempo(qpm, frameStartPpq_absolute, frameStartSec_absolute, frameStartPpq_relative,
-                          frameStartSec_relative));
             last_numerator = timeSigNumerator;
             last_denominator = timeSigDenominator;
-            NMP2ITP_TimeSignature_Que->push(
-                    TimeSignature(timeSigNumerator, timeSigDenominator, frameStartPpq_absolute, frameStartSec_absolute,
-                                  frameStartPpq_relative, frameStartSec_relative));
         }
 
         auto time_signature = Pinfo->getTimeSignature();
@@ -171,6 +169,7 @@ juce::AudioProcessorEditor* NeuralMidiFXPluginProcessor::createEditor()
     /*modelThread.addChangeListener(editor);*/
     return editor;
 }
+
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {

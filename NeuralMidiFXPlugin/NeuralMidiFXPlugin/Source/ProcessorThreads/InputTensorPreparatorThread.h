@@ -11,7 +11,7 @@
 #include "../settings.h"
 #include "../Includes/EventTracker.h"
 
-class InputTensorPreparatorThread:public juce::Thread{
+class InputTensorPreparatorThread:public juce::Thread {
 public:
     // ============================================================================================================
     // ===          Preparing Thread for Running
@@ -28,8 +28,7 @@ public:
             LockFreeQueue<NoteOn, 512>* NMP2ITP_NoteOn_Que_ptr,
             LockFreeQueue<NoteOff, 512>* NMP2ITP_NoteOff_Que_ptr,
             LockFreeQueue<CC, 512>* NMP2ITP_Controller_Que_ptr,
-            LockFreeQueue<Tempo, 512>* NMP2ITP_Tempo_Que_ptr,
-            LockFreeQueue<TimeSignature, 512>* NMP2ITP_TimeSignature_Que_ptr);
+            LockFreeQueue<TempoTimeSignature, 512>* NMP2ITP_TempoTimeSig_Que_ptr);
 
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 3 . start run() thread by calling startThread().
@@ -67,13 +66,17 @@ private:
     // ============================================================================================================
 
     // ------------------------------------------------------------------------------------------------------------
-    // ---          Input Queues
+    // ---          Input Queues, Event Tracker and Internal Event Buffer
     // ------------------------------------------------------------------------------------------------------------
     LockFreeQueue<NoteOn, 512>* NMP2ITP_NoteOn_Que_ptr;
     LockFreeQueue<NoteOff, 512>* NMP2ITP_NoteOff_Que_ptr;
     LockFreeQueue<CC, 512>* NMP2ITP_Controller_Que_ptr;
-    LockFreeQueue<Tempo, 512>* NMP2ITP_Tempo_Que_ptr;
-    LockFreeQueue<TimeSignature, 512>* NMP2ITP_TimeSignature_Que_ptr;
+    LockFreeQueue<TempoTimeSignature, 512>* NMP2ITP_TempoTimeSig_Que_ptr;
+
+    // keeps track of all events so far (unless clear is called)
+    ITP_MultiTime_EventTracker MultiTimeEventTracker {false};
+    // set true so as to remove events as soon as accessed (this way only new events are tracked)
+    ITP_MultiTime_EventTracker NewEventsBuffer {true};
 
 
     // ------------------------------------------------------------------------------------------------------------
@@ -89,7 +92,8 @@ private:
     // Torch.note
     // ============================================================================================================
 
-    EventTracker eventTracker {};
+
+
 
 };
 

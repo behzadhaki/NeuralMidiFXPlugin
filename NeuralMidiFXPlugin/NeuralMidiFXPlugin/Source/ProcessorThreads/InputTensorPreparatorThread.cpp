@@ -12,17 +12,14 @@ void InputTensorPreparatorThread::startThreadUsingProvidedResources(
         LockFreeQueue<NoteOn, 512>* NMP2ITP_NoteOn_Que_ptr_,
         LockFreeQueue<NoteOff, 512>* NMP2ITP_NoteOff_Que_ptr_,
         LockFreeQueue<CC, 512>* NMP2ITP_Controller_Que_ptr_,
-        LockFreeQueue<Tempo, 512>* NMP2ITP_Tempo_Que_ptr_,
-        LockFreeQueue<TimeSignature, 512>* NMP2ITP_TimeSignature_Que_ptr_) {
+        LockFreeQueue<TempoTimeSignature, 512>* NMP2ITP_TempoTimeSig_Que_ptr_) {
 
     // Provide access to resources needed to communicate with other threads
     // ---------------------------------------------------------------------------------------------
     NMP2ITP_NoteOn_Que_ptr = NMP2ITP_NoteOn_Que_ptr_;
     NMP2ITP_NoteOff_Que_ptr = NMP2ITP_NoteOff_Que_ptr_;
     NMP2ITP_Controller_Que_ptr = NMP2ITP_Controller_Que_ptr_;
-    NMP2ITP_Tempo_Que_ptr = NMP2ITP_Tempo_Que_ptr_;
-    NMP2ITP_TimeSignature_Que_ptr = NMP2ITP_TimeSignature_Que_ptr_;
-
+    NMP2ITP_TempoTimeSig_Que_ptr = NMP2ITP_TempoTimeSig_Que_ptr_;
 
     // Start the thread. This function internally calls run() method. DO NOT CALL run() DIRECTLY.
     // ---------------------------------------------------------------------------------------------
@@ -42,11 +39,53 @@ void InputTensorPreparatorThread::run() {
         // Update Local Event Tracker
         if (NMP2ITP_NoteOn_Que_ptr->getNumReady() > 0) {
             auto noteOn = NMP2ITP_NoteOn_Que_ptr->pop();
-            DBG("NoteOn time_sec_relative: " + juce::String(noteOn.time_sec_relative));
-            DBG("NoteOn time_sec_absolute: " + juce::String(noteOn.time_sec_absolute));
-            DBG("NoteOn time_ppq_absolute: " + juce::String(noteOn.time_ppq_absolute));
-            DBG("NoteOn time_ppq_relative: " + juce::String(noteOn.time_ppq_relative));
+            DBG("RECEIVED");
+            MultiTimeEventTracker.addNoteOn(noteOn.channel, noteOn.number, noteOn.velocity,
+                                            noteOn.time_ppq_absolute, noteOn.time_sec_absolute,
+                                            noteOn.time_ppq_relative, noteOn.time_sec_relative);
+            NewEventsBuffer.addNoteOn(noteOn.channel, noteOn.number, noteOn.velocity,
+                                      noteOn.time_ppq_absolute, noteOn.time_sec_absolute,
+                                      noteOn.time_ppq_relative, noteOn.time_sec_relative);
+
         }
+
+        auto NewEventsVector = NewEventsBuffer.get_events_with_duration(true, true, true);
+        DBG("NewEventsVector.size() = " << NewEventsVector.size());
+        if (!NewEventsVector.empty()) {
+            for (const auto& event: NewEventsVector) {
+                auto message = event.first;
+                auto duration = event.second;
+                if (message.isNoteOn()) {
+                    DBG("NoteOn: " + juce::String(message.getNoteNumber()) + " " +
+                    juce::String(message.getVelocity()) + " " +
+                    juce::String(duration));
+                }
+            }
+        }
+
+//        if (NMP2ITP_NoteOff_Que_ptr->getNumReady() > 0) {
+//            auto noteOff = NMP2ITP_NoteOff_Que_ptr->pop();
+//
+//            MultiTimeEventTracker.addNoteOff(noteOff.channel, noteOff.number, noteOff.velocity,
+//                                             noteOff.time_ppq_absolute, noteOff.time_sec_absolute,
+//                                             noteOff.time_ppq_relative, noteOff.time_sec_relative);
+//        }
+//
+//        if (NMP2ITP_Controller_Que_ptr->getNumReady() > 0) {
+//            auto controller = NMP2ITP_Controller_Que_ptr->pop();
+//
+//            MultiTimeEventTracker.addCC(controller.channel, controller.number, controller.value,
+//                                        controller.time_ppq_absolute, controller.time_sec_absolute,
+//                                        controller.time_ppq_relative, controller.time_sec_relative);
+//        }
+//
+//        if (NMP2ITP_TempoTimeSig_Que_ptr->getNumReady() > 0) {
+//            auto tempoTimeSig = NMP2ITP_TempoTimeSig_Que_ptr->pop();
+//
+//            MultiTimeEventTracker.addTempoAndTimeSignature(tempoTimeSig.qpm, tempoTimeSig.numerator, tempoTimeSig.denominator,
+//                                                           tempoTimeSig.time_ppq_absolute, tempoTimeSig.time_sec_absolute,
+//                                                           tempoTimeSig.time_ppq_relative, tempoTimeSig.time_sec_relative);
+//        }
 
 
 

@@ -28,8 +28,7 @@ public:
     unique_ptr<LockFreeQueue<NoteOn, 512>> NMP2ITP_NoteOn_Que;
     unique_ptr<LockFreeQueue<NoteOff, 512>> NMP2ITP_NoteOff_Que;
     unique_ptr<LockFreeQueue<CC, 512>> NMP2ITP_Controller_Que;
-    unique_ptr<LockFreeQueue<Tempo, 512>> NMP2ITP_Tempo_Que;
-    unique_ptr<LockFreeQueue<TimeSignature, 512>> NMP2ITP_TimeSignature_Que;
+    unique_ptr<LockFreeQueue<TempoTimeSignature, 512>> NMP2ITP_TempoTimeSignature_Que;
 
     // Threads used for generating patterns in the background
     shared_ptr<InputTensorPreparatorThread> inputTensorPreparatorThread;

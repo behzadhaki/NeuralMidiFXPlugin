@@ -17,7 +17,7 @@ using namespace std;
 struct NoteOn {
     int channel {0};
     int number {0};
-    float velocity {0.0f};
+    int velocity {0};
     double time_ppq_absolute {0.0};
     double time_sec_absolute {0.0};
     double time_ppq_relative {0.0};
@@ -25,7 +25,7 @@ struct NoteOn {
 
     NoteOn() = default;
 
-    NoteOn(int channel_, int number_, float velocity_, double time_ppq_absolute_, double time_sec_absolute_,
+    NoteOn(int channel_, int number_, int velocity_, double time_ppq_absolute_, double time_sec_absolute_,
            double time_ppq_relative_, double time_sec_relative_) :
             channel(channel_), number(number_), velocity(velocity_), time_ppq_absolute(time_ppq_absolute_),
             time_sec_absolute(time_sec_absolute_), time_ppq_relative(time_ppq_relative_),
@@ -40,7 +40,7 @@ struct NoteOn {
         {
             channel = m.getChannel();
             number = m.getNoteNumber();
-            velocity = m.getFloatVelocity();
+            velocity = m.getVelocity();
         }
     }
 };
@@ -49,7 +49,7 @@ struct NoteOn {
 struct NoteOff {
     int channel {0};
     int number {0};
-    float velocity {0.0f};
+    int velocity {0};
     double time_ppq_absolute {0.0};
     double time_sec_absolute {0.0};
     double time_ppq_relative {0.0};
@@ -57,7 +57,7 @@ struct NoteOff {
 
     NoteOff() = default;
 
-    NoteOff(int channel_, int number_, float velocity_, double time_ppq_absolute_, double time_sec_absolute_,
+    NoteOff(int channel_, int number_, int velocity_, double time_ppq_absolute_, double time_sec_absolute_,
             double time_ppq_relative_, double time_sec_relative_) :
             channel(channel_), number(number_), velocity(velocity_), time_ppq_absolute(time_ppq_absolute_),
             time_sec_absolute(time_sec_absolute_), time_ppq_relative(time_ppq_relative_),
@@ -71,7 +71,7 @@ struct NoteOff {
         {
             channel = m.getChannel();
             number = m.getNoteNumber();
-            velocity = m.getFloatVelocity();
+            velocity = m.getVelocity();
         }
     }
 };
@@ -108,54 +108,46 @@ struct CC {
 };
 
 
-struct Tempo
+struct TempoTimeSignature
 {
     double qpm {0.0f};
     int microseconds_per_quarter {0};
+
+    int numerator {0};
+    int denominator {0};
+
     double time_ppq_absolute {0.0};
     double time_sec_absolute {0.0};
     double time_ppq_relative {0.0};
     double time_sec_relative {0.0};
 
-    Tempo() = default;
+    TempoTimeSignature() = default;
 
-    Tempo(double qpm_, int microseconds_per_quarter_, double time_ppq_absolute_, double time_sec_absolute_,
-          double time_ppq_relative_, double time_sec_relative_) :
-          qpm(qpm_), microseconds_per_quarter(microseconds_per_quarter_), time_ppq_absolute(time_ppq_absolute_),
-          time_sec_absolute(time_sec_absolute_), time_ppq_relative(time_ppq_relative_),
-          time_sec_relative(time_sec_relative_){}
+    TempoTimeSignature(double qpm_, int microseconds_per_quarter_, int numerator_, int denominator_,
+                       double time_ppq_absolute_, double time_sec_absolute_,
+                       double time_ppq_relative_, double time_sec_relative_) :
+            qpm(qpm_), microseconds_per_quarter(microseconds_per_quarter_), numerator(numerator_), denominator(denominator_),
+            time_ppq_absolute(time_ppq_absolute_), time_sec_absolute(time_sec_absolute_),
+            time_ppq_relative(time_ppq_relative_),
+            time_sec_relative(time_sec_relative_){}
 
-    Tempo(double qpm_, double time_ppq_absolute_, double time_sec_absolute_,
-          double time_ppq_relative_, double time_sec_relative_): qpm(qpm_), time_ppq_absolute(time_ppq_absolute_),
-    time_sec_absolute(time_sec_absolute_), time_ppq_relative(time_ppq_relative_),
-    time_sec_relative(time_sec_relative_){
+    TempoTimeSignature(double qpm_, int numerator_, int denominator_, double time_ppq_absolute_, double time_sec_absolute_,
+                       double time_ppq_relative_, double time_sec_relative_) :
+            qpm(qpm_), numerator(numerator_), denominator(denominator_), time_ppq_absolute(time_ppq_absolute_),
+            time_sec_absolute(time_sec_absolute_), time_ppq_relative(time_ppq_relative_),
+            time_sec_relative(time_sec_relative_){
         microseconds_per_quarter = int(60000000 / qpm);
     }
 
-    Tempo(int microseconds_per_quarter_, double time_ppq_absolute_, double time_sec_absolute_,
-          double time_ppq_relative_, double time_sec_relative_) : microseconds_per_quarter(microseconds_per_quarter_),
-          time_ppq_absolute(time_ppq_absolute_), time_sec_absolute(time_sec_absolute_),
-          time_ppq_relative(time_ppq_relative_), time_sec_relative(time_sec_relative_){
+    TempoTimeSignature(int microseconds_per_quarter_, int numerator_, int denominator_,
+                       double time_ppq_absolute_, double time_sec_absolute_,
+                       double time_ppq_relative_, double time_sec_relative_) :
+            microseconds_per_quarter(microseconds_per_quarter_), numerator(numerator_), denominator(denominator_),
+            time_ppq_absolute(time_ppq_absolute_), time_sec_absolute(time_sec_absolute_),
+            time_ppq_relative(time_ppq_relative_), time_sec_relative(time_sec_relative_){
         qpm = 60000000 / microseconds_per_quarter;
     }
-};
 
-struct TimeSignature
-{
-    int numerator {0};
-    int denominator {0};
-    double time_ppq_absolute {0.0};
-    double time_sec_absolute {0.0};
-    double time_ppq_relative {0.0};
-    double time_sec_relative {0.0};
-
-    TimeSignature() = default;
-
-    TimeSignature(int numerator_, int denominator_, double time_ppq_absolute_, double time_sec_absolute_,
-                  double time_ppq_relative_, double time_sec_relative_) :
-                  numerator(numerator_), denominator(denominator_), time_ppq_absolute(time_ppq_absolute_),
-                  time_sec_absolute(time_sec_absolute_), time_ppq_relative(time_ppq_relative_),
-                  time_sec_relative(time_sec_relative_){}
 };
 
 // ============================================================================================================
@@ -170,6 +162,8 @@ struct TimeSignature
  * @tparam T    template datatype
  * @tparam queue_size
  */
+
+
 
 template <typename T, int queue_size> class LockFreeQueue
 {
