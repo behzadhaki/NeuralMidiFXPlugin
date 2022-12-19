@@ -35,33 +35,32 @@ void InputTensorPreparatorThread::run() {
         if (readyToStop) {
             break;
         }
+        accessNewMessagesIfAny();
 
-        // Update Local Event Tracker
-        if (NMP2ITP_NoteOn_Que_ptr->getNumReady() > 0) {
-            auto noteOn = NMP2ITP_NoteOn_Que_ptr->pop();
-            DBG("RECEIVED");
-            MultiTimeEventTracker.addNoteOn(noteOn.channel, noteOn.number, noteOn.velocity,
-                                            noteOn.time_ppq_absolute, noteOn.time_sec_absolute,
-                                            noteOn.time_ppq_relative, noteOn.time_sec_relative);
-            NewEventsBuffer.addNoteOn(noteOn.channel, noteOn.number, noteOn.velocity,
-                                      noteOn.time_ppq_absolute, noteOn.time_sec_absolute,
-                                      noteOn.time_ppq_relative, noteOn.time_sec_relative);
 
-        }
 
-        auto NewEventsVector = NewEventsBuffer.get_events_with_duration(true, true, true);
-        DBG("NewEventsVector.size() = " << NewEventsVector.size());
-        if (!NewEventsVector.empty()) {
-            for (const auto& event: NewEventsVector) {
-                auto message = event.first;
-                auto duration = event.second;
-                if (message.isNoteOn()) {
-                    DBG("NoteOn: " + juce::String(message.getNoteNumber()) + " " +
-                    juce::String(message.getVelocity()) + " " +
-                    juce::String(duration));
-                }
-            }
-        }
+        // for testing
+//        {
+//            DBG("NewEventsBuffer.getNumEvents() = " << NewEventsBuffer.getNumEvents());
+//            auto NewEventsVector = NewEventsBuffer.get_events_with_duration(true, true, false);
+//            DBG("NewEventsVector.size() = " << NewEventsVector.size());
+//            if (!NewEventsVector.empty()) {
+//                for (const auto &event: NewEventsVector) {
+//                    auto message = event.first;
+//                    auto duration = event.second;
+//                    if (message.isNoteOn()) {
+//                        DBG("NoteOn: " + juce::String(message.getNoteNumber()) + " " +
+//                            juce::String(message.getVelocity()) + " " +
+//                            juce::String(duration));
+//                    }
+//                }
+//            }
+//        }
+
+
+        // Below
+
+
 
 //        if (NMP2ITP_NoteOff_Que_ptr->getNumReady() > 0) {
 //            auto noteOff = NMP2ITP_NoteOff_Que_ptr->pop();
@@ -104,6 +103,67 @@ void InputTensorPreparatorThread::run() {
     sleep (thread_configurations::InputTensorPreparator::waitTimeBtnIters);
 }
 
+// updates the local trackers and buffer if new messages are available
+
+bool InputTensorPreparatorThread::accessNewMessagesIfAny() {// Update Local Event Tracker
+
+    bool newMessageReceived = false;
+
+    if (NMP2ITP_NoteOn_Que_ptr->getNumReady() > 0) {
+        auto noteOn = NMP2ITP_NoteOn_Que_ptr->pop();
+        MultiTimeEventTracker.addNoteOn(noteOn.channel, noteOn.number, noteOn.velocity,
+                                        noteOn.time_ppq_absolute, noteOn.time_sec_absolute,
+                                        noteOn.time_ppq_relative, noteOn.time_sec_relative);
+        NewEventsBuffer.addNoteOn(noteOn.channel, noteOn.number, noteOn.velocity,
+                                  noteOn.time_ppq_absolute, noteOn.time_sec_absolute,
+                                  noteOn.time_ppq_relative, noteOn.time_sec_relative);
+
+        newMessageReceived = true;
+    }
+
+    if (NMP2ITP_NoteOff_Que_ptr->getNumReady() > 0) {
+        auto noteOff = NMP2ITP_NoteOff_Que_ptr->pop();
+        MultiTimeEventTracker.addNoteOff(noteOff.channel, noteOff.number, noteOff.velocity,
+                                         noteOff.time_ppq_absolute, noteOff.time_sec_absolute,
+                                         noteOff.time_ppq_relative, noteOff.time_sec_relative);
+        NewEventsBuffer.addNoteOff(noteOff.channel, noteOff.number, noteOff.velocity,
+                                   noteOff.time_ppq_absolute, noteOff.time_sec_absolute,
+                                   noteOff.time_ppq_relative, noteOff.time_sec_relative);
+
+        newMessageReceived = true;
+    }
+
+    if (NMP2ITP_Controller_Que_ptr->getNumReady() > 0 ) {
+        auto controller = NMP2ITP_Controller_Que_ptr->pop();
+        MultiTimeEventTracker.addCC(controller.channel, controller.number, controller.value,
+                                    controller.time_ppq_absolute, controller.time_sec_absolute,
+                                    controller.time_ppq_relative, controller.time_sec_relative);
+        NewEventsBuffer.addCC(controller.channel, controller.number, controller.value,
+                              controller.time_ppq_absolute, controller.time_sec_absolute,
+                              controller.time_ppq_relative, controller.time_sec_relative);
+        newMessageReceived = true;
+    }
+
+    if (NMP2ITP_TempoTimeSig_Que_ptr->getNumReady() > 0 ) {
+        auto tempoTimeSig = NMP2ITP_TempoTimeSig_Que_ptr->pop();
+        MultiTimeEventTracker.addTempoAndTimeSignature(tempoTimeSig.qpm, tempoTimeSig.numerator,
+                                                       tempoTimeSig.denominator,
+                                                       tempoTimeSig.time_ppq_absolute,
+                                                       tempoTimeSig.time_sec_absolute,
+                                                       tempoTimeSig.time_ppq_relative,
+                                                       tempoTimeSig.time_sec_relative);
+        NewEventsBuffer.addTempoAndTimeSignature(tempoTimeSig.qpm, tempoTimeSig.numerator,
+                                                 tempoTimeSig.denominator,
+                                                 tempoTimeSig.time_ppq_absolute,
+                                                 tempoTimeSig.time_sec_absolute,
+                                                 tempoTimeSig.time_ppq_relative,
+                                                 tempoTimeSig.time_sec_relative);
+        newMessageReceived = true;
+    }
+
+    return newMessageReceived;
+}
+
 void InputTensorPreparatorThread::prepareToStop() {
     //Need to wait enough to ensure the run() method is over before killing thread
     this->stopThread(100 * thread_settings::GrooveThread::waitTimeBtnIters);
@@ -112,8 +172,7 @@ void InputTensorPreparatorThread::prepareToStop() {
 }
 
 InputTensorPreparatorThread::~InputTensorPreparatorThread() {
-    if (not readyToStop)
-    {
+    if (not readyToStop) {
         prepareToStop();
     }
 }

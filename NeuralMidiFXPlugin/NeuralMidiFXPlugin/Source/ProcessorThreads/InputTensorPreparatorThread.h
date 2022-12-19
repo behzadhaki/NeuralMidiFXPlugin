@@ -95,6 +95,7 @@ private:
 
 
 
+    bool accessNewMessagesIfAny();
 };
 
 
