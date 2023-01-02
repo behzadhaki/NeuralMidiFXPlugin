@@ -64,6 +64,11 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         last_qpm = -1;
         last_numerator = -1;
         last_denominator = -1;
+
+        // Reset Events in EventTrackers
+        inputTensorPreparatorThread->NewEventsBuffer.clear();
+        inputTensorPreparatorThread->MultiTimeEventTracker.clear();
+
     }
     last_frame_was_playing = Pinfo->getIsPlaying();
 

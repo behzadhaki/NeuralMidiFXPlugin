@@ -83,6 +83,18 @@ namespace thread_configurations
     namespace InputTensorPreparator
     {
         constexpr int waitTimeBtnIters {5}; //ms between two consecutive iterations of the thread loop in run()
+
+        // New notes can be accessed in two modes in the ITP thread:
+        // 1. as Note Ons with corresponding durations -> NewEventsBuffer.get_notes_with_duration()
+        //     This is useful if your model works with note onsets and durations. Keep in mind that this mode
+        //     only returns COMPLETED notes. If a note is not completed, it will not be returned and kept in the buffer
+        //     until it a corresponding note off is received.
+        // 2. as NoteOn and NoteOff events -> NewEventsBuffer.get_note_midi_messages()
+        //     This is useful if your model works with note onsets and offsets as separate events.
+        //     This mode returns all notes, even if they are not completed. This is useful if you want to
+        //     prepare the input sequentially in the same order as received in the host. The durations of events
+        //     in this case are assumed to be zero
+        constexpr int new_note_access_mode {2};
     }
 }
 

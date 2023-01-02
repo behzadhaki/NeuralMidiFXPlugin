@@ -4,8 +4,7 @@
 
 #include "InputTensorPreparatorThread.h"
 
-InputTensorPreparatorThread::InputTensorPreparatorThread():
-juce::Thread("InputPreparatorThread") {
+InputTensorPreparatorThread::InputTensorPreparatorThread(): juce::Thread("InputPreparatorThread") {
 }
 
 void InputTensorPreparatorThread::startThreadUsingProvidedResources(
@@ -26,6 +25,26 @@ void InputTensorPreparatorThread::startThreadUsingProvidedResources(
     startThread();
 }
 
+// New notes can be accessed in two modes in the ITP thread:
+// 1. as Note Ons with corresponding durations -> NewEventsBuffer.get_notes_with_duration()
+//     This is useful if your model works with note onsets and durations. Keep in mind that this mode
+//     only returns COMPLETED notes. If a note is not completed, it will not be returned and kept in the buffer
+//     until it a corresponding note off is received.
+// 2. as NoteOn and NoteOff events -> NewEventsBuffer.get_note_midi_messages()
+//     This is useful if your model works with note onsets and offsets as separate events.
+//     This mode returns all notes, even if they are not completed. This is useful if you want to
+//     prepare the input sequentially in the same order as received in the host. The durations of events
+//     in this case are assumed to be zero
+MultiTimedStructure<vector<pair<juce::MidiMessage, double>>> InputTensorPreparatorThread::get_new_notes(int mode)
+{
+    MultiTimedStructure<vector<pair<juce::MidiMessage, double>>> received_notes;
+    if (mode == 1) {
+        return NewEventsBuffer.get_notes_with_duration();
+    } else {
+        return NewEventsBuffer.get_note_midi_messages();
+    }
+}
+
 void InputTensorPreparatorThread::run() {
     // notify if the thread is still running
     bool bExit = threadShouldExit();
@@ -35,62 +54,33 @@ void InputTensorPreparatorThread::run() {
         if (readyToStop) {
             break;
         }
-        accessNewMessagesIfAny();
+
+        // ============================================================================================================
+        // ===         Step 1 . Get MIDI messages from host
+        // ============================================================================================================
+        bool newDataAvailable = accessNewMessagesIfAny();
+        bool tempoOrTimeSigChanged = accessTempoTimeSignatureChangesIfAny();
 
 
+        if (newDataAvailable) {
 
-        // for testing
-//        {
-//            DBG("NewEventsBuffer.getNumEvents() = " << NewEventsBuffer.getNumEvents());
-//            auto NewEventsVector = NewEventsBuffer.get_events_with_duration(true, true, false);
-//            DBG("NewEventsVector.size() = " << NewEventsVector.size());
-//            if (!NewEventsVector.empty()) {
-//                for (const auto &event: NewEventsVector) {
-//                    auto message = event.first;
-//                    auto duration = event.second;
-//                    if (message.isNoteOn()) {
-//                        DBG("NoteOn: " + juce::String(message.getNoteNumber()) + " " +
-//                            juce::String(message.getVelocity()) + " " +
-//                            juce::String(duration));
-//                    }
-//                }
-//            }
-//        }
+            auto received_notes = get_new_notes(thread_configurations::InputTensorPreparator::new_note_access_mode);
 
+            for (const auto& note: received_notes.absolute_time_in_ppq) {
+                juce::MidiMessage message = note.first;
+                double duration = note.second;
+                // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+                // HERE, UPDATE YOUR INPUT TENSORS ACCORDINGLY USING THE RECEIVED MIDI MESSAGE
+                // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+                DBG(message.getDescription() << ", time: " << message.getTimeStamp() << ", duration: " << duration);
 
-        // Below
-
-
-
-//        if (NMP2ITP_NoteOff_Que_ptr->getNumReady() > 0) {
-//            auto noteOff = NMP2ITP_NoteOff_Que_ptr->pop();
-//
-//            MultiTimeEventTracker.addNoteOff(noteOff.channel, noteOff.number, noteOff.velocity,
-//                                             noteOff.time_ppq_absolute, noteOff.time_sec_absolute,
-//                                             noteOff.time_ppq_relative, noteOff.time_sec_relative);
-//        }
-//
-//        if (NMP2ITP_Controller_Que_ptr->getNumReady() > 0) {
-//            auto controller = NMP2ITP_Controller_Que_ptr->pop();
-//
-//            MultiTimeEventTracker.addCC(controller.channel, controller.number, controller.value,
-//                                        controller.time_ppq_absolute, controller.time_sec_absolute,
-//                                        controller.time_ppq_relative, controller.time_sec_relative);
-//        }
-//
-//        if (NMP2ITP_TempoTimeSig_Que_ptr->getNumReady() > 0) {
-//            auto tempoTimeSig = NMP2ITP_TempoTimeSig_Que_ptr->pop();
-//
-//            MultiTimeEventTracker.addTempoAndTimeSignature(tempoTimeSig.qpm, tempoTimeSig.numerator, tempoTimeSig.denominator,
-//                                                           tempoTimeSig.time_ppq_absolute, tempoTimeSig.time_sec_absolute,
-//                                                           tempoTimeSig.time_ppq_relative, tempoTimeSig.time_sec_relative);
-//        }
-
-
+                // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+            }
+        }
 
 
         // ============================================================================================================
-        // ===          Prepare the Input Tensor Using the Events Registered in the Event Tracker
+        // ===
         // ============================================================================================================
 
 
@@ -104,8 +94,7 @@ void InputTensorPreparatorThread::run() {
 }
 
 // updates the local trackers and buffer if new messages are available
-
-bool InputTensorPreparatorThread::accessNewMessagesIfAny() {// Update Local Event Tracker
+bool InputTensorPreparatorThread::accessNewMessagesIfAny() {    // Update Local Event Tracker
 
     bool newMessageReceived = false;
 
@@ -133,7 +122,7 @@ bool InputTensorPreparatorThread::accessNewMessagesIfAny() {// Update Local Even
         newMessageReceived = true;
     }
 
-    if (NMP2ITP_Controller_Que_ptr->getNumReady() > 0 ) {
+    if (NMP2ITP_Controller_Que_ptr->getNumReady() > 0) {
         auto controller = NMP2ITP_Controller_Que_ptr->pop();
         MultiTimeEventTracker.addCC(controller.channel, controller.number, controller.value,
                                     controller.time_ppq_absolute, controller.time_sec_absolute,
@@ -144,7 +133,14 @@ bool InputTensorPreparatorThread::accessNewMessagesIfAny() {// Update Local Even
         newMessageReceived = true;
     }
 
-    if (NMP2ITP_TempoTimeSig_Que_ptr->getNumReady() > 0 ) {
+    return newMessageReceived;
+}
+
+bool InputTensorPreparatorThread::accessTempoTimeSignatureChangesIfAny() {
+
+    bool newMessageReceived {false};
+
+    if (NMP2ITP_TempoTimeSig_Que_ptr->getNumReady() > 0) {
         auto tempoTimeSig = NMP2ITP_TempoTimeSig_Que_ptr->pop();
         MultiTimeEventTracker.addTempoAndTimeSignature(tempoTimeSig.qpm, tempoTimeSig.numerator,
                                                        tempoTimeSig.denominator,

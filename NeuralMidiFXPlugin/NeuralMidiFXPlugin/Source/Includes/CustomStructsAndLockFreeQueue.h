@@ -13,6 +13,46 @@
 
 using namespace std;
 
+template <typename T> struct MultiTimedStructure {
+    T absolute_time_in_ppq;
+    T absolute_time_in_seconds;
+    T relative_time_in_ppq;
+    T relative_time_in_seconds;
+};
+
+struct Note {
+    int channel {0};
+    int number {0};
+    int velocity {0};
+    double onset_time {-1};
+    double duration {0};
+
+    Note() = default;
+
+    Note(int channel_, int number_, int velocity_, double onset_time_, double duration_) {
+        this->channel = channel_;
+        this->number = number_;
+        this->velocity = velocity_;
+        this->onset_time = onset_time_;
+        this->duration = duration_;
+    }
+
+    string getDescription() const {
+        stringstream ss;
+        ss << "NoteNumber: " + to_string(number) + " Velocity: " + to_string(velocity) + " Start: " +
+        to_string(onset_time) + " Duration: " + to_string(duration);
+        return ss.str();
+    }
+
+    bool operator==(const Note& rhs) const {
+        return channel == rhs.channel &&
+               number == rhs.number &&
+               velocity == rhs.velocity &&
+               onset_time == rhs.onset_time &&
+               duration == rhs.duration;
+    }
+};
+
 // Structs for passing note on, note off, cc, tempo and time sig data to other threads (no time info embedded)
 struct NoteOn {
     int channel {0};

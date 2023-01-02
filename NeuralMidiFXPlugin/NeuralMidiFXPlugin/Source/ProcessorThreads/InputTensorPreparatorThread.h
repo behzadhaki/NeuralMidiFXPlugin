@@ -53,7 +53,17 @@ public:
     void clearStep(int grid_ix, float start_ppq);    // clears a time step ONLY IF OVERDUBBING IS OFF!!!
     // ============================================================================================================
 
+    MultiTimedStructure<vector<pair<juce::MidiMessage, double>>> get_new_notes(int mode);
+
+    // keeps track of all events so far (unless clear is called)
+    ITP_MultiTime_EventTracker MultiTimeEventTracker {false};
+    // set true so as to remove events as soon as accessed (this way only new events are tracked)
+    ITP_MultiTime_EventTracker NewEventsBuffer {true};
+
+
+
 private:
+
     // ============================================================================================================
     // ===          Internal MIDI Buffer Memory
     // ============================================================================================================
@@ -68,15 +78,12 @@ private:
     // ------------------------------------------------------------------------------------------------------------
     // ---          Input Queues, Event Tracker and Internal Event Buffer
     // ------------------------------------------------------------------------------------------------------------
-    LockFreeQueue<NoteOn, 512>* NMP2ITP_NoteOn_Que_ptr;
-    LockFreeQueue<NoteOff, 512>* NMP2ITP_NoteOff_Que_ptr;
-    LockFreeQueue<CC, 512>* NMP2ITP_Controller_Que_ptr;
-    LockFreeQueue<TempoTimeSignature, 512>* NMP2ITP_TempoTimeSig_Que_ptr;
+    LockFreeQueue<NoteOn, 512>* NMP2ITP_NoteOn_Que_ptr{};
+    LockFreeQueue<NoteOff, 512>* NMP2ITP_NoteOff_Que_ptr{};
+    LockFreeQueue<CC, 512>* NMP2ITP_Controller_Que_ptr{};
+    LockFreeQueue<TempoTimeSignature, 512>* NMP2ITP_TempoTimeSig_Que_ptr{};
 
-    // keeps track of all events so far (unless clear is called)
-    ITP_MultiTime_EventTracker MultiTimeEventTracker {false};
-    // set true so as to remove events as soon as accessed (this way only new events are tracked)
-    ITP_MultiTime_EventTracker NewEventsBuffer {true};
+
 
 
     // ------------------------------------------------------------------------------------------------------------
@@ -96,6 +103,7 @@ private:
 
 
     bool accessNewMessagesIfAny();
+    bool accessTempoTimeSignatureChangesIfAny();
 };
 
 
