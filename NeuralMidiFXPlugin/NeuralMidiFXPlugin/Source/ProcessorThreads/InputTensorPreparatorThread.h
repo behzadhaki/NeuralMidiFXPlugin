@@ -24,11 +24,7 @@ public:
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 2 . give access to resources needed to communicate with other threads
     // ------------------------------------------------------------------------------------------------------------
-    void startThreadUsingProvidedResources(
-            LockFreeQueue<NoteOn, 512>* NMP2ITP_NoteOn_Que_ptr,
-            LockFreeQueue<NoteOff, 512>* NMP2ITP_NoteOff_Que_ptr,
-            LockFreeQueue<CC, 512>* NMP2ITP_Controller_Que_ptr,
-            LockFreeQueue<TempoTimeSignature, 512>* NMP2ITP_TempoTimeSig_Que_ptr);
+    void startThreadUsingProvidedResources(LockFreeQueue<Event, 512>* NMP2ITP_Event_Que_ptr_);
 
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 3 . start run() thread by calling startThread().
@@ -56,9 +52,9 @@ public:
     MultiTimedStructure<vector<pair<juce::MidiMessage, double>>> get_new_notes(int mode);
 
     // keeps track of all events so far (unless clear is called)
-    ITP_MultiTime_EventTracker MultiTimeEventTracker {false};
+    /*ITP_MultiTime_EventTracker MultiTimeEventTracker {false};
     // set true so as to remove events as soon as accessed (this way only new events are tracked)
-    ITP_MultiTime_EventTracker NewEventsBuffer {true};
+    ITP_MultiTime_EventTracker NewEventsBuffer {true};*/
 
 
 
@@ -78,10 +74,7 @@ private:
     // ------------------------------------------------------------------------------------------------------------
     // ---          Input Queues, Event Tracker and Internal Event Buffer
     // ------------------------------------------------------------------------------------------------------------
-    LockFreeQueue<NoteOn, 512>* NMP2ITP_NoteOn_Que_ptr{};
-    LockFreeQueue<NoteOff, 512>* NMP2ITP_NoteOff_Que_ptr{};
-    LockFreeQueue<CC, 512>* NMP2ITP_Controller_Que_ptr{};
-    LockFreeQueue<TempoTimeSignature, 512>* NMP2ITP_TempoTimeSig_Que_ptr{};
+    LockFreeQueue<Event, 512>* NMP2ITP_Event_Que_ptr{};
 
 
 

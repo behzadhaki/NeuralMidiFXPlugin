@@ -35,9 +35,9 @@ option(JUCE_BUILD_EXAMPLES "Build JUCE Examples" OFF)
 #IF you want to instead point it to a local version, you can invoke CMake with
 #-DCPM_JUCE_SOURCE="Path_To_JUCE"
 # use following for Latest JUCE version
-# CPMAddPackage("gh:juce-framework/JUCE#develop")
+CPMAddPackage("gh:juce-framework/JUCE#develop")
 # rn I'm using version 7.0.1 on commit # b08520c
-CPMAddPackage("gh:juce-framework/JUCE#b08520c")
+# CPMAddPackage("gh:juce-framework/JUCE#b08520c")
 
 #By default, we are building the provided plugin/app examples:
 option(BUILD_JUCE_PROTOTYPE_EXAMPLES "Build JUCE prototype examples" ON)

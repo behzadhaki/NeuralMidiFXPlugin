@@ -9,549 +9,185 @@
 #include "../settings.h"
 #include <utility>
 
-inline int qpm_to_microseconds_per_quarter(double qpm)
-{
-    return  int(60000000.0 / qpm);
-}
+/*
+ * Types:
+ *      1: First Buffer Since Start Event
+ *      1: New Buffer Event
+ *      2: MidiMessage within Buffer Event
+ */
 
-inline int microseconds_per_quarter_to_qpm(double microseconds_per_quarter)
-{
-    return int(60000000.0 / microseconds_per_quarter);
-}
 
-class EventTracker {
+
+/*
+ * getBpm
+ * getTimeSignature
+
+ * getIsPlaying
+ * getIsRecording
+
+ * getTimeInSamples
+ * getTimeInSeconds
+ * getPpqPosition
+
+ * getIsLooping
+ * getLoopPoints
+
+ * getBarCount
+ * getPpqPositionOfLastBarStart
+
+ * sampleRate
+ * framesize_in_samples
+
+ */
+using namespace juce;
+
+class Event {
+
 public:
-    // Constructor
-    EventTracker() {
-        TrackedEvents = make_shared<juce::MidiMessageSequence>();
-        TrackedTempos = make_shared<juce::MidiMessageSequence>();
-        TrackedTimeSignatures = make_shared<juce::MidiMessageSequence>();
-    }
 
-    // ======================================================================================
-    // ==== Methods for adding (aka registering) events to the tracker
-    // --------------------------------------------------------------------------------------
-    void add_note_on(int channel, int number, int velocity, double time) {
-        auto m = juce::MidiMessage::noteOn(channel, number, velocity / 127.0f);
-        TrackedEvents->addEvent(m, time);
-        TrackedEvents->sort();
-    }
+    int type {0};
 
-    void add_note_off(int channel, int number, int velocity, double time) {
-        auto m = juce::MidiMessage::noteOff(channel, number, velocity / 127.0f);
-        TrackedEvents->addEvent(m, time);
-        TrackedEvents->sort();
-    }
+    double qpm {-1};
+    double numerator {-1};
+    double denominator {-1};
 
-    void add_cc(int channel, int cc_number, int value, double time) {
-        auto m = juce::MidiMessage::controllerEvent(channel, cc_number, value);
-        TrackedEvents->addEvent(m, time);
-        TrackedEvents->sort();
-    }
+    bool isPlaying {false};
+    bool isRecording {false};
 
-    void tempo_or_time_signature_change(double qpm, int numerator, int denominator, double time) {
-        auto tmp = juce::MidiMessage::tempoMetaEvent(qpm_to_microseconds_per_quarter(qpm));
-        TrackedTempos->addEvent(tmp, time);
-        TrackedTempos->sort();
+    int64_t time_in_samples {-1};
+    double time_in_seconds {-1};
+    double time_in_ppq {-1};
 
-        auto ts = juce::MidiMessage::timeSignatureMetaEvent(numerator, denominator);
-        TrackedTimeSignatures->addEvent(ts, time);
-        TrackedTimeSignatures->sort();
-    }
+    bool isLooping {false};
+    double loop_start_in_ppq {-1};
+    double loop_end_in_ppq {-1};
 
-    // ======================================================================================
+    int64_t bar_count {-1};
+    double ppq_position_of_last_bar_start {-1};
 
-    // ======================================================================================
-    // ==== Getter Utilities
-    // --------------------------------------------------------------------------------------
-    /*
-     * Returns the tracked events (modifying these won't modify the contents of the tracker)
-     * If you want to modify the contents of the tracker, use the add_* methods or
-     * get a pointer to the sequence using get_tracked_events_mutable() method
-     */
-    juce::MidiMessageSequence get_tracked_events_non_mutable() {
-        return *TrackedEvents;
-    }
+    double sample_rate {-1};
+    int64_t buffer_size_in_samples {-1};
 
-    /*
-     * Returns a pointer to the tracked tempos (modifying these will modify the contents of the tracker)
-     * If you want to modify the contents of the tracker, use the add_* methods or
-     * get a pointer to the sequence using get_tracked_tempos_mutable() method
-     */
-    juce::MidiMessageSequence get_tracked_tempos_non_mutable() {
-        return *TrackedTempos;
-    }
+    juce::MidiMessage message {};
 
-    /*
-     * Returns a pointer to the tracked time signatures (modifying these will modify the contents of the tracker)
-     * If you want to modify the contents of the tracker, use the add_* methods or
-     * get a pointer to the sequence using get_tracked_time_signatures_mutable() method
-     */
-    juce::MidiMessageSequence get_tracked_time_signatures_non_mutable() {
-        return *TrackedTimeSignatures;
-    }
+    Event() = default;
 
-    /* Returns a pointer to the tracked events (modifying these will modify the contents of the tracker) */
-    juce::MidiMessageSequence* get_tracked_events_mutable() {
-        return TrackedEvents.get();
-    }
+    Event(juce::Optional<juce::AudioPlayHead::PositionInfo> Pinfo, double sample_rate_, int64_t buffer_size_in_samples_, bool isFirstFrame) {
+        type = isFirstFrame ? 1 : 2;
 
-    /* Returns a pointer to the tracked tempos (modifying these will modify the contents of the tracker) */
-    juce::MidiMessageSequence* get_tracked_tempos_mutable() {
-        return TrackedTempos.get();
-    }
-
-    /* Returns a pointer to the tracked time signatures (modifying these will modify the contents of the tracker) */
-    juce::MidiMessageSequence* get_tracked_time_signatures_mutable() {
-        return TrackedTimeSignatures.get();
-    }
-
-    /* Returns the tempo, time signature corresponding to the given time
-     * Ouput is a tuple of (time_stamp of closest tempo/ts, tempo, numerator, denominator)
-     */
-    tuple<double, double, int, int> get_tempo_and_time_signature_at_time(double time) {
-        // get the correct index for the tempo and time signature by checking the closest timestamp before time
-        for (int i = 0; i < TrackedTempos->getNumEvents(); i++) {
-            if (TrackedTempos->getEventPointer(i)->message.getTimeStamp() > time) {
-                // we have found the correct index
-                auto tempo = microseconds_per_quarter_to_qpm(TrackedTempos->getEventPointer(i - 1)->message.getTimeStamp());
-                int numerator, denominator;
-                TrackedTimeSignatures->getEventPointer(i - 1)->message.getTimeSignatureInfo(numerator, denominator);
-                return make_tuple(time, tempo, numerator, denominator);
-            }
+        if (Pinfo){
+            qpm = Pinfo->getBpm() ? *Pinfo->getBpm() : -1;
+            auto ts = Pinfo->getTimeSignature();
+            numerator = ts ? ts->numerator : -1;
+            denominator = ts ? ts->denominator : -1;
+            isPlaying = Pinfo->getIsPlaying();
+            isRecording = Pinfo->getIsRecording();
+            time_in_samples = Pinfo->getTimeInSamples() ? *Pinfo->getTimeInSamples() : -1;
+            time_in_seconds = Pinfo->getTimeInSeconds() ? *Pinfo->getTimeInSeconds() : -1;
+            time_in_ppq = Pinfo->getPpqPosition() ? *Pinfo->getPpqPosition() : -1;
+            isLooping = Pinfo->getIsLooping();
+            auto loopPoints = Pinfo->getLoopPoints();
+            loop_start_in_ppq = loopPoints ? loopPoints->ppqStart : -1;
+            loop_end_in_ppq = loopPoints ? loopPoints->ppqEnd : -1;
+            bar_count = Pinfo->getBarCount() ? *Pinfo->getBarCount() : -1;
+            ppq_position_of_last_bar_start = Pinfo->getPpqPositionOfLastBarStart() ?
+                    *Pinfo->getPpqPositionOfLastBarStart() : -1;
+            sample_rate = sample_rate_;
+            buffer_size_in_samples = buffer_size_in_samples_;
         }
     }
 
-    int get_num_events() {
-        return TrackedEvents->getNumEvents();
-    }
+    Event(juce::Optional<juce::AudioPlayHead::PositionInfo> Pinfo, double sample_rate_,
+          int64_t buffer_size_in_samples_, juce::MidiMessage message_) : message(message_) {
+        type = 3;
 
-    // ======================================================================================
-    // ==== Methods for clearing the tracker
-    // --------------------------------------------------------------------------------------
-    void clear() {
-        TrackedEvents->clear();
-        TrackedTempos->clear();
-        TrackedTimeSignatures->clear();
-    }
+        if (Pinfo){
+            qpm = Pinfo->getBpm() ? *Pinfo->getBpm() : -1;
+            auto ts = Pinfo->getTimeSignature();
+            numerator = ts ? ts->numerator : -1;
+            denominator = ts ? ts->denominator : -1;
+            isPlaying = Pinfo->getIsPlaying();
+            isRecording = Pinfo->getIsRecording();
 
-    void clear_starting_at(double time, bool delete_matching_note_up) {
-        for (int i = 0; i < TrackedEvents->getNumEvents(); i++) {
-            if (TrackedEvents->getEventPointer(i)->message.getTimeStamp() >= time) {
-                TrackedEvents->deleteEvent(i, delete_matching_note_up);
-            }
-        }
-        for (int i = 0; i < TrackedTempos->getNumEvents(); i++) {
-            if (TrackedTempos->getEventPointer(i)->message.getTimeStamp() >= time) {
-                TrackedTempos->deleteEvent(i, delete_matching_note_up);
-                TrackedTimeSignatures->deleteEvent(i, delete_matching_note_up);
-            }
-        }
-    }
+            auto frame_start_time_in_samples = Pinfo->getTimeInSamples() ? *Pinfo->getTimeInSamples() : -1;
+            auto message_start_in_samples = Pinfo->getTimeInSamples() ? message_.getTimeStamp() : -1;
+            time_in_samples = frame_start_time_in_samples + message_start_in_samples;
 
-    // ======================================================================================
-    // ==== Midi Utilities
-    // --------------------------------------------------------------------------------------
-    juce::MidiFile get_trackedEvents_as_midiFile(int ticksPerQuarterNote=480) {
+            auto frame_start_time_in_seconds = Pinfo->getTimeInSeconds() ? *Pinfo->getTimeInSeconds() : -1;
+            auto message_start_in_seconds = Pinfo->getTimeInSeconds() ? n_samples_to_sec(
+                    message_start_in_samples, sample_rate_) : -1;
+            time_in_seconds = frame_start_time_in_seconds + message_start_in_seconds;
 
-        juce::MidiFile midiFile;
-        midiFile.setTicksPerQuarterNote (ticksPerQuarterNote);
-        auto sequence = *TrackedEvents;
-        sequence.addSequence(*TrackedTempos, 0, 0, 1e10);
-        sequence.addSequence(*TrackedTimeSignatures, 0, 0, 1e10);
-        midiFile.addTrack(sequence);
+            auto frame_start_time_in_ppq = Pinfo->getPpqPosition() ? *Pinfo->getPpqPosition() : -1;
+            auto message_start_in_ppq = Pinfo->getPpqPosition() ? n_samples_to_ppq(
+                    message_start_in_samples, sample_rate_, qpm) : -1;
+            time_in_ppq = frame_start_time_in_ppq + message_start_in_ppq;
 
-        return midiFile;
-    }
-
-    void save_trackedEvents_as_midiFile(const string& path, int ticksPerQuarterNote=480){
-        juce::MidiFile midiFile = get_trackedEvents_as_midiFile(ticksPerQuarterNote);
-
-        // make sure path ends with .mid or .midi
-        string path_ = path;
-        if (path_.find(".mid") == string::npos && path_.find(".midi") == string::npos){
-            path_ += ".mid";
-        }
-
-        // create directories if they don't exist
-        juce::File file(path_);
-        file.createDirectory();
-
-        // open output stream
-        juce::FileOutputStream outputStream(file);
-
-        // save midi file
-        midiFile.writeTo(outputStream);
-    }
-    // ======================================================================================
-
-    void print_messages_in_buffer(){
-        for (int i = 0; i < TrackedEvents->getNumEvents(); i++) {
-            auto msg = TrackedEvents->getEventPointer(i)->message;
-            DBG(msg.getDescription() << "time: " << msg.getTimeStamp());
+            isLooping = Pinfo->getIsLooping();
+            auto loopPoints = Pinfo->getLoopPoints();
+            loop_start_in_ppq = loopPoints ? loopPoints->ppqStart : -1;
+            loop_end_in_ppq = loopPoints ? loopPoints->ppqEnd : -1;
+            bar_count = Pinfo->getBarCount() ? *Pinfo->getBarCount() : -1;
+            ppq_position_of_last_bar_start = Pinfo->getPpqPositionOfLastBarStart() ? *Pinfo->getPpqPositionOfLastBarStart() : -1;
+            sample_rate = sample_rate_;
+            buffer_size_in_samples = buffer_size_in_samples_;
         }
     }
 
-private:
-
-    shared_ptr<juce::MidiMessageSequence> TrackedEvents;
-    shared_ptr<juce::MidiMessageSequence> TrackedTempos;
-    shared_ptr<juce::MidiMessageSequence> TrackedTimeSignatures;
-
-};
-
-
-struct ITP_MultiTime_EventTracker {
-    EventTracker buffer_absolutetime_in_ppq {};
-    EventTracker buffer_relativetime_in_ppq {};
-    EventTracker buffer_absolutetime_in_seconds {};
-    EventTracker buffer_relativetime_in_seconds {};
-
-    explicit ITP_MultiTime_EventTracker(bool should_remove_after_access):_should_remove_after_access(
-            should_remove_after_access) {}
-
-    /***
-     * Return events available with a specified time setting.
-     * The returned events are then removed from the EventTrackers.
-     * Use this method to access and process newly available info
-     * @param use_abolute_time
-     * @param durations_in_ppq
-     * @param ignore_zero_duration_notes
-     * @return
-     */
-
-    // make sure all notes off point to the correct note on
-    void updateMatchedPairs() {
-        buffer_absolutetime_in_ppq.get_tracked_events_mutable()->updateMatchedPairs();
-        buffer_relativetime_in_ppq.get_tracked_events_mutable()->updateMatchedPairs();
-        buffer_absolutetime_in_seconds.get_tracked_events_mutable()->updateMatchedPairs();
-        buffer_relativetime_in_seconds.get_tracked_events_mutable()->updateMatchedPairs();
+    double n_samples_to_ppq(double audioSamplePos, double qpm, double sample_rate) {
+        auto tmp_ppq = audioSamplePos * qpm / (60 * sample_rate);
+        return tmp_ppq;
     }
 
-    MultiTimedStructure<vector<pair<juce::MidiMessage, double>>> get_notes_with_duration() {
+    double n_samples_to_sec(double audioSamplePos, double sample_rate) {
+        auto tmp_sec = audioSamplePos / sample_rate;
+        return tmp_sec;
+    }
 
-        // make sure all notes off point to the correct note on
-        updateMatchedPairs();
-
-        // print_messages_in_buffer();
-
-        // output container
-        MultiTimedStructure<vector<pair<juce::MidiMessage, double>>> events_with_duration;
-
-        // track events already prepared to return
-        vector<int> indices_to_remove;
-
-        MultiTimedStructure<juce::MidiMessageSequence*> tracked_events_ptrs {};
-        tracked_events_ptrs.absolute_time_in_ppq = buffer_absolutetime_in_ppq.get_tracked_events_mutable();
-        tracked_events_ptrs.relative_time_in_ppq = buffer_relativetime_in_ppq.get_tracked_events_mutable();
-        tracked_events_ptrs.absolute_time_in_seconds = buffer_absolutetime_in_seconds.get_tracked_events_mutable();
-        tracked_events_ptrs.relative_time_in_seconds = buffer_relativetime_in_seconds.get_tracked_events_mutable();
-
-        for (int i = 0; i < tracked_events_ptrs.absolute_time_in_ppq->getNumEvents(); i++) {
-            // get ith event in all time settings
-            MultiTimedStructure<juce::MidiMessage> event {};
-            event.absolute_time_in_ppq = tracked_events_ptrs.absolute_time_in_ppq->getEventPointer(i)->message;
-            event.relative_time_in_ppq = tracked_events_ptrs.relative_time_in_ppq->getEventPointer(i)->message;
-            event.absolute_time_in_seconds = tracked_events_ptrs.absolute_time_in_seconds->getEventPointer(i)->message;
-            event.relative_time_in_seconds = tracked_events_ptrs.relative_time_in_seconds->getEventPointer(i)->message;
-
-            // prepare durations
-            MultiTimedStructure<double> duration {};
-            duration.absolute_time_in_ppq = 0.0f;
-            duration.relative_time_in_ppq = 0.0f;
-            duration.absolute_time_in_seconds = 0.0f;
-            duration.relative_time_in_seconds = 0.0f;
-
-            // check if i is not in indices_to_delete (i.e. a note off event with a MATCHING note on event)
-            if (std::find(indices_to_remove.begin(), indices_to_remove.end(), i) ==
-                indices_to_remove.end()) {
-                if (event.absolute_time_in_ppq.isNoteOn()) {
-
-                    auto matching_event_index = tracked_events_ptrs.absolute_time_in_ppq->getIndexOfMatchingKeyUp(i);
-                    // add note on to vector
-                    if (matching_event_index != -1) {
-                        MultiTimedStructure<double> corresponding_note_off {};
-
-                        corresponding_note_off.absolute_time_in_ppq =
-                                tracked_events_ptrs.absolute_time_in_ppq->getEventPointer(
-                                        matching_event_index)->message.getTimeStamp();
-                        corresponding_note_off.relative_time_in_ppq =
-                                tracked_events_ptrs.relative_time_in_ppq->getEventPointer(
-                                        matching_event_index)->message.getTimeStamp();
-                        corresponding_note_off.absolute_time_in_seconds =
-                                tracked_events_ptrs.absolute_time_in_seconds->getEventPointer(
-                                        matching_event_index)->message.getTimeStamp();
-                        corresponding_note_off.relative_time_in_seconds =
-                                tracked_events_ptrs.relative_time_in_seconds->getEventPointer(
-                                        matching_event_index)->message.getTimeStamp();
-
-                        duration.absolute_time_in_ppq = corresponding_note_off.absolute_time_in_ppq-
-                                                        event.absolute_time_in_ppq.getTimeStamp();
-                        duration.relative_time_in_ppq = corresponding_note_off.relative_time_in_ppq-
-                                                        event.relative_time_in_ppq.getTimeStamp();
-                        duration.absolute_time_in_seconds = corresponding_note_off.absolute_time_in_seconds-
-                                                            event.absolute_time_in_seconds.getTimeStamp();
-                        duration.relative_time_in_seconds = corresponding_note_off.relative_time_in_seconds-
-                                                            event.relative_time_in_seconds.getTimeStamp();
-                    }
-
-                    if (duration.absolute_time_in_ppq > 0.0f) {
-                        events_with_duration.absolute_time_in_ppq.emplace_back(
-                                make_pair(event.absolute_time_in_ppq, duration.absolute_time_in_ppq));
-                        events_with_duration.relative_time_in_ppq.emplace_back(
-                                make_pair(event.relative_time_in_ppq, duration.relative_time_in_ppq));
-                        events_with_duration.absolute_time_in_seconds.emplace_back(
-                                make_pair(event.absolute_time_in_seconds, duration.absolute_time_in_seconds));
-                        events_with_duration.relative_time_in_seconds.emplace_back(
-                                make_pair(event.relative_time_in_seconds, duration.relative_time_in_seconds));
-
-                        // only note ons with corresponding note offs will be deleted if needed
-                        if (duration.absolute_time_in_ppq > 0.0f) {
-                            indices_to_remove.push_back(i);
-                        }
-
-                        // add note off to indices_to_delete if it exists and deletion needed
-                        if (matching_event_index != -1) {
-                            indices_to_remove.push_back(matching_event_index);
-                        }
-
-                    }
-                }
-            }
+    std::stringstream getDescription() {
+        std::stringstream ss;
+        ss << "-----------------------------------------------" << std::endl;
+        switch (type) {
+            case 1:
+                ss << "First Frame Metadata Event" << std::endl;
+                break;
+            case 2:
+                ss << "Next Frame Metadata Event" << std::endl;
+                break;
+            case 3:
+                ss << "Midi Within Buffer Event" << std::endl;
+                break;
+            default:
+                ss << "Unknown Event" << std::endl;
+                break;
         }
 
-        if (_should_remove_after_access) {
-            // delete events from buffer
-            for (auto index: indices_to_remove) {
-                buffer_absolutetime_in_ppq.get_tracked_events_mutable()->deleteEvent(index, false);
-                buffer_relativetime_in_ppq.get_tracked_events_mutable()->deleteEvent(index, false);
-                buffer_absolutetime_in_seconds.get_tracked_events_mutable()->deleteEvent(index, false);
-                buffer_relativetime_in_seconds.get_tracked_events_mutable()->deleteEvent(index, false);
-            }
+        ss << "qpm: " << qpm << ", ts numerator: " << numerator << ", ts denominator: " << denominator << std::endl;
+        ss << "isPlaying: " << isPlaying << ", isRecording: " << isRecording << std::endl;
+        ss << "time_in_samples: " << time_in_samples << ", time_in_seconds: " << time_in_seconds << ", time_in_ppq: " << time_in_ppq << std::endl;
+        ss << "isLooping: " << isLooping << ", loop_start_in_ppq: " << loop_start_in_ppq << ", loop_end_in_ppq: " << loop_end_in_ppq << std::endl;
+        ss << "bar_count: " << bar_count << ", ppq_position_of_last_bar_start: " << ppq_position_of_last_bar_start << std::endl;
+        ss << "sample_rate: " << sample_rate << ", buffer_size_in_samples: " << buffer_size_in_samples << std::endl;
+
+        if (type == 3) {
+            ss << "message: " << message.getDescription() << std::endl;
         }
 
-        return events_with_duration;
+        return ss;
     }
 
-    MultiTimedStructure<vector<pair<juce::MidiMessage, double>>> get_note_midi_messages() {
-// make sure all notes off point to the correct note on
-        updateMatchedPairs();
+    // ==================================================
+    // Operators for sorting using time stamp
+    // ==================================================
 
-        // print_messages_in_buffer();
+    bool operator < (const Event& e) const { return time_in_samples < e.time_in_samples; }
 
-        // output container
-        MultiTimedStructure<vector<pair<juce::MidiMessage, double>>> events_available;
+    bool operator <= (const Event& e) const { return time_in_samples <= e.time_in_samples; }
 
-        // track events already prepared to return
-        vector<int> indices_to_remove;
+    bool operator > (const Event& e) const { return time_in_samples > e.time_in_samples; }
 
-        MultiTimedStructure<juce::MidiMessageSequence*> tracked_events_ptrs {};
-        tracked_events_ptrs.absolute_time_in_ppq = buffer_absolutetime_in_ppq.get_tracked_events_mutable();
-        tracked_events_ptrs.relative_time_in_ppq = buffer_relativetime_in_ppq.get_tracked_events_mutable();
-        tracked_events_ptrs.absolute_time_in_seconds = buffer_absolutetime_in_seconds.get_tracked_events_mutable();
-        tracked_events_ptrs.relative_time_in_seconds = buffer_relativetime_in_seconds.get_tracked_events_mutable();
+    bool operator >= (const Event& e) const { return time_in_samples >= e.time_in_samples; }
 
-        for (int i = 0; i < tracked_events_ptrs.absolute_time_in_ppq->getNumEvents(); i++) {
-            // get ith event in all time settings
-            MultiTimedStructure<juce::MidiMessage> event {};
-            event.absolute_time_in_ppq = tracked_events_ptrs.absolute_time_in_ppq->getEventPointer(i)->message;
-            event.relative_time_in_ppq = tracked_events_ptrs.relative_time_in_ppq->getEventPointer(i)->message;
-            event.absolute_time_in_seconds = tracked_events_ptrs.absolute_time_in_seconds->getEventPointer(i)->message;
-            event.relative_time_in_seconds = tracked_events_ptrs.relative_time_in_seconds->getEventPointer(i)->message;
-
-            // check if i is not in indices_to_delete (i.e. a note off event with a MATCHING note on event)
-            if (std::find(indices_to_remove.begin(), indices_to_remove.end(), i) ==
-                indices_to_remove.end()) {
-                if (event.absolute_time_in_ppq.isNoteOn() or event.absolute_time_in_ppq.isNoteOff()) {
-                    events_available.absolute_time_in_ppq.emplace_back(
-                            make_pair(event.absolute_time_in_ppq, 0.0f));
-                    events_available.relative_time_in_ppq.emplace_back(
-                            make_pair(event.relative_time_in_ppq, 0.0f));
-                    events_available.absolute_time_in_seconds.emplace_back(
-                            make_pair(event.absolute_time_in_seconds, 0.0f));
-                    events_available.relative_time_in_seconds.emplace_back(
-                            make_pair(event.relative_time_in_seconds, 0.0f));
-                    indices_to_remove.push_back(i);
-                }
-            }
-        }
-
-        if (_should_remove_after_access) {
-            // delete events from buffer
-            for (auto index: indices_to_remove) {
-                buffer_absolutetime_in_ppq.get_tracked_events_mutable()->deleteEvent(index, false);
-                buffer_relativetime_in_ppq.get_tracked_events_mutable()->deleteEvent(index, false);
-                buffer_absolutetime_in_seconds.get_tracked_events_mutable()->deleteEvent(index, false);
-                buffer_relativetime_in_seconds.get_tracked_events_mutable()->deleteEvent(index, false);
-            }
-        }
-
-        return events_available;
-    }
-
-    vector<juce::MidiMessage> get_CCs(bool use_abolute_time, bool durations_in_ppq){
-        updateMatchedPairs();
-        // print_messages_in_buffer();
-
-        vector<juce::MidiMessage> events_with_duration;
-        vector<int> indices_already_accessed;
-        juce::MidiMessageSequence *tracked_events_ptr;
-
-        // make sure all notes off point to the correct note on
-
-        if (use_abolute_time) {
-            if (durations_in_ppq) {
-                tracked_events_ptr = buffer_absolutetime_in_ppq.get_tracked_events_mutable();
-            } else {
-                tracked_events_ptr = buffer_absolutetime_in_seconds.get_tracked_events_mutable();
-            }
-        } else {
-            if (durations_in_ppq) {
-                tracked_events_ptr = buffer_relativetime_in_ppq.get_tracked_events_mutable();
-            } else {
-                tracked_events_ptr = buffer_relativetime_in_seconds.get_tracked_events_mutable();
-            }
-        }
-
-        for (int i = 0; i < tracked_events_ptr->getNumEvents(); i++) {
-            auto event = tracked_events_ptr->getEventPointer(i)->message;
-            if (event.isController()){
-                events_with_duration.push_back(event);
-            }
-        }
-
-        if (_should_remove_after_access) {
-            // delete events from buffer
-            for (auto index: indices_already_accessed) {
-                buffer_absolutetime_in_ppq.get_tracked_events_mutable()->deleteEvent(index, false);
-                buffer_relativetime_in_ppq.get_tracked_events_mutable()->deleteEvent(index, false);
-                buffer_absolutetime_in_seconds.get_tracked_events_mutable()->deleteEvent(index, false);
-                buffer_relativetime_in_seconds.get_tracked_events_mutable()->deleteEvent(index, false);
-            }
-        }
-
-        return events_with_duration;
-    }
-
-    void print_messages_in_buffer(){
-        DBG("++++++ buffer_absolutetime_in_ppq ++++++");
-        buffer_absolutetime_in_ppq.print_messages_in_buffer();
-        DBG("----------------------------------------");
-        DBG("++++++ buffer_relativetime_in_ppq ++++++");
-        buffer_relativetime_in_ppq.print_messages_in_buffer();
-        DBG("----------------------------------------");
-        DBG("++++++ buffer_absolutetime_in_seconds ++++++");
-        buffer_absolutetime_in_seconds.print_messages_in_buffer();
-        DBG("----------------------------------------");
-        DBG("++++++ buffer_relativetime_in_seconds ++++++");
-        buffer_relativetime_in_seconds.print_messages_in_buffer();
-        DBG("----------------------------------------");
-    }
-
-    vector<tuple<double, double, int, int>> get_tempo_time_signatures(bool use_abolute_time, bool time_unit_in_ppq) {
-        vector<tuple<double, double, int, int>> tempo_time_signatures;
-        juce::MidiMessageSequence *tracked_tempos_ptr;
-        juce::MidiMessageSequence *tracked_time_signatures_ptr;
-
-        if (use_abolute_time) {
-            if (time_unit_in_ppq) {
-                tracked_tempos_ptr = buffer_absolutetime_in_ppq.get_tracked_tempos_mutable();
-                tracked_time_signatures_ptr = buffer_absolutetime_in_ppq.get_tracked_time_signatures_mutable();
-            } else {
-                tracked_tempos_ptr = buffer_absolutetime_in_seconds.get_tracked_tempos_mutable();
-                tracked_time_signatures_ptr = buffer_absolutetime_in_seconds.get_tracked_time_signatures_mutable();
-            }
-        } else {
-            if (time_unit_in_ppq) {
-                tracked_tempos_ptr = buffer_relativetime_in_ppq.get_tracked_tempos_mutable();
-                tracked_time_signatures_ptr = buffer_relativetime_in_ppq.get_tracked_time_signatures_mutable();
-            } else {
-                tracked_tempos_ptr = buffer_relativetime_in_seconds.get_tracked_tempos_mutable();
-                tracked_time_signatures_ptr = buffer_relativetime_in_seconds.get_tracked_time_signatures_mutable();
-            }
-        }
-
-        for (int i = 0; i < tracked_tempos_ptr->getNumEvents(); i++) {
-            auto tempo = tracked_tempos_ptr->getEventPointer(i)->message;
-            auto qpm = 60.0f / tempo.getTempoSecondsPerQuarterNote();
-            auto time_signature = tracked_time_signatures_ptr->getEventPointer(i)->message;
-            int numerator, denominator;
-            time_signature.getTimeSignatureInfo(numerator, denominator);
-
-            tempo_time_signatures.emplace_back(tempo.getTimeStamp(),
-                                               qpm,
-                                               numerator,
-                                               numerator);
-        }
-
-        if (_should_remove_after_access) {
-            // delete events from buffer
-            tracked_tempos_ptr->clear();
-            tracked_time_signatures_ptr->clear();
-        }
-        return tempo_time_signatures;
-    }
-
-    // returns total number of NoteOn, NoteOff, CC messages
-    // (ignores tempo and time signature in the count)
-    int getNumEvents() {
-        return buffer_absolutetime_in_ppq.get_num_events();
-    }
-
-    void clear() {
-        buffer_absolutetime_in_ppq.clear();
-        buffer_relativetime_in_ppq.clear();
-        buffer_absolutetime_in_seconds.clear();
-        buffer_relativetime_in_seconds.clear();
-    }
-
-    void clear_starting_at(double absolute_time_ppq, double absolute_time_sec,
-                           double relative_time_ppq, double relative_time_sec,
-                           bool delete_matching_note_up=true){
-        buffer_absolutetime_in_ppq.clear_starting_at(absolute_time_ppq, delete_matching_note_up);
-        buffer_relativetime_in_ppq.clear_starting_at(relative_time_ppq, delete_matching_note_up);
-        buffer_absolutetime_in_seconds.clear_starting_at(absolute_time_sec, delete_matching_note_up);
-        buffer_relativetime_in_seconds.clear_starting_at(relative_time_sec, delete_matching_note_up);
-    }
-
-    void addNoteOn(int channel, int number, int velocity,
-                   double absolute_time_ppq, double absolute_time_sec,
-                   double relative_time_ppq, double relative_time_sec){
-        buffer_absolutetime_in_ppq.add_note_on(channel, number, velocity, absolute_time_ppq);
-        buffer_relativetime_in_ppq.add_note_on(channel, number, velocity, relative_time_ppq);
-        buffer_absolutetime_in_seconds.add_note_on(channel, number, velocity, absolute_time_sec);
-        buffer_relativetime_in_seconds.add_note_on(channel, number, velocity, relative_time_sec);
-    }
-
-    void addNoteOff(int channel, int number, int velocity,
-                    double absolute_time_ppq, double absolute_time_sec,
-                    double relative_time_ppq, double relative_time_sec){
-        buffer_absolutetime_in_ppq.add_note_off(channel, number, velocity, absolute_time_ppq);
-        buffer_relativetime_in_ppq.add_note_off(channel, number, velocity, relative_time_ppq);
-        buffer_absolutetime_in_seconds.add_note_off(channel, number, velocity, absolute_time_sec);
-        buffer_relativetime_in_seconds.add_note_off(channel, number, velocity, relative_time_sec);
-    }
-
-    void addCC(int channel, int cc_number, int value,
-               double absolute_time_ppq, double absolute_time_sec,
-               double relative_time_ppq, double relative_time_sec){
-        buffer_absolutetime_in_ppq.add_cc(channel, cc_number, value, absolute_time_ppq);
-        buffer_relativetime_in_ppq.add_cc(channel, cc_number, value, relative_time_ppq);
-        buffer_absolutetime_in_seconds.add_cc(channel, cc_number, value, absolute_time_sec);
-        buffer_relativetime_in_seconds.add_cc(channel, cc_number, value, relative_time_sec);
-    }
-
-    void addTempoAndTimeSignature(double qpm, int numerator, int denominator,
-                                  double absolute_time_ppq, double absolute_time_sec,
-                                  double relative_time_ppq, double relative_time_sec){
-        buffer_absolutetime_in_ppq.tempo_or_time_signature_change(qpm, numerator, denominator, absolute_time_ppq);
-        buffer_relativetime_in_ppq.tempo_or_time_signature_change(qpm, numerator, denominator, relative_time_ppq);
-        buffer_absolutetime_in_seconds.tempo_or_time_signature_change(qpm, numerator, denominator, absolute_time_sec);
-        buffer_relativetime_in_seconds.tempo_or_time_signature_change(qpm, numerator, denominator, relative_time_sec);
-    }
-
-
-private:
-    bool _should_remove_after_access;
+    bool operator == (const Event& e) const { return time_in_samples == e.time_in_samples; }
 
 };

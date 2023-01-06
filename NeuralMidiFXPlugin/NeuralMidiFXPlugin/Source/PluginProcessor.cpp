@@ -13,11 +13,7 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor():
     //////////////////////////////////////////////////////////////////
     //// Make_unique pointers for Queues
     //////////////////////////////////////////////////////////////////
-    NMP2ITP_NoteOn_Que = make_unique<LockFreeQueue<NoteOn, 512>>();
-    NMP2ITP_NoteOff_Que = make_unique<LockFreeQueue<NoteOff, 512>>();
-    NMP2ITP_Controller_Que = make_unique<LockFreeQueue<CC, 512>>();
-    NMP2ITP_TempoTimeSignature_Que = make_unique<LockFreeQueue<TempoTimeSignature, 512>>();
-
+    NMP2ITP_Event_Que = make_unique<LockFreeQueue<Event, 512>>();
 
 
     //////////////////////////////////////////////////////////////////
@@ -31,11 +27,8 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor():
 
     // give access to resources and run threads
 
-    inputTensorPreparatorThread->startThreadUsingProvidedResources(
-            NMP2ITP_NoteOn_Que.get(),
-            NMP2ITP_NoteOff_Que.get(),
-            NMP2ITP_Controller_Que.get(),
-            NMP2ITP_TempoTimeSignature_Que.get());
+    inputTensorPreparatorThread->startThreadUsingProvidedResources(NMP2ITP_Event_Que.get());
+
 }
 
 NeuralMidiFXPluginProcessor::~NeuralMidiFXPluginProcessor(){
@@ -44,6 +37,7 @@ NeuralMidiFXPluginProcessor::~NeuralMidiFXPluginProcessor(){
         inputTensorPreparatorThread->prepareToStop();
     }
 }
+
 
 void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                                                juce::MidiBuffer& midiMessages)
@@ -56,109 +50,38 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     auto Pinfo = playhead->getPosition();
     auto fs = getSampleRate();
     auto buffSize = buffer.getNumSamples();
-    // check if host playhead just started moving
-    if ((not last_frame_was_playing) and Pinfo->getIsPlaying())
-    {
-        playhead_pos_on_start_ppq = *Pinfo->getPpqPosition();
-        playhead_pos_on_start_sec = *Pinfo->getTimeInSeconds();
-        last_qpm = -1;
-        last_numerator = -1;
-        last_denominator = -1;
-
-        // Reset Events in EventTrackers
-        inputTensorPreparatorThread->NewEventsBuffer.clear();
-        inputTensorPreparatorThread->MultiTimeEventTracker.clear();
-
-    }
-    last_frame_was_playing = Pinfo->getIsPlaying();
-
-    // STEP 2
-    // check if new pattern is generated and available for playback
-
-
-    // Step 3
-    // In playback mode, add drum note to the buffer if the time is right
-    if (Pinfo->getIsPlaying())
-    {
-
-//        if (*Pinfo->getPpqPosition() < startPpq)
-//        {
-//            // if playback head moved backwards or playback paused and restarted
-//            // change the registration_times of groove events to ensure the
-//            // groove properly overdubs
-//
-//        }
-//
-//        startPpq = *Pinfo->getPpqPosition();
-//        auto qpm = *Pinfo->getBpm();
-//        auto start_ = fmod(startPpq, HVO_params::time_steps/4); // start_ should be always between 0 and 8
-//        playhead_pos = fmod(float(startPpq + HVO_params::_32_note_ppq), float(HVO_params::time_steps/4.0f)) / (HVO_params::time_steps/4.0f);
-//
-//        auto new_grid = floor(start_/HVO_params::_16_note_ppq);
-//        if (new_grid != current_grid) {
-//            current_grid = new_grid;
-//
-//        }
-
-    }
 
     if (Pinfo) {
 
-        auto frameStartPpq_absolute = *Pinfo->getPpqPosition();
-        auto frameStartSec_absolute = *Pinfo->getTimeInSeconds();
-        auto frameStartPpq_relative = frameStartPpq_absolute - playhead_pos_on_start_ppq;
-        auto frameStartSec_relative = frameStartSec_absolute - playhead_pos_on_start_sec;
-
-        auto qpm = *Pinfo->getBpm();
-        auto timeSigNumerator = Pinfo->getTimeSignature()->numerator;
-        auto timeSigDenominator = Pinfo->getTimeSignature()->denominator;
-
-        if (qpm != last_qpm || timeSigNumerator != last_numerator || timeSigDenominator != last_denominator) {
-
-            NMP2ITP_TempoTimeSignature_Que->push(
-                    TempoTimeSignature(qpm, timeSigNumerator, timeSigDenominator,
-                                       frameStartPpq_absolute, frameStartSec_absolute,
-                                       frameStartPpq_relative, frameStartSec_relative));
-
-            last_qpm = qpm;
-            last_numerator = timeSigNumerator;
-            last_denominator = timeSigDenominator;
+        if (last_frame_meta_data.isPlaying xor Pinfo->getIsPlaying()) {
+            // if just started, register the playhead starting position
+            if ((not last_frame_meta_data.isPlaying) and Pinfo->getIsPlaying()) {
+                auto frame_meta_data = Event {Pinfo, fs, buffSize, true};
+                NMP2ITP_Event_Que->push(frame_meta_data);
+                last_frame_meta_data = frame_meta_data;
+            } else {
+                // if just stopped, register the playhead stopping position
+                auto frame_meta_data = Event {Pinfo, fs, buffSize, false};
+                NMP2ITP_Event_Que->push(frame_meta_data);
+                last_frame_meta_data = frame_meta_data;
+            }
+        } else {
+            // if still playing, register the playhead position
+            if (Pinfo->getIsPlaying()) {
+                auto frame_meta_data = Event {Pinfo, fs, buffSize, false};
+                NMP2ITP_Event_Que->push(frame_meta_data);
+                last_frame_meta_data = frame_meta_data;
+            }
         }
-
-        auto time_signature = Pinfo->getTimeSignature();
-
 
         // Step 4. see if new notes are played on the input side
         if (not midiMessages.isEmpty() /*and groove_thread_ready*/) {
-
-
-            for (auto m: midiMessages) {
-                auto msg = m.getMessage();
-                auto audioSamplePos = msg.getTimeStamp();
-                double ppq_from_frame_start = audioSamplePos * qpm / (60.0f * fs);
-                double sec_from_frame_start = audioSamplePos / fs;
-                double time_ppq_absolute = frameStartPpq_absolute + ppq_from_frame_start;
-                double time_sec_absolute = frameStartSec_absolute + sec_from_frame_start;
-                double time_ppq_relative = frameStartPpq_relative + ppq_from_frame_start;
-                double time_sec_relative = frameStartSec_relative + sec_from_frame_start;
-
-                if (msg.isNoteOn()) {
-                    NMP2ITP_NoteOn_Que->push(
-                            NoteOn(msg.getChannel(), msg.getNoteNumber(), msg.getVelocity(), time_ppq_absolute,
-                                   time_sec_absolute, time_ppq_relative, time_sec_relative));
-                }
-                else if (msg.isNoteOff()) {
-                    NMP2ITP_NoteOff_Que->push(
-                            NoteOff(msg.getChannel(), msg.getNoteNumber(), msg.getVelocity(), time_ppq_absolute,
-                                    time_sec_absolute, time_ppq_relative, time_sec_relative));
-                }
-                else if (msg.isController()) {
-                    NMP2ITP_Controller_Que->push(
-                            CC(msg.getChannel(), msg.getControllerNumber(), msg.getControllerValue(), time_ppq_absolute,
-                               time_sec_absolute, time_ppq_relative, time_sec_relative));
-                }
+            // if there are new notes, send them to the groove thread
+            for (const auto midiMessage : midiMessages) {
+                auto msg = midiMessage.getMessage();
+                auto frame_meta_data = Event {Pinfo, fs, buffSize, msg};
+                NMP2ITP_Event_Que->push(frame_meta_data);
             }
-
         }
     }
 

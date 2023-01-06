@@ -25,10 +25,8 @@ public:
     juce::AudioProcessorEditor* createEditor() override;
 
     // InputTensorPreparator Queue
-    unique_ptr<LockFreeQueue<NoteOn, 512>> NMP2ITP_NoteOn_Que;
-    unique_ptr<LockFreeQueue<NoteOff, 512>> NMP2ITP_NoteOff_Que;
-    unique_ptr<LockFreeQueue<CC, 512>> NMP2ITP_Controller_Que;
-    unique_ptr<LockFreeQueue<TempoTimeSignature, 512>> NMP2ITP_TempoTimeSignature_Que;
+    unique_ptr<LockFreeQueue<Event, 512>> NMP2ITP_Event_Que;
+
 
     // Threads used for generating patterns in the background
     shared_ptr<InputTensorPreparatorThread> inputTensorPreparatorThread;
@@ -48,6 +46,8 @@ public:
 
 
 private:
+
+
     // =========  Queues for communicating Between the main threads in proce    ssor  =============================================
 
     // holds the playhead position for displaying on GUI
@@ -64,11 +64,8 @@ private:
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
     // last ppq
-    double last_qpm {-1};
-    double last_numerator {-1};
-    double last_denominator {-1};
+    Event last_frame_meta_data;
 
-    bool last_frame_was_playing {false};
-    double playhead_pos_on_start_ppq {0.0};
-    double playhead_pos_on_start_sec {0.0};
+    void prepareEventWithPlayheadInfo();
+
 };
