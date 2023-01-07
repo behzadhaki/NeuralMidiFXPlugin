@@ -24,7 +24,7 @@ public:
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 2 . give access to resources needed to communicate with other threads
     // ------------------------------------------------------------------------------------------------------------
-    void startThreadUsingProvidedResources(LockFreeQueue<Event, 512>* NMP2ITP_Event_Que_ptr_);
+    void startThreadUsingProvidedResources(LockFreeQueue<Event, 2048>* NMP2ITP_Event_Que_ptr_);
 
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 3 . start run() thread by calling startThread().
@@ -74,7 +74,7 @@ private:
     // ------------------------------------------------------------------------------------------------------------
     // ---          Input Queues, Event Tracker and Internal Event Buffer
     // ------------------------------------------------------------------------------------------------------------
-    LockFreeQueue<Event, 512>* NMP2ITP_Event_Que_ptr{};
+    LockFreeQueue<Event, 2048>* NMP2ITP_Event_Que_ptr{};
 
 
 

@@ -25,7 +25,7 @@ public:
     juce::AudioProcessorEditor* createEditor() override;
 
     // InputTensorPreparator Queue
-    unique_ptr<LockFreeQueue<Event, 512>> NMP2ITP_Event_Que;
+    unique_ptr<LockFreeQueue<Event, 2048>> NMP2ITP_Event_Que;
 
 
     // Threads used for generating patterns in the background

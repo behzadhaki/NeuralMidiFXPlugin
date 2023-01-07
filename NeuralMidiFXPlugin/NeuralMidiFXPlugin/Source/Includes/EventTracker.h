@@ -101,7 +101,7 @@ public:
           int64_t buffer_size_in_samples_, juce::MidiMessage message_) : message(message_) {
         type = 3;
 
-        if (Pinfo){
+        if (Pinfo) {
             qpm = Pinfo->getBpm() ? *Pinfo->getBpm() : -1;
             auto ts = Pinfo->getTimeSignature();
             numerator = ts ? ts->numerator : -1;
@@ -134,6 +134,18 @@ public:
         }
     }
 
+    bool isFirstBuffer() const {
+        return type == 1;
+    }
+
+    bool isNewBuffer() const {
+        return type == 2;
+    }
+
+    bool isMidiMessage() const {
+        return type == 3;
+    }
+
     double n_samples_to_ppq(double audioSamplePos, double qpm, double sample_rate) {
         auto tmp_ppq = audioSamplePos * qpm / (60 * sample_rate);
         return tmp_ppq;
@@ -144,36 +156,102 @@ public:
         return tmp_sec;
     }
 
-    std::stringstream getDescription() {
+    std::stringstream getDescriptionOfChangedFeatures(Event other, bool ignore_time_changes_for_new_buffer_events){
         std::stringstream ss;
-        ss << "-----------------------------------------------" << std::endl;
-        switch (type) {
-            case 1:
-                ss << "First Frame Metadata Event" << std::endl;
-                break;
-            case 2:
-                ss << "Next Frame Metadata Event" << std::endl;
-                break;
-            case 3:
-                ss << "Midi Within Buffer Event" << std::endl;
-                break;
-            default:
-                ss << "Unknown Event" << std::endl;
-                break;
+        ss << "++ ";
+
+        if (qpm != other.qpm) {
+            ss << " | qpm: " << qpm ;
+        }
+        if (numerator != other.numerator) {
+            ss << " | ts numerator: " << numerator;
+        }
+        if (denominator != other.denominator) {
+            ss << " | ts denominator: " << denominator;
+        }
+        if (isPlaying != other.isPlaying) {
+            ss << " | isPlaying: " << isPlaying;
+        }
+        if (isRecording != other.isRecording) {
+            ss << " | isRecording: " << isRecording;
+        }
+        if (isLooping != other.isLooping) {
+            ss << " | isLooping: " << isLooping;
+        }
+        if (loop_start_in_ppq != other.loop_start_in_ppq) {
+            ss << " | loop_start_in_ppq: " << loop_start_in_ppq;
+        }
+        if (loop_end_in_ppq != other.loop_end_in_ppq) {
+            ss << " | loop_end_in_ppq: " << loop_end_in_ppq;
+        }
+        if (bar_count != other.bar_count) {
+            ss << " | bar_count: " << bar_count;
+        }
+        if (ppq_position_of_last_bar_start != other.ppq_position_of_last_bar_start) {
+            ss << " | ppq_position_of_last_bar_start: " << ppq_position_of_last_bar_start;
+        }
+        if (sample_rate != other.sample_rate) {
+            ss << " | sample_rate: " << sample_rate;
+        }
+        if (buffer_size_in_samples != other.buffer_size_in_samples) {
+            ss << " | buffer_size_in_samples: " << buffer_size_in_samples;
+        }
+        if (! (ignore_time_changes_for_new_buffer_events and isNewBuffer())) {
+            if (time_in_samples != other.time_in_samples) {
+                ss << " | time_in_samples: " << time_in_samples;
+            }
+            if (time_in_seconds != other.time_in_seconds) {
+                ss << " | time_in_seconds: " << time_in_seconds;
+            }
+            if (time_in_ppq != other.time_in_ppq) {
+                ss << " | time_in_ppq: " << time_in_ppq;
+            }
+        }
+        if (isMidiMessage())
+        {
+            ss << " | message: " << message.getDescription();
         }
 
-        ss << "qpm: " << qpm << ", ts numerator: " << numerator << ", ts denominator: " << denominator << std::endl;
-        ss << "isPlaying: " << isPlaying << ", isRecording: " << isRecording << std::endl;
-        ss << "time_in_samples: " << time_in_samples << ", time_in_seconds: " << time_in_seconds << ", time_in_ppq: " << time_in_ppq << std::endl;
-        ss << "isLooping: " << isLooping << ", loop_start_in_ppq: " << loop_start_in_ppq << ", loop_end_in_ppq: " << loop_end_in_ppq << std::endl;
-        ss << "bar_count: " << bar_count << ", ppq_position_of_last_bar_start: " << ppq_position_of_last_bar_start << std::endl;
-        ss << "sample_rate: " << sample_rate << ", buffer_size_in_samples: " << buffer_size_in_samples << std::endl;
-
-        if (type == 3) {
-            ss << "message: " << message.getDescription() << std::endl;
+        if (ss.str().length() > 3) {
+            return ss;
+        }
+        else {
+            return std::stringstream();
         }
 
-        return ss;
+    }
+
+    std::stringstream getDescription(){
+        std::stringstream ss;
+        ss << "++ ";
+
+        ss << " | qpm: " << qpm ;
+        ss << " | ts numerator: " << numerator;
+        ss << " | ts denominator: " << denominator;
+        ss << " | isPlaying: " << isPlaying;
+        ss << " | isRecording: " << isRecording;
+        ss << " | isLooping: " << isLooping;
+        ss << " | loop_start_in_ppq: " << loop_start_in_ppq;
+        ss << " | loop_end_in_ppq: " << loop_end_in_ppq;
+        ss << " | bar_count: " << bar_count;
+        ss << " | ppq_position_of_last_bar_start: " << ppq_position_of_last_bar_start;
+        ss << " | sample_rate: " << sample_rate;
+        ss << " | buffer_size_in_samples: " << buffer_size_in_samples;
+        ss << " | time_in_samples: " << time_in_samples;
+        ss << " | time_in_seconds: " << time_in_seconds;
+        ss << " | time_in_ppq: " << time_in_ppq;
+        if (isMidiMessage())
+        {
+            ss << " | message: " << message.getDescription();
+        }
+
+        if (ss.str().length() > 3) {
+            return ss;
+        }
+        else {
+            return std::stringstream();
+        }
+
     }
 
     // ==================================================

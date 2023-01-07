@@ -8,7 +8,7 @@ InputTensorPreparatorThread::InputTensorPreparatorThread(): juce::Thread("InputP
 }
 
 void InputTensorPreparatorThread::startThreadUsingProvidedResources(
-        LockFreeQueue<Event, 512>* NMP2ITP_Event_Que_ptr_) {
+        LockFreeQueue<Event, 2048>* NMP2ITP_Event_Que_ptr_) {
 
     // Provide access to resources needed to communicate with other threads
     // ---------------------------------------------------------------------------------------------
@@ -25,6 +25,9 @@ void InputTensorPreparatorThread::run() {
     bool bExit = threadShouldExit();
 
     double cnt = 0;
+
+    Event last_event {};
+
     while (!bExit) {
         // check if thread is ready to be stopped
         if (readyToStop) {
@@ -39,8 +42,15 @@ void InputTensorPreparatorThread::run() {
         // Declare an Optional Double value for time
         if (NMP2ITP_Event_Que_ptr->getNumReady() > 0) {
 
-            auto event = NMP2ITP_Event_Que_ptr->pop();
-            DBG(event.getDescription().str() << " --- " << cnt);
+            auto new_event = NMP2ITP_Event_Que_ptr->pop();
+            if (new_event.isFirstBuffer()){
+                auto dscrptn = new_event.getDescription();
+                if (dscrptn.str().length() > 0) { DBG(new_event.getDescription().str() << " | event # " << cnt); }
+            } else {
+                auto dscrptn = new_event.getDescriptionOfChangedFeatures(last_event, true).str() ;
+                if (dscrptn.length() > 0) { DBG(dscrptn << " | event # " << cnt); }
+            }
+            last_event = new_event;
             cnt++;
         }
 
