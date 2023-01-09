@@ -50,6 +50,15 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     auto fs = getSampleRate();
     auto buffSize = buffer.getNumSamples();
 
+    sendReceivedInputsAsEvents(midiMessages, Pinfo, fs, buffSize);
+
+    midiMessages.swapWith(tempBuffer);
+
+    buffer.clear(); //
+}
+
+void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(MidiBuffer &midiMessages, const Optional<AudioPlayHead::PositionInfo> &Pinfo,
+                                                             double fs, int buffSize) {
     using namespace event_communication_settings;
     if (Pinfo) {
 
@@ -139,11 +148,6 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
             NewTimeShiftEvent = std::nullopt;
         }
     }
-
-    midiMessages.swapWith(tempBuffer);
-
-
-    buffer.clear(); //
 }
 
 juce::AudioProcessorEditor* NeuralMidiFXPluginProcessor::createEditor()

@@ -70,4 +70,5 @@ private:
 
     void prepareEventWithPlayheadInfo();
 
+    void sendReceivedInputsAsEvents(MidiBuffer &midiMessages, const Optional<AudioPlayHead::PositionInfo> &Pinfo, double fs, int buffSize);
 };
