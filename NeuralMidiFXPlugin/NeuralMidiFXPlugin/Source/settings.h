@@ -192,17 +192,16 @@ namespace thread_settings
 // ======================================================================================
 namespace gui_settings{
     //
-    namespace BasicNoteStructLoggerTextEditor{
-        constexpr int maxChars { 500 };
-        constexpr int nNotesPerLine { 4 };
+    namespace BasicNoteStructLoggerTextEditor {
+        constexpr int maxChars{500};
+        constexpr int nNotesPerLine{4};
     }
 
-    namespace TextMessageLoggerTextEditor{
+    namespace TextMessageLoggerTextEditor {
         constexpr int maxChars { 3000 };
     }
 
-    namespace PianoRolls
-    {
+    namespace PianoRolls {
         constexpr float label_ratio_of_width {0.1f};        // ratio of label on left side relative to local width
         constexpr float timestep_ratio_of_width {1.0f / (HVO_params::time_steps + 4.0f)};
         constexpr float prob_to_pianoRoll_Ratio {0.4f};
@@ -217,3 +216,25 @@ namespace gui_settings{
 }
 
 
+// ======================================================================================
+// ==================        Event Communication Settings                ================
+// ======================================================================================
+
+namespace event_communication_settings::EventsToSend {
+    // set to true, if you need to send the metadata for a new buffer to the ITP thread
+    constexpr bool SendEventForNewBuffer{true};
+    constexpr bool SendEventForNewBufferIfMetadataChanged{true};     // only sends if metadata changes
+
+    // set to true Event for every time_shift_event ratio of quarter notes
+    constexpr bool SendTimeShiftEvents{true};
+    constexpr double delta_TimeShiftEventRatioOfQuarterNote{0.5}; // sends a time shift event every 8th note
+
+    // Filter Note On Events
+    constexpr bool FilterNoteOnEvents{false};
+
+    // Filter Note Off Events
+    constexpr bool FilterNoteOffEvents{false};
+
+    // Filter CC Events
+    constexpr bool FilterCCEvents{false};
+}

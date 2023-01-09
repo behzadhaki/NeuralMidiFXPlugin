@@ -53,9 +53,9 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
     if (Pinfo) {
 
-        if (last_frame_meta_data.isPlaying xor Pinfo->getIsPlaying()) {
+        if (last_frame_meta_data.bufferMetaData.isPlaying xor Pinfo->getIsPlaying()) {
             // if just started, register the playhead starting position
-            if ((not last_frame_meta_data.isPlaying) and Pinfo->getIsPlaying()) {
+            if ((not last_frame_meta_data.bufferMetaData.isPlaying) and Pinfo->getIsPlaying()) {
                 auto frame_meta_data = Event {Pinfo, fs, buffSize, true};
                 NMP2ITP_Event_Que->push(frame_meta_data);
                 last_frame_meta_data = frame_meta_data;
@@ -69,19 +69,62 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
             // if still playing, register the playhead position
             if (Pinfo->getIsPlaying()) {
                 auto frame_meta_data = Event {Pinfo, fs, buffSize, false};
+                frame_meta_data.bufferMetaData.set_time_shift_compared_to_last_frame(
+                        last_frame_meta_data.bufferMetaData);
                 NMP2ITP_Event_Que->push(frame_meta_data);
                 last_frame_meta_data = frame_meta_data;
             }
         }
 
+        if (Pinfo->getIsPlaying()) {
+            // check if new bar within buffer
+            NewBarEvent = last_frame_meta_data.checkIfNewBarHappensWithinBuffer();
+            // check if new bar within buffer
+            using namespace event_communication_settings::EventsToSend;
+            NewTimeShiftEvent = last_frame_meta_data.checkIfTimeShiftEventHappensWithinBuffer(
+                    delta_TimeShiftEventRatioOfQuarterNote);
+        } else {
+            NewBarEvent = std::nullopt;
+            NewTimeShiftEvent = std::nullopt;
+        }
+
+
+
+
         // Step 4. see if new notes are played on the input side
-        if (not midiMessages.isEmpty() /*and groove_thread_ready*/) {
+        if (not midiMessages.isEmpty() and Pinfo->getIsPlaying()) {
             // if there are new notes, send them to the groove thread
             for (const auto midiMessage : midiMessages) {
                 auto msg = midiMessage.getMessage();
-                auto frame_meta_data = Event {Pinfo, fs, buffSize, msg};
-                NMP2ITP_Event_Que->push(frame_meta_data);
+                auto midiEvent = Event{Pinfo, fs, buffSize, msg};
+
+                // check if new bar event exists and it is before the current midi event
+                if (NewBarEvent.has_value()) {
+                    if (midiEvent.time_in_samples >= NewBarEvent->time_in_samples) {
+                        NMP2ITP_Event_Que->push(*NewBarEvent);
+                        NewBarEvent = std::nullopt;
+                    }
+                }
+
+                if (NewTimeShiftEvent.has_value()) {
+                    if (midiEvent.time_in_samples >= NewTimeShiftEvent->time_in_samples) {
+                        NMP2ITP_Event_Que->push(*NewTimeShiftEvent);
+                        NewTimeShiftEvent = std::nullopt;
+                    }
+                }
+
+                NMP2ITP_Event_Que->push(midiEvent);
             }
+        }
+
+        // if there is a new bar event, and hasn't been sent yet, send it
+        if (NewBarEvent.has_value()) {
+            NMP2ITP_Event_Que->push(*NewBarEvent);
+            NewBarEvent = std::nullopt;
+        }
+        if (NewTimeShiftEvent.has_value()) {
+            NMP2ITP_Event_Que->push(*NewTimeShiftEvent);
+            NewTimeShiftEvent = std::nullopt;
         }
     }
 

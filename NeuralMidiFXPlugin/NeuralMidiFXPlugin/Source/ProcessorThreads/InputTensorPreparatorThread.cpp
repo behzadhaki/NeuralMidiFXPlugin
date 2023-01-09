@@ -43,7 +43,7 @@ void InputTensorPreparatorThread::run() {
         if (NMP2ITP_Event_Que_ptr->getNumReady() > 0) {
 
             auto new_event = NMP2ITP_Event_Que_ptr->pop();
-            if (new_event.isFirstBuffer()){
+            if (new_event.isFirstBufferEvent()){
                 auto dscrptn = new_event.getDescription();
                 if (dscrptn.str().length() > 0) { DBG(new_event.getDescription().str() << " | event # " << cnt); }
             } else {

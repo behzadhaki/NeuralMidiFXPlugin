@@ -65,6 +65,8 @@ private:
 
     // last ppq
     Event last_frame_meta_data;
+    std::optional<Event> NewBarEvent;
+    std::optional<Event> NewTimeShiftEvent;
 
     void prepareEventWithPlayheadInfo();
 
