@@ -12,63 +12,54 @@
 using namespace std;
 
 
-class NeuralMidiFXPluginProcessor : public PluginHelpers::ProcessorBase
-{
+class NeuralMidiFXPluginProcessor : public PluginHelpers::ProcessorBase {
+
 public:
 
     NeuralMidiFXPluginProcessor();
 
     ~NeuralMidiFXPluginProcessor() override;
 
-    void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
+    void processBlock(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midiMessages) override;
 
     juce::AudioProcessorEditor* createEditor() override;
 
     // InputTensorPreparator Queue
-    unique_ptr<LockFreeQueue<Event, 2048>> NMP2ITP_Event_Que;
+    unique_ptr<LockFreeQueue<Event, queue_settings::NMP2ITP_que_size>> NMP2ITP_Event_Que;
 
 
     // Threads used for generating patterns in the background
     shared_ptr<InputTensorPreparatorThread> inputTensorPreparatorThread;
 
-    // getters
-    float get_playhead_pos();
-
     // APVTS
     juce::AudioProcessorValueTreeState apvts;
 
 
-    void getStateInformation (juce::MemoryBlock& destData) override;
-    void setStateInformation (const void* data, int sizeInBytes) override;
+    void getStateInformation(juce::MemoryBlock &destData) override;
+    void setStateInformation(const void *data, int sizeInBytes) override;
 
-    // model paths
-    // juce::StringArray model_paths{get_pt_files_in_default_path()};
-
+    // Getters
+    float get_playhead_pos() const;
 
 private:
-
-
-    // =========  Queues for communicating Between the main threads in proce    ssor  =============================================
+    // =========  Queues for communicating Between the main threads in processor  ===============
 
     // holds the playhead position for displaying on GUI
-    float playhead_pos;
-
-    // holds the previous start ppq to check restartedFlag status
-    double startPpq {0};
-    double current_grid {-1};
+    float playhead_pos{-1.0f};
 
     //  midiBuffer to fill up with generated data
     juce::MidiBuffer tempBuffer;
 
     // Parameter Layout for apvts
-    juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+    static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
     // last ppq
     Event last_frame_meta_data;
     std::optional<Event> NewBarEvent;
     std::optional<Event> NewTimeShiftEvent;
 
-    void prepareEventWithPlayheadInfo();
-
-    void sendReceivedInputsAsEvents(MidiBuffer &midiMessages, const Optional<AudioPlayHead::PositionInfo> &Pinfo, double fs, int buffSize);
+    void sendReceivedInputsAsEvents(
+            MidiBuffer &midiMessages, const Optional<AudioPlayHead::PositionInfo> &Pinfo,
+            double fs,
+            int buffSize);
 };
