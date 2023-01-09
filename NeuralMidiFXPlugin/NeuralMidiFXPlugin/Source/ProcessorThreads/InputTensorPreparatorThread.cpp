@@ -19,11 +19,20 @@ void InputTensorPreparatorThread::startThreadUsingProvidedResources(
     startThread();
 }
 
+/*
+ * Use this method to print the content of an event
+ *  in debugging mode (using DBG() macro)
+ *
+ * @param event: the event to be printed
+ * @param compact_mode: Skips buffer events where no change in buffer is detected
+ *      compared to the previous buffer
+ * @param event_count: the number of events that have been received so far
+ */
 void InputTensorPreparatorThread::DisplayEvent(
         const Event &event, bool compact_mode, double event_count) {
     if (event.isFirstBufferEvent() or !compact_mode) {
-        auto dscrptn = event.getDescription();
-        if (dscrptn.str().length() > 0) { DBG(event.getDescription().str() << " | event # " << event_count); }
+        auto dscrptn = event.getDescription().str();
+        if (dscrptn.length() > 0) { DBG(dscrptn << " | event # " << event_count); }
     } else {
         auto dscrptn = event.getDescriptionOfChangedFeatures(event, true).str();
         if (dscrptn.length() > 0) { DBG(dscrptn << " | event # " << event_count); }
@@ -86,6 +95,17 @@ void InputTensorPreparatorThread::run() {
                           SendEventForNewBufferIfMetadataChanged_FLAG ---> True or False
                  ...
                  */
+                if (frame_metadata_event.bufferMetaData.playhead_force_moved_backward) {
+                    // get the amount by which the playhead has moved forward
+                    /*frame_metadata_event.bufferMetaData.delta_time_in_samples;
+                    frame_metadata_event.bufferMetaData.delta_time_in_seconds;
+                    frame_metadata_event.bufferMetaData.delta_time_in_ppq;*/
+                } else if (frame_metadata_event.bufferMetaData.playhead_force_moved_forward) {
+                    // get the amount by which the playhead has moved forward
+                    /*frame_metadata_event.bufferMetaData.delta_time_in_samples;
+                    frame_metadata_event.bufferMetaData.delta_time_in_seconds;
+                    frame_metadata_event.bufferMetaData.delta_time_in_ppq;*/
+                }
             } else if (new_event.isNewBarEvent()) {
                 last_bar_event = new_event;
                 /* These events are only available if the following flags are specified

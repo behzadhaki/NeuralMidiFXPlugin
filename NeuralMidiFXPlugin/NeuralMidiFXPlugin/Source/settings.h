@@ -48,7 +48,7 @@ namespace event_communication_settings {
     constexpr bool SendNewBarEvents_FLAG{true};
 
     // set to true Event for every time_shift_event ratio of quarter notes
-    constexpr bool SendTimeShiftEvents_FLAG{true};
+    constexpr bool SendTimeShiftEvents_FLAG{false};
     constexpr double delta_TimeShiftEventRatioOfQuarterNote{0.5}; // sends a time shift event every 8th note
 
     // Filter Note On Events if you don't need them

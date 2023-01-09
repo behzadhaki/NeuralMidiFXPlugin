@@ -76,11 +76,9 @@ struct BufferMetaData {
         // check if playhead was manually moved forward or backward
         auto expected_next_frame_sample = last_frame_meta_data.time_in_samples +
                 last_frame_meta_data.buffer_size_in_samples;
-        if (expected_next_frame_sample < this->time_in_samples) {
-            DBG("playhead moved FORWARD");
+        if ((expected_next_frame_sample < this->time_in_samples) and (qpm == last_frame_meta_data.qpm)) {
             playhead_force_moved_forward = true;
-        } else if (expected_next_frame_sample > this->time_in_samples) {
-            DBG("playhead moved BACKWARD");
+        } else if ((expected_next_frame_sample > this->time_in_samples) and (qpm == last_frame_meta_data.qpm)) {
             playhead_force_moved_backward = true;
         }
     }
@@ -264,6 +262,8 @@ public:
         std::stringstream ss;
         ss << "++ ";
 
+        if (isFirstBufferEvent()) { ss << " | First Buffer"; }
+        if (isNewBufferEvent()) { ss << " | New Buffer"; }
         if (isNewBarEvent()) { ss << " | New Bar"; }
         if (isNewTimeShiftEvent()) { ss << " | New Time Shift"; }
 
@@ -340,6 +340,8 @@ public:
     std::stringstream getDescription() const {
         std::stringstream ss;
         ss << "++ ";
+        if (isFirstBufferEvent()) { ss << " | First Buffer"; }
+        if (isNewBufferEvent()) { ss << " | New Buffer"; }
         if (isNewBarEvent()) { ss << " | New Bar"; }
         if (isMidiMessageEvent()) {
             ss << " | message: " << message.getDescription();
