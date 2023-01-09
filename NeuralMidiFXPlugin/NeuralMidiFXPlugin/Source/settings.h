@@ -220,21 +220,26 @@ namespace gui_settings{
 // ==================        Event Communication Settings                ================
 // ======================================================================================
 
-namespace event_communication_settings::EventsToSend {
+namespace event_communication_settings {
     // set to true, if you need to send the metadata for a new buffer to the ITP thread
-    constexpr bool SendEventForNewBuffer{true};
-    constexpr bool SendEventForNewBufferIfMetadataChanged{true};     // only sends if metadata changes
+    constexpr bool __SendEventAtBeginningOfNewBuffers__{true};
+    constexpr bool __SendEventForNewBufferIfMetadataChanged__{true};     // only sends if metadata changes
+
+    // set to true if you need to notify the beginning of a new bar
+    constexpr bool __SendNewBarEvents__{true};
 
     // set to true Event for every time_shift_event ratio of quarter notes
-    constexpr bool SendTimeShiftEvents{true};
-    constexpr double delta_TimeShiftEventRatioOfQuarterNote{0.5}; // sends a time shift event every 8th note
+    constexpr bool __SendTimeShiftEvents__{true};
+    constexpr double __delta_TimeShiftEventRatioOfQuarterNote__{0.5}; // sends a time shift event every 8th note
 
-    // Filter Note On Events
-    constexpr bool FilterNoteOnEvents{false};
+    // Filter Note On Events if you don't need them
+    constexpr bool __FilterNoteOnEvents__{false};
 
-    // Filter Note Off Events
-    constexpr bool FilterNoteOffEvents{false};
+    // Filter Note Off Events if you don't need them
+    constexpr bool __FilterNoteOffEvents__{false};
 
-    // Filter CC Events
-    constexpr bool FilterCCEvents{false};
+    // Filter CC Events if you don't need them
+    constexpr bool __FilterCCEvents__{false};
 }
+
+

@@ -93,6 +93,19 @@ struct BufferMetaData {
         return playhead_force_moved_forward;
     }
 
+    bool operator==(const BufferMetaData &e) const {
+        return (qpm == e.qpm) and (numerator == e.numerator) and (denominator == e.denominator) and
+               (isPlaying == e.isPlaying) and (isRecording == e.isRecording) and
+               (isLooping == e.isLooping) and
+               (loop_start_in_ppq == e.loop_start_in_ppq) and (loop_end_in_ppq == e.loop_end_in_ppq) and
+               (sample_rate == e.sample_rate) and
+               (buffer_size_in_samples == e.buffer_size_in_samples);
+    }
+
+    bool operator!=(const BufferMetaData &e) const {
+        return !(*this == e);
+    }
+
 };
 
 /*
@@ -214,7 +227,9 @@ public:
             new_event.time_in_seconds = bufferMetaData.time_in_seconds + dtime_ppq / 60.0 * bufferMetaData.qpm;
             return new_event;
         }
+
     }
+
 
     int Type() const { return type; }
 

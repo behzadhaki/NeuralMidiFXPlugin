@@ -32,8 +32,7 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor():
 }
 
 NeuralMidiFXPluginProcessor::~NeuralMidiFXPluginProcessor(){
-    if (!inputTensorPreparatorThread->readyToStop)
-    {
+    if (!inputTensorPreparatorThread->readyToStop) {
         inputTensorPreparatorThread->prepareToStop();
     }
 }
@@ -51,6 +50,7 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     auto fs = getSampleRate();
     auto buffSize = buffer.getNumSamples();
 
+    using namespace event_communication_settings;
     if (Pinfo) {
 
         if (last_frame_meta_data.bufferMetaData.isPlaying xor Pinfo->getIsPlaying()) {
@@ -71,7 +71,14 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                 auto frame_meta_data = Event {Pinfo, fs, buffSize, false};
                 frame_meta_data.bufferMetaData.set_time_shift_compared_to_last_frame(
                         last_frame_meta_data.bufferMetaData);
-                NMP2ITP_Event_Que->push(frame_meta_data);
+                if (__SendEventAtBeginningOfNewBuffers__) {
+                    if (__SendEventForNewBufferIfMetadataChanged__) {
+                        if (frame_meta_data.bufferMetaData != last_frame_meta_data.bufferMetaData){
+                            NMP2ITP_Event_Que->push(frame_meta_data); }
+                    } else {
+                        NMP2ITP_Event_Que->push(frame_meta_data);
+                    }
+                }
                 last_frame_meta_data = frame_meta_data;
             }
         }
@@ -80,14 +87,12 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
             // check if new bar within buffer
             NewBarEvent = last_frame_meta_data.checkIfNewBarHappensWithinBuffer();
             // check if new bar within buffer
-            using namespace event_communication_settings::EventsToSend;
             NewTimeShiftEvent = last_frame_meta_data.checkIfTimeShiftEventHappensWithinBuffer(
-                    delta_TimeShiftEventRatioOfQuarterNote);
+                    __delta_TimeShiftEventRatioOfQuarterNote__);
         } else {
             NewBarEvent = std::nullopt;
             NewTimeShiftEvent = std::nullopt;
         }
-
 
 
 
@@ -99,30 +104,37 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                 auto midiEvent = Event{Pinfo, fs, buffSize, msg};
 
                 // check if new bar event exists and it is before the current midi event
-                if (NewBarEvent.has_value()) {
+                if (NewBarEvent.has_value() and __SendNewBarEvents__) {
                     if (midiEvent.time_in_samples >= NewBarEvent->time_in_samples) {
                         NMP2ITP_Event_Que->push(*NewBarEvent);
                         NewBarEvent = std::nullopt;
                     }
                 }
 
-                if (NewTimeShiftEvent.has_value()) {
+                if (NewTimeShiftEvent.has_value() and __SendTimeShiftEvents__) {
                     if (midiEvent.time_in_samples >= NewTimeShiftEvent->time_in_samples) {
                         NMP2ITP_Event_Que->push(*NewTimeShiftEvent);
                         NewTimeShiftEvent = std::nullopt;
                     }
                 }
 
-                NMP2ITP_Event_Que->push(midiEvent);
+                if (!(
+                        (__FilterNoteOnEvents__ and midiEvent.message.isNoteOn()) or
+                        (__FilterNoteOffEvents__ and midiEvent.message.isNoteOff()) or
+                        (__FilterCCEvents__ and midiEvent.message.isController())
+                        )
+                        ) {
+                    NMP2ITP_Event_Que->push(midiEvent);
+                }
             }
         }
 
         // if there is a new bar event, and hasn't been sent yet, send it
-        if (NewBarEvent.has_value()) {
+        if (NewBarEvent.has_value() and __SendNewBarEvents__) {
             NMP2ITP_Event_Que->push(*NewBarEvent);
             NewBarEvent = std::nullopt;
         }
-        if (NewTimeShiftEvent.has_value()) {
+        if (NewTimeShiftEvent.has_value() and __SendTimeShiftEvents__) {
             NMP2ITP_Event_Que->push(*NewTimeShiftEvent);
             NewTimeShiftEvent = std::nullopt;
         }
