@@ -30,11 +30,6 @@ void NeuralMidiFXPluginEditor::resized()
 {
     auto area = getLocalBounds();
     setBounds(area);                            // bounds for main Editor GUI
-
-    // reserve right side for other controls
-    area.removeFromRight(proportionOfWidth(gui_settings::PianoRolls::space_reserved_right_side_of_gui_ratio_of_width));
-
-
 }
 
 void NeuralMidiFXPluginEditor::paint(juce::Graphics& g)

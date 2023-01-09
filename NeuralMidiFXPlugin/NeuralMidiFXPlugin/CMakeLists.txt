@@ -21,7 +21,6 @@ juce_add_plugin("${BaseTargetName}"
 target_sources(${BaseTargetName} PRIVATE
         Source/PluginProcessor.cpp
         Source/PluginEditor.cpp
-        Source/Model/ModelAPI.cpp
         Source/ProcessorThreads/InputTensorPreparatorThread.cpp
         Source/ProcessorThreads/PlaybackPreparatorThread.cpp
         )
