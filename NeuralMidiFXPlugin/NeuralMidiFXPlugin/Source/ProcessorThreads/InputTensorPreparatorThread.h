@@ -11,7 +11,7 @@
 #include "../settings.h"
 #include "../Includes/EventTracker.h"
 
-class InputTensorPreparatorThread:public juce::Thread {
+class InputTensorPreparatorThread : public juce::Thread {
 public:
     // ============================================================================================================
     // ===          Preparing Thread for Running
@@ -24,7 +24,8 @@ public:
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 2 . give access to resources needed to communicate with other threads
     // ------------------------------------------------------------------------------------------------------------
-    void startThreadUsingProvidedResources(LockFreeQueue<Event, 2048>* NMP2ITP_Event_Que_ptr_);
+    void startThreadUsingProvidedResources(
+            LockFreeQueue<Event, queue_settings::NMP2ITP_que_size> *NMP2ITP_Event_Que_ptr_);
 
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 3 . start run() thread by calling startThread().
@@ -32,6 +33,7 @@ public:
     // ---                  (Implement what the thread does inside the run() method
     // ------------------------------------------------------------------------------------------------------------
     void run() override;
+
     // ============================================================================================================
 
     // ============================================================================================================
@@ -39,64 +41,20 @@ public:
     // ============================================================================================================
     void prepareToStop();     // run this in destructor destructing object
     ~InputTensorPreparatorThread() override;
-    bool readyToStop {false}; // Used to check if thread is ready to be stopped or externally stopped from a parent thread
+    bool readyToStop{false}; // Used to check if thread is ready to be stopped or externally stopped
     // ============================================================================================================
-
-    // ============================================================================================================
-    // ===          Utility Methods and Parameters
-    // ============================================================================================================
-    void ClearTrackedEventsStartingAt(float start);   // clears a time step starting at start
-    void clearStep(int grid_ix, float start_ppq);    // clears a time step ONLY IF OVERDUBBING IS OFF!!!
-    // ============================================================================================================
-
-    MultiTimedStructure<vector<pair<juce::MidiMessage, double>>> get_new_notes(int mode);
-
-    // keeps track of all events so far (unless clear is called)
-    /*ITP_MultiTime_EventTracker MultiTimeEventTracker {false};
-    // set true so as to remove events as soon as accessed (this way only new events are tracked)
-    ITP_MultiTime_EventTracker NewEventsBuffer {true};*/
-
-
 
 private:
-
-    // ============================================================================================================
-    // ===          Internal MIDI Buffer Memory
-    // ============================================================================================================
-    // RT_STREAM_FROM_HOST      Real-time stream of MIDI messages from host stored in this stream
-    juce::MidiMessageSequence RT_MidiMessageSequence;
-    // ============================================================================================================
-
     // ============================================================================================================
     // ===          I/O Queues for Receiving/Sending Data
     // ============================================================================================================
-
-    // ------------------------------------------------------------------------------------------------------------
-    // ---          Input Queues, Event Tracker and Internal Event Buffer
-    // ------------------------------------------------------------------------------------------------------------
-    LockFreeQueue<Event, 2048>* NMP2ITP_Event_Que_ptr{};
-
-
-
-
-    // ------------------------------------------------------------------------------------------------------------
-    // ---          Output to Model Thread
-    // ------------------------------------------------------------------------------------------------------------
-
-    // Torch.tensor
-
-    // ------------------------------------------------------------------------------------------------------------
-    // ---          Output to GUI
-    // ------------------------------------------------------------------------------------------------------------
-
-    // Torch.note
+    LockFreeQueue<Event, queue_settings::NMP2ITP_que_size> *NMP2ITP_Event_Que_ptr{};
     // ============================================================================================================
 
-
-
-
-    bool accessNewMessagesIfAny();
-    bool accessTempoTimeSignatureChangesIfAny();
+    // ============================================================================================================
+    // ===          Debugging Methods
+    // ============================================================================================================
+    static void DisplayEvent(const Event &event, bool compact_mode, double event_count);
 };
 
 
