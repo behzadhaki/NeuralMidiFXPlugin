@@ -12,7 +12,77 @@
 
 using namespace juce;
 
-
+/*
+ * This structure holds the metadata for a given buffer received from the host.
+ * All necessary information is embedded in this structure:
+ *
+ *  - qpm: tempo in quarter notes per minute
+ *  - numerator: numerator of the time signature
+ *  - denominator: denominator of the time signature
+ *
+ *  - isPlaying: is the host playing or not
+ *  - isRecording: is the host recording or not
+ *
+ *  - time_in_samples: starting point of the buffer in audio samples
+ *  - time_in_seconds: starting point of the buffer in seconds
+ *  - time_in_ppq: starting point of the buffer in quarter notes
+ *
+ *  - delta_time_in_samples: amount of time in samples that the playhead has moved since previous buffer
+ *  - delta_time_in_seconds: amount of time in seconds that the playhead has moved since previous buffer
+ *  - delta_time_in_ppq: amount of time in quarter notes that the playhead has moved since previous buffer
+ *  - playhead_force_moved_forward: has the playhead has been moved forcibly ahead of the next expected buffer
+ *  - playhead_force_moved_backward: has the playhead has been moved forcibly behind the next expected buffer
+ *
+ *  - isLooping: is the host looping or not
+ *  - loop_start_in_ppq: starting point of the loop in quarter notes
+ *  - loop_end_in_ppq: ending point of the loop in quarter notes
+ *
+ *  - bar_count: number of bars in the buffer
+ *  - ppq_position_of_last_bar_start: quarter note position of the last bar corresponding to the existing position
+ *
+ *  - sample_rate: sample rate of the host
+ *  - buffer_size: buffer size of the host in number of samples
+ *
+ *
+ *
+ * You can have access to these information at different frequencies,
+ *      depending on the usecase intended. The frequency of accessing
+ *      this information is determined by the settings in settings.h.
+ *      Examples:
+ *      1. If you need these information at every buffer, then set
+ *
+ *      >> constexpr bool SendEventAtBeginningOfNewBuffers_FLAG{true};
+ *      >> constexpr bool SendEventForNewBufferIfMetadataChanged_FLAG{false};
+ *
+ *      2. Alternatively, you may want to access these information,
+ *      only when the metadata changes. In this case:
+ *
+ *      >> constexpr bool SendEventAtBeginningOfNewBuffers_FLAG{true};
+ *      >> constexpr bool SendEventForNewBufferIfMetadataChanged_FLAG{false};
+ *
+ *      3. If you need these information at every bar, then:
+ *
+ *      >> constexpr bool SendNewBarEvents_FLAG{true};
+ *
+ *      4. If you need these information at every specific time shift periods,
+ *      you can specify the time shift as a ratio of a quarter note. For instance,
+ *      if you want to access these information at every 8th note, then:
+ *
+ *      >>  constexpr bool SendTimeShiftEvents_FLAG{false};
+ *      >>  constexpr double delta_TimeShiftEventRatioOfQuarterNote{0.5};
+ *
+ *      5. If you only need this information, whenever a new midi message
+ *      (note on/off or cc) is received, you don't need to set any of the above,
+ *      since the metadata is embedded in any midi Event. Just remember to not
+ *      filter out the midi events.
+ *
+ *      >>  constexpr bool FilterNoteOnEvents_FLAG{false};
+ *      and/or
+ *      >>  constexpr bool FilterNoteOffEvents_FLAG{false};
+ *      and/or
+ *      >>  constexpr bool FilterCCEvents_FLAG{false};
+ *
+ */
 struct BufferMetaData {
     double qpm{-1};
     double numerator{-1};
@@ -107,18 +177,58 @@ struct BufferMetaData {
 };
 
 /*
- * Types:
+ * All information received from the host are wrapped in this class.
  *
+ * Each event, has the following fields:
+ *
+ * 1. bufferMetaData --> metadata of the buffer frame to which the event corresponds
+ * 2. time_in_samples --> start time in samples of the event
+ * 3. time_in_seconds --> start time in seconds of the event
+ * 4. time_in_ppq --> start time in ppq of the event
+ * 5. type:
  *     -1: Playback Stopped Event
+ *              the event holds information about the last frame
  *      1: First Buffer Event, Since Start
+ *              the event holds information about the first frame
  *      2: New Buffer Event
+ *              the event specifies that a new buffer just started
  *      3: New Bar Event
+ *              specifies that a new bar just started
  *      4: New Time Shift Event
- *
+ *              specifies that the playback has progressed by a specific
+ *              time amount specified in settings.h (for example, every 8th note)
  *
  *      10: MidiMessage within Buffer Event
+ *              specifies that a midi message was received within the buffer
+ *
+ * A few notes about the availability of information:
+ * - Playback Stopped Event: Always available
+ * - First Buffer Event, Since Start: Always available
+ * - New Buffer Event: Can be available at arrival of every new buffer, or
+ *                  whenever the essential fields of the buffer (qpm, numerator,...)
+ *                  are changed, flags to set:
+ *
+ *      >> constexpr bool SendEventAtBeginningOfNewBuffers_FLAG{true};
+ *      >> constexpr bool SendEventForNewBufferIfMetadataChanged_FLAG{true};
+ *
+ *                  If first flag is false, this event wont be available at all.
+ *
+ * - New Bar Event: Can be available at arrival of every new bar, if the flag is set:
+ *
+ *      >> constexpr bool SendNewBarEvents_FLAG{true};
+ *
+ * - New Time Shift Event: Can be available at arrival of every new time shift, if the flag is set:
+ *
+ *      >> constexpr bool SendTimeShiftEvents_FLAG{true};
+ *      >> constexpr double delta_TimeShiftEventRatioOfQuarterNote{0.5}; //8th note
+ *
+ * - MidiMessage within Buffer Event: always available as long as the filter flags are not set to true:
+ *
+ *      >> constexpr bool FilterNoteOnEvents_FLAG{false};
+ *      >> constexpr bool FilterNoteOffEvents_FLAG{false};
+ *      >> constexpr bool FilterCCEvents_FLAG{false};
+ * -
  */
-// TODO ADD description
 class Event {
 public:
 

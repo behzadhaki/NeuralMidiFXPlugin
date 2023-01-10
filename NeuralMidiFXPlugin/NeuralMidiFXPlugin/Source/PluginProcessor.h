@@ -34,7 +34,6 @@ public:
     // APVTS
     juce::AudioProcessorValueTreeState apvts;
 
-
     void getStateInformation(juce::MemoryBlock &destData) override;
     void setStateInformation(const void *data, int sizeInBytes) override;
 
@@ -53,13 +52,15 @@ private:
     // Parameter Layout for apvts
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
-    // last ppq
+    // Event Place Holders for cross buffer events
     Event last_frame_meta_data;
     std::optional<Event> NewBarEvent;
     std::optional<Event> NewTimeShiftEvent;
 
+    //
     void sendReceivedInputsAsEvents(
             MidiBuffer &midiMessages, const Optional<AudioPlayHead::PositionInfo> &Pinfo,
             double fs,
             int buffSize);
+
 };

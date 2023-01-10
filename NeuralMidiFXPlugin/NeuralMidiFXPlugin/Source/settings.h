@@ -38,7 +38,46 @@ namespace queue_settings {
 // ======================================================================================
 // ==================        Event Communication Settings                ================
 // ======================================================================================
-
+/*
+ * You can send Events to ITP at different frequencies with different
+ *      intentions, depending on the usecase intended. The type and frequency of providing
+ *      these events is determined below.
+ *
+ *      Examples:
+ *      1. If you need these information at every buffer, then set
+ *
+ *      >> constexpr bool SendEventAtBeginningOfNewBuffers_FLAG{true};
+ *      >> constexpr bool SendEventForNewBufferIfMetadataChanged_FLAG{false};
+ *
+ *      2. Alternatively, you may want to access these information,
+ *      only when the metadata changes. In this case:
+ *
+ *      >> constexpr bool SendEventAtBeginningOfNewBuffers_FLAG{true};
+ *      >> constexpr bool SendEventForNewBufferIfMetadataChanged_FLAG{false};
+ *
+ *      3. If you need these information at every bar, then:
+ *
+ *      >> constexpr bool SendNewBarEvents_FLAG{true};
+ *
+ *      4. If you need these information at every specific time shift periods,
+ *      you can specify the time shift as a ratio of a quarter note. For instance,
+ *      if you want to access these information at every 8th note, then:
+ *
+ *      >>  constexpr bool SendTimeShiftEvents_FLAG{false};
+ *      >>  constexpr double delta_TimeShiftEventRatioOfQuarterNote{0.5};
+ *
+ *      5. If you only need this information, whenever a new midi message
+ *      (note on/off or cc) is received, you don't need to set any of the above,
+ *      since the metadata is embedded in any midi Event. Just remember to not
+ *      filter out the midi events.
+ *
+ *      >>  constexpr bool FilterNoteOnEvents_FLAG{false};
+ *      and/or
+ *      >>  constexpr bool FilterNoteOffEvents_FLAG{false};
+ *      and/or
+ *      >>  constexpr bool FilterCCEvents_FLAG{false};
+ *
+ */
 namespace event_communication_settings {
     // set to true, if you need to send the metadata for a new buffer to the ITP thread
     constexpr bool SendEventAtBeginningOfNewBuffers_FLAG{true};
