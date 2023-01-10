@@ -21,19 +21,9 @@ namespace thread_configurations::InputTensorPreparator {
 namespace queue_settings {
     constexpr int NMP2ITP_que_size{4096};
     constexpr int ITP2MDL_que_size{128};
-    constexpr int MDL2PPP_que_size{4096};
+    constexpr int MDL2PPP_que_size{128};
+    constexpr int PPP2NMP_que_size{4096};
 }
-// ======================================================================================
-// ==================     General Settings                 ==============================
-// ======================================================================================
-//namespace GeneralSettings {
-//    // model_settings
-//    // FIXME add to readme.me for setup ==> model should be placed in root
-//    //  (/Library/NeuralMidiFXPlugin/trained_models) folder
-//    char constexpr *default_model_path{(char*)"/Library/NeuralMidiFXPlugin/trained_models/model_1.pt"};
-//    char constexpr *default_model_folder{(char*)"/Library/NeuralMidiFXPlugin/trained_models"};
-//}
-
 
 // ======================================================================================
 // ==================        Event Communication Settings                ================
@@ -74,7 +64,7 @@ namespace queue_settings {
  *      >>  constexpr bool FilterNoteOnEvents_FLAG{false};
  *      and/or
  *      >>  constexpr bool FilterNoteOffEvents_FLAG{false};
- *      and/or
+ *      and/orzX
  *      >>  constexpr bool FilterCCEvents_FLAG{false};
  *
  */
