@@ -3,9 +3,8 @@
 #include <shared_plugin_helpers/shared_plugin_helpers.h>
 //#include <vector>
 #include <torch/torch.h>
-
+#include "model_settings.h"
 #include "ProcessorThreads/InputTensorPreparatorThread.h"
-
 
 // #include "gui/CustomGuiTextEditors.h"
 
@@ -24,9 +23,11 @@ public:
 
     juce::AudioProcessorEditor* createEditor() override;
 
-    // InputTensorPreparator Queue
+    //Queues
     unique_ptr<LockFreeQueue<Event, queue_settings::NMP2ITP_que_size>> NMP2ITP_Event_Que;
-
+    unique_ptr<LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size>> ITP2MDL_ModelInput_Que;
+    unique_ptr<LockFreeQueue<ModelOutput, queue_settings::MDL2PPP_que_size>> MDL2PPP_ModelOutput_Que;
+    unique_ptr<LockFreeQueue<Event, queue_settings::PPP2NMP_que_size>> PPP2NMP_Event_Que;
 
     // Threads used for generating patterns in the background
     shared_ptr<InputTensorPreparatorThread> inputTensorPreparatorThread;
