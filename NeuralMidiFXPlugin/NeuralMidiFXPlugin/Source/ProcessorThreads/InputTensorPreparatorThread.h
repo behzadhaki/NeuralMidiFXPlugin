@@ -9,6 +9,7 @@
 #include <shared_plugin_helpers/shared_plugin_helpers.h>
 #include "../Includes/CustomStructsAndLockFreeQueue.h"
 #include "../settings.h"
+#include "../model_settings.h"
 #include "../Includes/EventTracker.h"
 
 class InputTensorPreparatorThread : public juce::Thread {
@@ -25,7 +26,8 @@ public:
     // ---         Step 2 . give access to resources needed to communicate with other threads
     // ------------------------------------------------------------------------------------------------------------
     void startThreadUsingProvidedResources(
-            LockFreeQueue<Event, queue_settings::NMP2ITP_que_size> *NMP2ITP_Event_Que_ptr_);
+            LockFreeQueue<Event, queue_settings::NMP2ITP_que_size> *NMP2ITP_Event_Que_ptr_,
+            LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size> *ITP2MDL_ModelInput_Que_ptr_);
 
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 3 . start run() thread by calling startThread().
@@ -49,6 +51,7 @@ private:
     // ===          I/O Queues for Receiving/Sending Data
     // ============================================================================================================
     LockFreeQueue<Event, queue_settings::NMP2ITP_que_size> *NMP2ITP_Event_Que_ptr{};
+    LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size> *ITP2MDL_ModelInput_Que_ptr{};
     // ============================================================================================================
 
     // ============================================================================================================

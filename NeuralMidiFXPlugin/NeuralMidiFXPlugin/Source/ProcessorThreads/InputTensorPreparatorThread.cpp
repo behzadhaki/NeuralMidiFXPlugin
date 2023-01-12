@@ -8,11 +8,13 @@ InputTensorPreparatorThread::InputTensorPreparatorThread() : juce::Thread("Input
 }
 
 void InputTensorPreparatorThread::startThreadUsingProvidedResources(
-        LockFreeQueue<Event, queue_settings::NMP2ITP_que_size> *NMP2ITP_Event_Que_ptr_) {
+        LockFreeQueue<Event, queue_settings::NMP2ITP_que_size> *NMP2ITP_Event_Que_ptr_,
+        LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size> *ITP2MDL_ModelInput_Que_ptr_) {
 
     // Provide access to resources needed to communicate with other threads
     // ---------------------------------------------------------------------------------------------
     NMP2ITP_Event_Que_ptr = NMP2ITP_Event_Que_ptr_;
+    ITP2MDL_ModelInput_Que_ptr = ITP2MDL_ModelInput_Que_ptr_;
 
     // Start the thread. This function internally calls run() method. DO NOT CALL run() DIRECTLY.
     // ---------------------------------------------------------------------------------------------
@@ -62,6 +64,7 @@ void InputTensorPreparatorThread::run() {
     bool SHOULD_SEND_TO_MODEL_FOR_GENERATION_ = false;
 
     while (!bExit) {
+
         if (readyToStop) { break; } // check if thread is ready to be stopped
 
         // Check if new events are available in the queue
@@ -120,6 +123,12 @@ void InputTensorPreparatorThread::run() {
                                                                 the corresponding buffer
                  ...
                  */
+
+                // the following line should be placed in the correct place in your code
+                // in this example we want to send the compiled data to the model
+                // on every bar, hence I'll set the flag to true here
+                SHOULD_SEND_TO_MODEL_FOR_GENERATION_ = true;
+
             } else if (new_event.isNewTimeShiftEvent()) {
                 last_complete_note_duration_event = new_event;
                 /* These events are only available if the following flags are specified
@@ -160,7 +169,15 @@ void InputTensorPreparatorThread::run() {
             //                     SHOULD_SEND_TO_MODEL_FOR_GENERATION_ is set to TRUE
             // =================================================================================
             if (SHOULD_SEND_TO_MODEL_FOR_GENERATION_) {
-                // Push To Queue
+                /* Prepare the input structure for the model
+                 see ModelInput struct in model_settings.h*/
+                ModelInput model_input{};
+                model_input.metadata = new_event.bufferMetaData;
+                /*  ... set other model_input fields */
+
+                /* Send to Model Thread */
+                auto a = make_shared<ModelInput>(model_input);
+                ITP2MDL_ModelInput_Que_ptr->push(model_input);
 
                 // reset the generation flag
                 SHOULD_SEND_TO_MODEL_FOR_GENERATION_ = false;
