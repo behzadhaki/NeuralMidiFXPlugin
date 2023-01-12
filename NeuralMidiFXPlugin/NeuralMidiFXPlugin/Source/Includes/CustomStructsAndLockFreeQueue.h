@@ -55,17 +55,12 @@ public:
         lockFreeFifo->prepareToWrite(
                 1, start1, blockSize1,
                 start2, blockSize2);
-
         auto start_data_ptr = data.getRawDataPointer() + start1;
-
         *start_data_ptr = make_shared<T>(writeData).get();
-
         latest_written_data = writeData;
         num_writes += 1;
         lockFreeFifo->finishedWrite(1);
-
         writingActive = false;
-
     }
 
     T pop() {
