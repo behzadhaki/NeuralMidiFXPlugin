@@ -17,7 +17,9 @@ namespace thread_configurations::InputTensorPreparator {
 // ======================================================================================
 // ==================       QUEUE  Settings                  ============================
 // ======================================================================================
-
+/* specifies the max number of elements that can be stored in the queue
+ *  if the queue is full, the producer thread will overwrite the oldest element
+ */
 namespace queue_settings {
     constexpr int NMP2ITP_que_size{4096};
     constexpr int ITP2MDL_que_size{128};
