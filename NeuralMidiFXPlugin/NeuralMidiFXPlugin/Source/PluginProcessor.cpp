@@ -10,14 +10,17 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
     //       Make_unique pointers for Queues
     // --------------------------------------------------------------------------------------
     NMP2ITP_Event_Que = make_unique<LockFreeQueue<Event, queue_settings::NMP2ITP_que_size>>();
+    ITP2MDL_ModelInput_Que = make_unique<LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size>>();
 
     //       Create shared pointers for Threads (shared with APVTSMediator)
     // --------------------------------------------------------------------------------------
     inputTensorPreparatorThread = make_shared<InputTensorPreparatorThread>();
 
+
     //       give access to resources and run threads
     // --------------------------------------------------------------------------------------
-    inputTensorPreparatorThread->startThreadUsingProvidedResources(NMP2ITP_Event_Que.get());
+    inputTensorPreparatorThread->startThreadUsingProvidedResources(NMP2ITP_Event_Que.get(),
+                                                                   ITP2MDL_ModelInput_Que.get());
 }
 
 NeuralMidiFXPluginProcessor::~NeuralMidiFXPluginProcessor() {
