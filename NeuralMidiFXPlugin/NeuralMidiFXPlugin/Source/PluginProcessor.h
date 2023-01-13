@@ -5,6 +5,7 @@
 #include <torch/torch.h>
 #include "model_settings.h"
 #include "ProcessorThreads/InputTensorPreparatorThread.h"
+#include "ProcessorThreads/ModelThread.h"
 
 // #include "gui/CustomGuiTextEditors.h"
 
@@ -31,6 +32,7 @@ public:
 
     // Threads used for generating patterns in the background
     shared_ptr<InputTensorPreparatorThread> inputTensorPreparatorThread;
+    shared_ptr<ModelThread> modelThread;
 
     // APVTS
     juce::AudioProcessorValueTreeState apvts;

@@ -173,6 +173,8 @@ void InputTensorPreparatorThread::run() {
                  see ModelInput struct in model_settings.h*/
                 ModelInput model_input{};
                 model_input.metadata = new_event.bufferMetaData;
+                model_input.tensor1 = torch::rand({1, 32, 27}, torch::kFloat32);
+                model_input.someDouble = 0.5f;
                 /*  ... set other model_input fields */
 
                 /* Send to Model Thread */

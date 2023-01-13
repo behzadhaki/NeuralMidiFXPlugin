@@ -22,6 +22,7 @@ target_sources(${BaseTargetName} PRIVATE
         Source/PluginProcessor.cpp
         Source/PluginEditor.cpp
         Source/ProcessorThreads/InputTensorPreparatorThread.cpp
+        Source/ProcessorThreads/ModelThread.cpp
         Source/ProcessorThreads/PlaybackPreparatorThread.cpp
         )
 

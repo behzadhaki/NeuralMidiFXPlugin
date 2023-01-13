@@ -13,6 +13,14 @@ namespace thread_configurations::InputTensorPreparator {
     // waittime between iterations in ms
     constexpr int waitTimeBtnIters{5};
 }
+namespace thread_configurations::Model {
+    // waittime between iterations in ms
+    constexpr int waitTimeBtnIters{5};
+}
+namespace thread_configurations::PlaybackPreparator {
+    // waittime between iterations in ms
+    constexpr int waitTimeBtnIters{5};
+}
 
 // ======================================================================================
 // ==================       QUEUE  Settings                  ============================

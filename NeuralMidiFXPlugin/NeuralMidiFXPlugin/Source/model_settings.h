@@ -5,7 +5,7 @@
 #pragma once
 
 #include <torch/script.h> // One-stop header.
-#include "includes/CustomStructsAndLockFreeQueue.h"
+#include "Includes/CustomStructsAndLockFreeQueue.h"
 #include "includes/EventTracker.h"
 
 // ======================================================================================
@@ -24,8 +24,8 @@
  */
 struct ModelInput {
     torch::Tensor tensor1{};
-    torch::Tensor tensor2{};
-    torch::Tensor tensor3{};
+    // torch::Tensor tensor2{};
+    // torch::Tensor tensor3{};
     double someDouble{};
     BufferMetaData metadata{};
 };
@@ -40,13 +40,17 @@ struct ModelOutput {
     torch::Tensor tensor1{};
     torch::Tensor tensor2{};
     torch::Tensor tensor3{};
-    std::vector<int> intVector{};
+    // std::vector<int> intVector{};
 };
 
 
 // ======================================================================================
 // ==================       Model Params                     ============================
 // ======================================================================================
+
+namespace model_settings {
+    char constexpr *default_model_path{(char *) "/Library/NeuralMidiFXPlugin/trained_models/ModelA.pt"};
+}
 
 struct Model {
     string path;            // "/Library/NeuralMidiFXPlugin/trained_models/ModelA.pt"
@@ -55,16 +59,16 @@ struct Model {
     /*
      * constructor for Model to be loaded from a path
      */
-    Model(string path) {
+    explicit Model(const string& path_) {
         ifstream myFile;
-        myFile.open(path);
+        myFile.open(path_);
         if (myFile.is_open()) {
             myFile.close();
-            model = torch::jit::load(path);
+            model = torch::jit::load(path_);
             myFile.close();
-            this->path = path;
+            this->path = path_;
         } else {
-            DBG("Model file not found at: " + path);
+            DBG("Model file not found at: " + path_);
             model = std::nullopt;
             this->path = "";
         }
@@ -72,17 +76,18 @@ struct Model {
 
     std::optional<ModelOutput> forwardPredict(const ModelInput& inputStruct) {
 
-        std::optional<ModelOutput> output;
+        std::optional<ModelOutput> outputStruct{};
 
         if (model.has_value()) {
             // ---------------------------------  Step 1 -----------------------------------------------------
             // ==================   prepare the actual input of forward methods   ============================
-            /* e.g. , we concatenate the three tensors and pass them to the model */
+            /* e.g. , we process the input tensors (if needed) and pass them to the model */
             // auto in = torch::concat({inputStruct.tensor1, inputStruct.tensor2, inputStruct.tensor3}, 1);
 
             /* forward pass through the model */
             // auto outs = model->forward({in}); // in this case, out is a tuple of 3 tensors
 
+            auto outs = model->forward({inputStruct.tensor1}); // Example
 
             // ---------------------------------  Step 2 -----------------------------------------------------
             // ==================       process the output of model here          ============================
@@ -95,11 +100,18 @@ struct Model {
             auto probs = outs.toTuple()->elements()[0].toTensor();
 
              // the double value in the inputStruct is used for thresholding the probs
-            hits = torch::zeros_like(probs);
+            auto hits = torch::zeros_like(probs);
             auto idx = probs >= inputStruct.someDouble;
             hits.index_put_({idx}, 1);
             ....
             */
+
+            auto probs = outs.toTuple()->elements()[0].toTensor();
+            auto hits = torch::zeros_like(probs);
+            auto idx = probs >= inputStruct.someDouble;
+            hits.index_put_({idx}, 1);
+            auto vels = outs.toTuple()->elements()[1].toTensor();
+            auto offsets = outs.toTuple()->elements()[2].toTensor();
 
             // ---------------------------------  Step 3 -----------------------------------------------------
             // ==================       wrap the output in ModelOutput struct     ============================
@@ -107,13 +119,20 @@ struct Model {
             output->tensor1 = hits;
             ...
             */
+
+            // comment out following line (just for demoing)
+            ModelOutput output;
+            output.tensor1 = hits;
+            output.tensor2 = vels;
+            output.tensor3 = offsets;
+            outputStruct = std::optional<ModelOutput>(output);      // don't delete this line!!
         } else {
             /* if model is not loaded, return an empty optional */
-            output = std::nullopt;
+            outputStruct = std::nullopt;                            // don't delete this line!!
         }
 
         /* return the output */
-        return output;
+        return outputStruct;                                        // don't delete this line!!
     }
 };
 

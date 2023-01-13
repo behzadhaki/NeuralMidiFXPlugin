@@ -87,7 +87,7 @@ public:
 
         if (blockSize2 > 0) {
             auto start_data_ptr = data.getRawDataPointer() + start2;
-            readData = *(start_data_ptr+blockSize2-1);
+            readData = *(*(start_data_ptr+blockSize2-1));
             lockFreeFifo -> finishedRead(blockSize1+blockSize2);
             num_reads += 1;
             return readData;
@@ -95,7 +95,7 @@ public:
         }
         if (blockSize1 > 0) {
             auto start_data_ptr = data.getRawDataPointer() + start1;
-            readData = *(start_data_ptr+blockSize1-1);
+            readData = *(*(start_data_ptr+blockSize1-1));
             lockFreeFifo -> finishedRead(blockSize1+blockSize2);
             num_reads += 1;
             return readData;
