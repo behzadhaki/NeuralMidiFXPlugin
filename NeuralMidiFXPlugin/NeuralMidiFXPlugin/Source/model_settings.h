@@ -74,6 +74,8 @@ struct Model {
         }
     }
 
+    // better to return an optional ModelOutput to ensure that
+    // plugin does not crash if model is not loaded/found
     std::optional<ModelOutput> forwardPredict(const ModelInput& inputStruct) {
 
         std::optional<ModelOutput> outputStruct{};

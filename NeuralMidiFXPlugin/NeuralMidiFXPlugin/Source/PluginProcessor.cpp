@@ -27,11 +27,11 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
 }
 
 NeuralMidiFXPluginProcessor::~NeuralMidiFXPluginProcessor() {
-    if (!inputTensorPreparatorThread->readyToStop) {
-        inputTensorPreparatorThread->prepareToStop();
-    }
     if (!modelThread->readyToStop) {
         modelThread->prepareToStop();
+    }
+    if (!inputTensorPreparatorThread->readyToStop) {
+        inputTensorPreparatorThread->prepareToStop();
     }
 }
 

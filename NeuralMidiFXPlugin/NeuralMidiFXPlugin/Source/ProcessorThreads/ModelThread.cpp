@@ -39,10 +39,8 @@ void ModelThread::DisplayTensor(const torch::Tensor &tensor, const string Label,
 }
 
 void ModelThread::run() {
-// notify if the thread is still running
+    // notify if the thread is still running
     bool bExit = threadShouldExit();
-
-    double cnt = 0;
 
     while (!bExit) {
 
@@ -75,7 +73,16 @@ void ModelThread::run() {
             }
 
         }
+
+        // check if thread is still running
+        // Don't remove this line!
+        bExit = threadShouldExit();
     }
+
+    // wait for a few ms to avoid burning the CPU
+    // do not remove this, for super strict timing requirements
+    // adjust the wait time to your needs
+    sleep(thread_configurations::Model::waitTimeBtnIters);
 }
 
 void ModelThread::prepareToStop() {
