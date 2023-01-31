@@ -6,6 +6,8 @@
 #include "model_settings.h"
 #include "ProcessorThreads/InputTensorPreparatorThread.h"
 #include "ProcessorThreads/ModelThread.h"
+#include "ProcessorThreads/PlaybackPreparatorThread.h"
+#include "Includes/GenerationEvent.h"
 
 // #include "gui/CustomGuiTextEditors.h"
 
@@ -28,11 +30,12 @@ public:
     unique_ptr<LockFreeQueue<Event, queue_settings::NMP2ITP_que_size>> NMP2ITP_Event_Que;
     unique_ptr<LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size>> ITP2MDL_ModelInput_Que;
     unique_ptr<LockFreeQueue<ModelOutput, queue_settings::MDL2PPP_que_size>> MDL2PPP_ModelOutput_Que;
-    unique_ptr<LockFreeQueue<Event, queue_settings::PPP2NMP_que_size>> PPP2NMP_Event_Que;
+    unique_ptr<LockFreeQueue<GenerationEvent, queue_settings::PPP2NMP_que_size>> PPP2NMP_GenerationEvent_Que;
 
     // Threads used for generating patterns in the background
     shared_ptr<InputTensorPreparatorThread> inputTensorPreparatorThread;
     shared_ptr<ModelThread> modelThread;
+    shared_ptr<PlaybackPreparatorThread> playbackPreparatorThread;
 
     // APVTS
     juce::AudioProcessorValueTreeState apvts;
@@ -56,14 +59,21 @@ private:
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
     // Event Place Holders for cross buffer events
-    Event last_frame_meta_data;
+    Event last_frame_meta_data{};
     std::optional<Event> NewBarEvent;
     std::optional<Event> NewTimeShiftEvent;
 
-    //
+    // Gets DAW info and midi messages,
+    // Wraps messages as Events
+    // then sends them to the InputTensorPreparatorThread via the NMP2ITP_Event_Que
     void sendReceivedInputsAsEvents(
             MidiBuffer &midiMessages, const Optional<AudioPlayHead::PositionInfo> &Pinfo,
             double fs,
             int buffSize);
+
+    // Playback Data
+    juce::MidiMessageSequence playbackSequence{};  // holds messages to play
+    std::optional<GenerationPlaybackPolicies> playbackPolicies{std::nullopt};
+    BufferMetaData phead_at_start_of_new_stream{};
 
 };

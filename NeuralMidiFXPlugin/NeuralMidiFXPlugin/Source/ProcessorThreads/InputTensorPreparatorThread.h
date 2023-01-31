@@ -10,7 +10,7 @@
 #include "../Includes/CustomStructsAndLockFreeQueue.h"
 #include "../settings.h"
 #include "../model_settings.h"
-#include "../Includes/EventTracker.h"
+#include "../Includes/InputEvent.h"
 
 class InputTensorPreparatorThread : public juce::Thread {
 public:
