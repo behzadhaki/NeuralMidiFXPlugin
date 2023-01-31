@@ -14,9 +14,7 @@
 using namespace std;
 
 // ============================================================================================================
-// ==========          LockFreeQueue used for general data such as arrays, ints, floats and...   =============
-// ==========          !!!! NOT TO BE USED WITH Vectors or                  !!!!
-// ==========          !!!!  datatypes where size can change Dynamically    !!!!
+// ==========          LockFreeQueue (First In - First Out)          ==========================================
 // ============================================================================================================
 template<typename T, int queue_size>
 class LockFreeQueue {
