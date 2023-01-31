@@ -174,6 +174,28 @@ struct BufferMetaData {
         return !(*this == e);
     }
 
+    void operator=(const BufferMetaData &e) {
+        this->qpm = e.qpm;
+        this->numerator = e.numerator;
+        this->denominator = e.denominator;
+        this->isPlaying = e.isPlaying;
+        this->isRecording = e.isRecording;
+        this->time_in_samples = e.time_in_samples;
+        this->time_in_seconds = e.time_in_seconds;
+        this->time_in_ppq = e.time_in_ppq;
+        this->delta_time_in_samples = e.delta_time_in_samples;
+        this->delta_time_in_seconds = e.delta_time_in_seconds;
+        this->delta_time_in_ppq = e.delta_time_in_ppq;
+        this->playhead_force_moved_forward = e.playhead_force_moved_forward;
+        this->playhead_force_moved_backward = e.playhead_force_moved_backward;
+        this->isLooping = e.isLooping;
+        this->loop_start_in_ppq = e.loop_start_in_ppq;
+        this->loop_end_in_ppq = e.loop_end_in_ppq;
+        this->bar_count = e.bar_count;
+        this->ppq_position_of_last_bar_start = e.ppq_position_of_last_bar_start;
+        this->sample_rate = e.sample_rate;
+        this->buffer_size_in_samples = e.buffer_size_in_samples;
+    }
 };
 
 /*
@@ -259,9 +281,11 @@ public:
     }
 
     Event(juce::Optional<juce::AudioPlayHead::PositionInfo> Pinfo, double sample_rate_,
-          int64_t buffer_size_in_samples_, const juce::MidiMessage &message_) : message(message_) {
+          int64_t buffer_size_in_samples_, juce::MidiMessage message_) {
 
         type = 10;
+        message = juce::MidiMessage(message_);
+        message.getDescription();
 
         bufferMetaData = BufferMetaData(Pinfo, sample_rate_, buffer_size_in_samples_);
 
@@ -338,10 +362,15 @@ public:
 
     }
 
+    void setPlaybackStoppedEvent() {
+        type = -1;
+    }
 
     int Type() const { return type; }
 
     bool isFirstBufferEvent() const { return type == 1; }
+
+    bool isPlaybackStoppedEvent() const { return type == -1; }
 
     bool isNewBufferEvent() const { return type == 2; }
 
@@ -373,6 +402,7 @@ public:
         ss << "++ ";
 
         if (isFirstBufferEvent()) { ss << " | First Buffer"; }
+        if (isPlaybackStoppedEvent()) { ss << " | Stop  Buffer"; }
         if (isNewBufferEvent()) { ss << " | New Buffer"; }
         if (isNewBarEvent()) { ss << " | New Bar"; }
         if (isNewTimeShiftEvent()) { ss << " | New Time Shift"; }
@@ -451,10 +481,11 @@ public:
         std::stringstream ss;
         ss << "++ ";
         if (isFirstBufferEvent()) { ss << " | First Buffer"; }
-        if (isNewBufferEvent()) { ss << " | New Buffer"; }
-        if (isNewBarEvent()) { ss << " | New Bar"; }
+        if (isPlaybackStoppedEvent()) { ss << " | Stop  Buffer"; }
+        if (isNewBufferEvent()) { ss << " |  New Buffer "; }
+        if (isNewBarEvent()) { ss << " |  New  Bar   "; }
         if (isMidiMessageEvent()) {
-            ss << " | message: " << message.getDescription();
+            ss << " | message:    " << message.getDescription();
         } else {
             if (bufferMetaData.wasPlayheadManuallyMovedBackward()) {
                 ss << " | Playhead Manually Moved BACKWARD";
