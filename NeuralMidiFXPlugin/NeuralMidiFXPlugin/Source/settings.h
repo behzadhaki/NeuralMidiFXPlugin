@@ -29,10 +29,10 @@ namespace thread_configurations::PlaybackPreparator {
  *  if the queue is full, the producer thread will overwrite the oldest element
  */
 namespace queue_settings {
-    constexpr int NMP2ITP_que_size{4096};
-    constexpr int ITP2MDL_que_size{4096};
-    constexpr int MDL2PPP_que_size{4096};
-    constexpr int PPP2NMP_que_size{4096};
+    constexpr int NMP2ITP_que_size{512};
+    constexpr int ITP2MDL_que_size{512};
+    constexpr int MDL2PPP_que_size{512};
+    constexpr int PPP2NMP_que_size{512};
 }
 
 // ======================================================================================
