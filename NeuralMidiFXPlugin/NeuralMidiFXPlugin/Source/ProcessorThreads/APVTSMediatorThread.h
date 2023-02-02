@@ -4,8 +4,6 @@
 
 #pragma once
 
-
-
 #include <shared_plugin_helpers/shared_plugin_helpers.h>
 #include "../settings.h"
 #include "../Includes/CustomStructsAndLockFreeQueue.h"
@@ -31,45 +29,58 @@ class APVTSMediatorThread: public juce::Thread
 public:
     juce::StringArray paths;
 
+    // I want to declare these as private, but if I do it lower down it doesn't work..
+    int numSliders;
+    int numRotaries;
+
     // ============================================================================================================
     // ===          Preparing Thread for Running
     // ============================================================================================================
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 1 . Construct
     // ------------------------------------------------------------------------------------------------------------
-    APVTSMediatorThread(GrooveThread* grooveThreadPntr, ModelThread* modelThreadPntr): juce::Thread("APVTSMediatorThread")
+    APVTSMediatorThread(InputTensorPreparatorThread* inputThreadPntr,
+                        PlaybackPreparatorThread* playbackThreadPntr)
+        : juce::Thread("APVTSMediatorThread")
     {
-        grooveThread = grooveThreadPntr;
-        modelThread = modelThreadPntr;
-        paths = get_pt_files_in_default_path();
+        inputThread = inputThreadPntr;
+        modelThread = playbackThreadPntr;
+        //paths = get_pt_files_in_default_path(); //JL: Where is this defined?
     }
 
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 2 . give access to resources needed to communicate with other threads
     // ------------------------------------------------------------------------------------------------------------
-    void startThreadUsingProvidedResources(
-        juce::AudioProcessorValueTreeState* APVTSPntr,
-        LockFreeQueue<std::array<float, 4>, GeneralSettings::gui_io_queue_size>* APVTS2GrooveThread_groove_vel_offset_ranges_QuePntr,
-        LockFreeQueue<std::array<int, 2>, GeneralSettings::gui_io_queue_size>* APVTS2GrooveThread_groove_record_overdubToggles_QuePntr,
-        LockFreeQueue<std::array<float, HVO_params::num_voices>, GeneralSettings::gui_io_queue_size>* APVTS2ModelThread_max_num_hits_QuePntr,
-        LockFreeQueue<std::array<float, HVO_params::num_voices+1>, GeneralSettings::gui_io_queue_size>* APVTS2ModelThread_sampling_thresholds_and_temperature_QuePntr,
-        LockFreeQueue<std::array<int, HVO_params::num_voices>, GeneralSettings::gui_io_queue_size>* APVTS2ModelThread_midi_mappings_QuePntr
-        )
+    void startThreadUsingProvidedResources(juce::AudioProcessorValueTreeState* APVTSPntr)
     {
         APVTS = APVTSPntr;
-        APVTS2GrooveThread_groove_vel_offset_ranges_Que = APVTS2GrooveThread_groove_vel_offset_ranges_QuePntr;
-        APVTS2GrooveThread_groove_record_overdubToggles_Que = APVTS2GrooveThread_groove_record_overdubToggles_QuePntr;
-        APVTS2ModelThread_max_num_hits_Que = APVTS2ModelThread_max_num_hits_QuePntr;
-        APVTS2ModelThread_sampling_thresholds_and_temperature_Que = APVTS2ModelThread_sampling_thresholds_and_temperature_QuePntr;
-        APVTS2ModelThread_midi_mappings_Que = APVTS2ModelThread_midi_mappings_QuePntr;
+
+        auto tabList = UIObjects::Tabs::tabList;
+        int numTabs = tabList.size();
+
+
+        // Naming of Slider + Rotary Parameter ID's per tab
+        for (int j = 0; j < numTabs; j++)
+        {
+            numSliders = std::get<1>(tabList[j]).size();
+            numRotaries = std::get<2>(tabList[j]).size();
+
+
+            for (int i = 0; i < numSliders; i++)
+            {
+                auto ID = "Slider_" + to_string(j) + to_string(i);
+                sliderParamIDS.push_back(ID);
+            }
+
+            for (int i = 0; i < numRotaries; i++)
+            {
+                auto ID = "Rotary_" + to_string(j) + to_string(i);
+                rotaryParamIDS.push_back(ID);
+            }
+        }
 
         startThread();
     }
-
-
-
-
-
 
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 3 . start run() thread by calling startThread().
@@ -81,134 +92,32 @@ public:
         // notify if the thread is still running
         bool bExit = threadShouldExit();
 
-        auto current_overdub_record_toggle_states = get_overdub_record_toggle_states();
-        auto current_groove_vel_offset_ranges = get_groove_vel_offset_ranges();
-        auto current_max_num_hits = get_max_num_hits();
-        auto current_sampling_thresholds_with_temperature = get_sampling_thresholds_with_temperature();
-        auto current_per_voice_midi_numbers = get_per_voice_midi_numbers();
-        auto current_reset_buttons = get_reset_buttons();
-        auto current_randomize_groove_buttons = get_randomize_groove_buttons();
-        auto current_model_selected = get_model_selected();
+        auto current_slider_values = get_slider_values();
+        auto current_rotary_values = get_rotary_values();
 
         while (!bExit)
         {
             if (APVTS != nullptr)
             {
-                auto new_overdub_record_toggle_states =
-                    get_overdub_record_toggle_states();
-                if (current_overdub_record_toggle_states
-                    != new_overdub_record_toggle_states)
+                auto new_slider_values = get_slider_values();
+                if (new_slider_values != current_slider_values)
                 {
-                    current_overdub_record_toggle_states =
-                        new_overdub_record_toggle_states;
-                    APVTS2GrooveThread_groove_record_overdubToggles_Que->push(
-                        new_overdub_record_toggle_states);
+                    current_slider_values = new_slider_values;
+                    // Update Lock Free Queues with new values
+//                    APVM2ITP_slider_values_que->push(new_slider_values);
+//                    APVM2PPP_slider_values_que->push(new_slider_values);
+//                    APVM2MDL_slider_values_que->push(new_slider_values);
+//                    APVM2NMP_slider_values_que->push(new_slider_values);
                 }
 
-                auto new_groove_vel_offset_ranges = get_groove_vel_offset_ranges();
-                // check if vel/offset values changed
-                if (current_groove_vel_offset_ranges != new_groove_vel_offset_ranges)
+                auto new_rotary_values = get_rotary_values();
+                if (new_rotary_values != current_rotary_values)
                 {
-                    current_groove_vel_offset_ranges = new_groove_vel_offset_ranges;
-                    APVTS2GrooveThread_groove_vel_offset_ranges_Que->push(
-                        new_groove_vel_offset_ranges);
-                }
-
-                // check if per voice allowed maximum number of hits has changed
-                auto new_max_num_hits = get_max_num_hits();
-                if (current_max_num_hits != new_max_num_hits)
-                {
-                    current_max_num_hits = new_max_num_hits;
-                    APVTS2ModelThread_max_num_hits_Que->push(new_max_num_hits);
-                }
-
-                // check if per voice allowed sampling thresholds have changed
-                auto new_sampling_thresholds_with_temperature =
-                    get_sampling_thresholds_with_temperature();
-
-                if (current_sampling_thresholds_with_temperature
-                    != new_sampling_thresholds_with_temperature)
-                {
-                    current_sampling_thresholds_with_temperature =
-                        new_sampling_thresholds_with_temperature;
-                    APVTS2ModelThread_sampling_thresholds_and_temperature_Que->push(
-                        new_sampling_thresholds_with_temperature);
-                }
-
-                // check if per voice midi numbers have changed
-                auto new_per_voice_midi_numbers = get_per_voice_midi_numbers();
-                if (current_per_voice_midi_numbers != get_per_voice_midi_numbers())
-                {
-                    current_per_voice_midi_numbers = new_per_voice_midi_numbers;
-                    APVTS2ModelThread_midi_mappings_Que->push(new_per_voice_midi_numbers);
-                }
-
-                // check if per reset buttons have been clicked
-                auto new_reset_buttons = get_reset_buttons();
-                if (current_reset_buttons != new_reset_buttons)
-                {
-                    auto resetGrooveButtonClicked = (current_reset_buttons[0] !=  new_reset_buttons[0]);
-                    auto resetSampleParamsClicked = (current_reset_buttons[1] !=  new_reset_buttons[1]);
-                    auto resetAllClicked = (current_reset_buttons[2] !=  new_reset_buttons[2]);
-                    
-                    if (resetGrooveButtonClicked or resetAllClicked)
-                    {
-                        grooveThread->ForceResetGroove();
-                    }
-                    if (resetSampleParamsClicked  or resetAllClicked)
-                    {
-                        // reset parameters to default
-                        for(const string &ParamID : {"VEL_BIAS", "VEL_DYNAMIC_RANGE", "OFFSET_BIAS", "OFFSET_RANGE"})
-                        {
-                            auto param = APVTS->getParameter(ParamID);
-                            param->setValueNotifyingHost(param->getDefaultValue());
-                        }
-                        
-                        for (size_t i=0; i < HVO_params::num_voices; i++)
-                        {
-                            auto ParamID = nine_voice_kit_labels[i];
-                            auto param = APVTS->getParameter(ParamID+"_X");
-                            param->setValueNotifyingHost(param->getDefaultValue());
-                            param = APVTS->getParameter(ParamID+"_Y");
-                            param->setValueNotifyingHost(param->getDefaultValue());
-                            param = APVTS->getParameter(ParamID+"_MIDI");
-                            param->setValueNotifyingHost(param->getDefaultValue());
-                        }
-                    }
-
-                    // current_reset_buttons = new_reset_buttons;
-                    reset_reset_buttons();
-                }
-
-                // check if random buttons have been clicked
-                auto new_randomize_groove_buttons = get_randomize_groove_buttons();
-                if (current_randomize_groove_buttons != new_randomize_groove_buttons)
-                {
-                    if (current_randomize_groove_buttons[0] != new_randomize_groove_buttons[0])
-                    {
-                        grooveThread->randomizeExistingVelocities();
-                    }
-
-                    if (current_randomize_groove_buttons[1] != new_randomize_groove_buttons[1])
-                    {
-                        grooveThread->randomizeExistingOffsets();
-                    }
-
-                    if (current_randomize_groove_buttons[2] != new_randomize_groove_buttons[2])
-                    {
-                        grooveThread->randomizeAll();
-                    }
-
-                    reset_random_buttons();
-                }
-
-                // check if new model selected
-                auto new_model_selected = get_model_selected();
-                if (current_model_selected != new_model_selected)
-                {
-                    current_model_selected = new_model_selected;
-                    auto new_model_path = (string)GeneralSettings::default_model_folder + "/" + paths[current_model_selected].toStdString() + ".pt";
-                    modelThread->UpdateModelPath(new_model_path);
+                    current_rotary_values = new_rotary_values;
+//                    APVM2ITP_rotary_values_que->push(new_rotary_values);
+//                    APVM2PPP_rotary_values_que->push(new_rotary_values);
+//                    APVM2MDL_rotary_values_que->push(new_rotary_values);
+//                    APVM2NMP_rotary_values_que->push(new_rotary_values);
                 }
 
                 bExit = threadShouldExit();
@@ -244,121 +153,56 @@ private:
     // ===          Utility Methods and Parameters
     // ============================================================================================================
 
-    std::array<int, 2> get_overdub_record_toggle_states()
+    std::vector<float> get_slider_values()
     {
-        return {
-            int(*APVTS->getRawParameterValue("OVERDUB")), int(*APVTS->getRawParameterValue("RECORD"))
-        };
-    }
-
-    std::array<float, 4> get_groove_vel_offset_ranges()
-    {
-        return {
-            *APVTS->getRawParameterValue("VEL_BIAS"), *APVTS->getRawParameterValue("VEL_DYNAMIC_RANGE"),
-            *APVTS->getRawParameterValue("OFFSET_BIAS"), *APVTS->getRawParameterValue("OFFSET_RANGE"),
-        };
-    }
-
-    std::array<float, HVO_params::num_voices> get_max_num_hits()
-    {
-        std::array<float, HVO_params::num_voices> max_num_hits {};
-        for (size_t i=0; i<HVO_params::num_voices; i++)
+        std::vector<float> newSliderArray;
+        for (int i = 0; i < numSliders; ++i)
         {
-            auto voice_label = nine_voice_kit_labels[i];
-            max_num_hits[i] = *APVTS->getRawParameterValue(voice_label+"_X");
+            auto paramRef = sliderParamIDS[i];
+            newSliderArray.push_back(float(*APVTS->getRawParameterValue(paramRef)));
         }
-        return max_num_hits;
+
+        return newSliderArray;
     }
 
-    std::array<float, HVO_params::num_voices+1> get_sampling_thresholds_with_temperature()
+
+    std::vector<float> get_rotary_values()
     {
-        std::array<float, HVO_params::num_voices+1> sampling_thresholds_with_temperature {};
-        for (size_t i=0; i<HVO_params::num_voices; i++)
+        std::vector<float> newRotaryArray;
+        for (int i = 0; i < numRotaries; ++i)
         {
-            auto voice_label = nine_voice_kit_labels[i];
-            sampling_thresholds_with_temperature[i] = *APVTS->getRawParameterValue(voice_label+"_Y");
+            auto paramRef = rotaryParamIDS[i];
+            newRotaryArray.push_back(float(*APVTS->getRawParameterValue(paramRef)));
         }
-        sampling_thresholds_with_temperature[HVO_params::num_voices] = *APVTS->getRawParameterValue("Temperature");
-        return sampling_thresholds_with_temperature;
-    }
 
-    std::array<int, HVO_params::num_voices> get_per_voice_midi_numbers()
-    {
-        std::array<int, HVO_params::num_voices> midiNumbers {};
-        for (size_t i=0; i<HVO_params::num_voices; i++)
-        {
-            auto voice_label = nine_voice_kit_labels[i];
-            midiNumbers[i] = int(*APVTS->getRawParameterValue(voice_label + "_MIDI"));
-        }
-        return midiNumbers;
-    }
-
-    // returns reset_groove, reset_samplingparams and reset all
-    std::array<int, 3> get_reset_buttons()
-    {
-        return {(int)*APVTS->getRawParameterValue("RESET_GROOVE"),
-                (int)*APVTS->getRawParameterValue("RESET_SAMPLINGPARAMS"),
-                (int)*APVTS->getRawParameterValue("RESET_ALL")};
-    }
-
-    // returns all reset buttons (buttons are toggles, so when mouse release they should jump back)
-    void reset_reset_buttons()
-    {
-        auto param = APVTS->getParameter("RESET_GROOVE");
-        param->setValueNotifyingHost(0);
-        param = APVTS->getParameter("RESET_SAMPLINGPARAMS");
-        param->setValueNotifyingHost(0);
-        param = APVTS->getParameter("RESET_ALL");
-        param->setValueNotifyingHost(0);
-    }
-
-    // returns RANDOMIZE_VEL, RANDOMIZE_OFFSET and RANDOMIZE_ALL all
-    std::array<int, 3> get_randomize_groove_buttons()
-    {
-        return {(int)*APVTS->getRawParameterValue("RANDOMIZE_VEL"),
-                (int)*APVTS->getRawParameterValue("RANDOMIZE_OFFSET"),
-                (int)*APVTS->getRawParameterValue("RANDOMIZE_ALL")};
-    }
-
-    // returns all reset buttons (buttons are toggles, so when mouse release they should jump back)
-    void reset_random_buttons()
-    {
-        auto param = APVTS->getParameter("RANDOMIZE_VEL");
-        param->setValueNotifyingHost(0);
-        param = APVTS->getParameter("RANDOMIZE_OFFSET");
-        param->setValueNotifyingHost(0);
-        param = APVTS->getParameter("RANDOMIZE_ALL");
-        param->setValueNotifyingHost(0);
-    }
-
-    // returns RANDOMIZE_VEL, RANDOMIZE_OFFSET and RANDOMIZE_ALL all
-    int get_model_selected()
-    {
-        auto model_selected = (int)*APVTS->getRawParameterValue("MODEL");
-        return model_selected;
+        return newRotaryArray;
     }
 
     // ============================================================================================================
     // ===          Output Queues for Receiving/Sending Data
     // ============================================================================================================
-    LockFreeQueue<std::array<float, 4>, GeneralSettings::gui_io_queue_size>* APVTS2GrooveThread_groove_vel_offset_ranges_Que {nullptr};
-    LockFreeQueue<std::array<int, 2>, GeneralSettings::gui_io_queue_size>* APVTS2GrooveThread_groove_record_overdubToggles_Que {nullptr};
-    LockFreeQueue<std::array<float, HVO_params::num_voices>, GeneralSettings::gui_io_queue_size>* APVTS2ModelThread_max_num_hits_Que {nullptr};
-    LockFreeQueue<std::array<float, HVO_params::num_voices+1>, GeneralSettings::gui_io_queue_size>* APVTS2ModelThread_sampling_thresholds_and_temperature_Que {nullptr};
-    LockFreeQueue<std::array<int, HVO_params::num_voices>, GeneralSettings::gui_io_queue_size>* APVTS2ModelThread_midi_mappings_Que {nullptr};
 
+//    LockFreeQueue<std::array<float, numSliders>, 512>* APVM2ITP_slider_values_que {nullptr};
+//    LockFreeQueue<std::array<float, numSliders>, 512>* APVM2PPP_slider_values_que {nullptr};
+//    LockFreeQueue<std::array<float, numSliders>, 512>* APVM2MDL_slider_values_que {nullptr};
+//    LockFreeQueue<std::array<float, numSliders>, 512>* APVM2NMP_slider_values_que {nullptr};
+//
+//    LockFreeQueue<std::array<float, numRotaries>, 512>* APVM2ITP_rotary_values_que {nullptr};
+//    LockFreeQueue<std::array<float, numRotaries>, 512>* APVM2PPP_rotary_values_que {nullptr};
+//    LockFreeQueue<std::array<float, numRotaries>, 512>* APVM2MDL_rotary_values_que {nullptr};
+//    LockFreeQueue<std::array<float, numRotaries>, 512>* APVM2NMP_rotary_values_que {nullptr};
+//
+    std::vector<std::string> sliderParamIDS;
+    std::vector<std::string> rotaryParamIDS;
 
     // ============================================================================================================
     // ===          pointer to NeuralMidiFXPluginProcessor
     // ============================================================================================================
-    GrooveThread* grooveThread;
-    ModelThread* modelThread;
-
+    InputTensorPreparatorThread* inputThread;
+    PlaybackPreparatorThread* modelThread;
 
     // ============================================================================================================
     // ===          Pointer to APVTS hosted in the Main Processor
     // ============================================================================================================
     juce::AudioProcessorValueTreeState* APVTS {nullptr};
-
-
 };

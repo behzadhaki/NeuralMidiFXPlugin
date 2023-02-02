@@ -7,6 +7,68 @@
 #include <torch/script.h> // One-stop header.
 
 // ======================================================================================
+// ==================     UI Settings                      ==============================
+// ======================================================================================
+
+// GUI settings
+namespace UIObjects {
+    using slider_tuple = std::tuple<const char *, double, double, double>;
+    using rotary_tuple = std::tuple<const char *, double, double, double>;
+    using button_tuple = std::tuple<const char *, bool>;
+
+    using slider_list = std::vector<slider_tuple>;
+    using rotary_list = std::vector<rotary_tuple>;
+    using button_list = std::vector<button_tuple>;
+
+    using tab_tuple = std::tuple<const char *, slider_list, rotary_list, button_list>;
+
+    namespace Tabs {
+        // To access:
+//      std::string tabName = std::get<0>(tabList[0]);
+//      slider_list sliders = std::get<1>(tabList[0]);
+//      rotary_list rotaries = std::get<2>(tabList[0]);
+//      button_list buttons = std::get<3>(tabList[0]);
+//
+//      slider_tuple firstSlider = std::get<0>(sliders);
+//      double sliderValue = std::get<1>(firstSlider);
+
+
+        const std::vector<std::vector<int>> myVec = {{0, 0},
+                                                     {1, 1}};
+        const std::vector<tab_tuple> tabList{
+
+                tab_tuple{
+                        "Model",
+                        slider_list{
+                                slider_tuple{"Slider 1", 0.0, 1.0, 0.0},
+                                slider_tuple{"Slider 2", 0.0, 25.0, 11.0}},
+                        rotary_list{
+                                rotary_tuple{"Rotary 1", 0.0, 1.0, 0.5},
+                                rotary_tuple{"Test 2", 0.0, 4.0, 1.5},
+                                rotary_tuple{"Rotary 3", 0.0, 1.0, 0.0}},
+                        button_list{
+                                button_tuple{"Button 1", true},
+                                button_tuple{"Button 2", false}}
+                },
+
+                tab_tuple{
+                        "Settings",
+                        slider_list{
+                                slider_tuple{"Test 1", 0.0, 1.0, 0.0},
+                                slider_tuple{"Gibberish", 0.0, 25.0, 11.0}},
+                        rotary_list{
+                                rotary_tuple{"Rotary 1", 0.0, 1.0, 0.5},
+                                rotary_tuple{"Test 2", 0.0, 4.0, 1.5}},
+                        button_list{
+                                button_tuple{"Test Button", true},
+                                button_tuple{"Velocity", true},
+                                button_tuple{"Dynamics", false}}
+                }
+        };
+    }
+}
+
+// ======================================================================================
 // ==================       Thread  Settings                  ============================
 // ======================================================================================
 namespace thread_configurations::InputTensorPreparator {
@@ -99,6 +161,3 @@ namespace event_communication_settings {
     // Filter CC Events if you don't need them
     constexpr bool FilterCCEvents_FLAG{false};
 }
-
-
-
