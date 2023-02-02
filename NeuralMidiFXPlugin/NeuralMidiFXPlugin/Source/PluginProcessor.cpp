@@ -24,10 +24,10 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
     // --------------------------------------------------------------------------------------
     inputTensorPreparatorThread->startThreadUsingProvidedResources(NMP2ITP_Event_Que.get(),
                                                                    ITP2MDL_ModelInput_Que.get());
-//    modelThread->startThreadUsingProvidedResources(ITP2MDL_ModelInput_Que.get(),
-//                                                   MDL2PPP_ModelOutput_Que.get());
-//    playbackPreparatorThread->startThreadUsingProvidedResources(MDL2PPP_ModelOutput_Que.get(),
-//                                                                PPP2NMP_GenerationEvent_Que.get());
+    modelThread->startThreadUsingProvidedResources(ITP2MDL_ModelInput_Que.get(),
+                                                   MDL2PPP_ModelOutput_Que.get());
+    playbackPreparatorThread->startThreadUsingProvidedResources(MDL2PPP_ModelOutput_Que.get(),
+                                                                PPP2NMP_GenerationEvent_Que.get());
 
 }
 
@@ -64,58 +64,7 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             DBG("**NMP** GenerationEvent received" << event.getNewPlaybackPolicyEvent().getPlaybackPolicyType());
         }
     }
-//    if (PPP2NMP_GenerationEvent_Que->getNumReady() > 0) {
-//        DBG("PPP2NMP_GenerationEvent_Que->getNumReady() = " << PPP2NMP_GenerationEvent_Que->getNumReady());
-//        auto generationEvent = PPP2NMP_GenerationEvent_Que->pop();
-//        DBG(*generationEvent.playbackPolicies->PlaybackPolicy);
-//    }
 
-    /*while (PPP2NMP_GenerationEvent_Que->getNumReady() > 0) {
-        auto generation_event = PPP2NMP_GenerationEvent_Que->pop();
-        DBG("**NMP** Received Generation Event in NMP");
-        if (generation_event.playbackPolicies.has_value()) {
-            DBG("**NMP** Playback Policies are present");
-            playbackPolicies = *generation_event.playbackPolicies;
-            phead_at_start_of_new_stream = last_frame_meta_data.bufferMetaData;
-            // check what time unit is used for timing of messages
-            double time;
-            if (playbackPolicies->IsTimeUnitIsAudioSamples()) {
-                time = double(phead_at_start_of_new_stream.time_in_samples);
-                DBG("**NMP** time in samples: " << time);
-            } else if (playbackPolicies->IsTimeUnitIsPPQ()) {
-                time = phead_at_start_of_new_stream.time_in_ppq;
-                DBG("**NMP** time in ppq: " << time);
-            } else {
-                time = phead_at_start_of_new_stream.time_in_seconds;
-                DBG("**NMP** time in seconds: " << time);
-            }
-            // check what to do with the previous stream
-//            if (playbackPolicies->IsOverwritePolicy_DeleteAllEventsAfterNow()) {
-//                for (int i = 0; i < playbackSequence.getNumEvents(); i++) {
-//                    auto message = playbackSequence.getEventPointer(i)->message;
-//                    if (message.getTimeStamp() > time) {
-//                        playbackSequence.deleteEvent(i, true);
-//                    }
-//                }
-//                playbackSequence.updateMatchedPairs();
-//
-//            } else if (playbackPolicies->IsOverwritePolicy_DeleteAllEventsInPreviousStreamAndUseNewStream()) {
-//                playbackSequence.clear();
-//            }
-        }
-        if (generation_event.messageSequence.has_value()*//* and playbackPolicies.has_value()*//*) {
-            // auto messageSequence = *generation_event.messageSequence;
-            DBG("**NMP** Message Sequence is present");
-//            for (auto &message : messageSequence) {
-//                DBG(message->message.getDescription());
-////                if (playbackPolicies->IsPlaybackPolicy_RelativeToAbsoluteZero()) {
-////                    playbackSequence.addEvent(message);
-////                } else if (playbackPolicies->IsPlaybackPolicy_RelativeToNow()) {
-////                    playbackSequence.
-////                }
-//            }
-        }
-    }*/
 
     midiMessages.swapWith(tempBuffer);
 
