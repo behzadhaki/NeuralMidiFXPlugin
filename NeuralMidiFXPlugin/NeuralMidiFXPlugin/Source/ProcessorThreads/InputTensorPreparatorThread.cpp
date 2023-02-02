@@ -178,7 +178,6 @@ void InputTensorPreparatorThread::run() {
                 /*  ... set other model_input fields */
 
                 /* Send to Model Thread */
-                auto a = make_shared<ModelInput>(model_input);
                 ITP2MDL_ModelInput_Que_ptr->push(model_input);
 
                 // reset the generation flag
