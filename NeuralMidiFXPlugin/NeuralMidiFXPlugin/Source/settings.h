@@ -43,8 +43,8 @@ namespace UIObjects {
                                 slider_tuple{"Slider 1", 0.0, 1.0, 0.0},
                                 slider_tuple{"Slider 2", 0.0, 25.0, 11.0}},
                         rotary_list{
-                                rotary_tuple{"Rotary 1", 0.0, 1.0, 0.5},
-                                rotary_tuple{"Test 2", 0.0, 4.0, 1.5},
+                                rotary_tuple{"Rotary 1A", 0.0, 1.0, 0.5},
+                                rotary_tuple{"Test 2A", 0.0, 4.0, 1.5},
                                 rotary_tuple{"Rotary 3", 0.0, 1.0, 0.0}},
                         button_list{
                                 button_tuple{"Button 1", true},
@@ -57,8 +57,8 @@ namespace UIObjects {
                                 slider_tuple{"Test 1", 0.0, 1.0, 0.0},
                                 slider_tuple{"Gibberish", 0.0, 25.0, 11.0}},
                         rotary_list{
-                                rotary_tuple{"Rotary 1", 0.0, 1.0, 0.5},
-                                rotary_tuple{"Test 2", 0.0, 4.0, 1.5}},
+                                rotary_tuple{"Rotary 1B", 0.0, 1.0, 0.5},
+                                rotary_tuple{"Test 2B", 0.0, 4.0, 1.5}},
                         button_list{
                                 button_tuple{"Test Button", true},
                                 button_tuple{"Velocity", true},
@@ -84,6 +84,10 @@ namespace thread_configurations::PlaybackPreparator {
     constexpr int waitTimeBtnIters{5};
 }
 
+namespace thread_configurations::APVTSMediatorThread {
+    // waittime between iterations in ms
+    constexpr int waitTimeBtnIters{5};
+}
 // ======================================================================================
 // ==================       QUEUE  Settings                  ============================
 // ======================================================================================
@@ -95,6 +99,7 @@ namespace queue_settings {
     constexpr int ITP2MDL_que_size{512};
     constexpr int MDL2PPP_que_size{512};
     constexpr int PPP2NMP_que_size{512};
+    constexpr int APVM_que_size{32};
 }
 
 // ======================================================================================
