@@ -11,13 +11,12 @@
 using namespace std;
 
 
-class ParameterComponent:  public juce::Button::Listener,
+class ParameterComponent : public juce::Button::Listener,
                            public juce::Component
 
 {
 public:
-    inline ParameterComponent(UIObjects::tab_tuple tabTuple)
-    {
+    inline ParameterComponent(UIObjects::tab_tuple tabTuple) {
         // Separate the larger tuple into a separate tuple for each category of UI elements
         tabName = std::get<0>(tabTuple);
         sliderList = std::get<1>(tabTuple);
@@ -29,8 +28,7 @@ public:
         numButtons = buttonList.size();
     }
 
-    void generateGuiElements(juce::Rectangle<int> paramsArea, juce::AudioProcessorValueTreeState* apvtsPointer)
-    {
+    void generateGuiElements(juce::Rectangle<int> paramsArea, juce::AudioProcessorValueTreeState *apvtsPointer) {
         setSize(paramsArea.getWidth(), paramsArea.getHeight());
 
         // Hold the string IDS to connect to APVTS in audio process thread
@@ -38,8 +36,7 @@ public:
         std::vector<std::string> rotaryParamIDS;
         std::vector<std::string> buttonParamIDS;
 
-        for (int i=0; i < numSliders; i++)
-        {
+        for (size_t i = 0; i < numSliders; i++) {
             // Retrieve single slider and its values
             auto sliderTuple = sliderList[i];
 
@@ -54,7 +51,7 @@ public:
             addAndMakeVisible(newSlider);
         }
 
-        for (int i=0; i < numRotaries; i++)
+        for (size_t i=0; i < numRotaries; i++)
         {
             auto rotaryTuple = rotaryList[i];
 
@@ -70,7 +67,7 @@ public:
             addAndMakeVisible(newRotary);
         }
 
-        for (int i=0; i < numButtons; i++)
+        for (size_t i=0; i < numButtons; i++)
         {
             auto buttonTuple = buttonList[i];
             juce::TextButton* textButton = generateButton(buttonTuple);
@@ -138,9 +135,9 @@ private:
     UIObjects::rotary_list rotaryList;
     UIObjects::button_list buttonList;
 
-    int numSliders;
-    int numRotaries;
-    int numButtons;
+    size_t numSliders;
+    size_t numRotaries;
+    size_t numButtons;
 
     juce::Rectangle<int> areaWithBleed;
     int deltaX;
@@ -153,7 +150,7 @@ private:
         newSlider->setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
                                    newSlider->getTextBoxWidth(), 50);
 
-        std::tie(name, minValue,maxValue, initValue) = sliderTuple;
+        std::tie(name, minValue, maxValue, initValue) = sliderTuple;
 
         // Generate labels
         juce::String str = juce::String(" ") + juce::String(name);
@@ -276,8 +273,4 @@ private:
 
 };
 
-inline juce::String generateParamID(int tab, int element)
-{
-    std::string paramID = "Slider_" + to_string(tab) + to_string(element);
-    return paramID;
-}
+
