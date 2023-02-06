@@ -48,6 +48,12 @@ public:
     }
 
     void push(T writeData) {
+        // check if this object is null
+        if (this == nullptr) {
+            DBG(" [******] You've forgotten to Initialize the LockFreeQueue object! "
+                "Double check the processor constructor !!");
+            assert (false);
+        }
         int start1, start2, blockSize1, blockSize2;
         writingActive = true;
         lockFreeFifo->prepareToWrite(
@@ -175,7 +181,7 @@ struct GuiParams {
 
     double getParamValue(const string &label) {
         for (size_t i = 0; i < paramLabels.size(); i++) {
-            if (paramLabels[i] == label) {
+            if (paramIDs[i] == label2ParamID(label)) {
                 return paramValues[i];
             }
         }
@@ -197,12 +203,10 @@ private:
         auto tabList = UIObjects::Tabs::tabList;
 
         for (auto tab_list: tabList) {
-            auto slider_elementsList = std::make_pair("Slider_", std::get<1>(tab_list));
-            auto rotary_elementsList = std::make_pair("Rotary_", std::get<2>(tab_list));
+            auto slidersList = std::get<1>(tab_list);
+            auto rotariesList = std::get<2>(tab_list);
 
-            for (const auto &paired_type_with_list: {slider_elementsList, rotary_elementsList}) {
-                auto elementType = paired_type_with_list.first;
-                auto elementsList = paired_type_with_list.second;
+            for (const auto &elementsList: {slidersList, rotariesList}) {
                 for (auto element: elementsList) {
                     std::string label = std::get<0>(element);
                     double defaultVal = std::get<3>(element);
