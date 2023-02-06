@@ -5,7 +5,7 @@
 #ifndef JUCECMAKEREPO_GUIELEMENTS_H
 #define JUCECMAKEREPO_GUIELEMENTS_H
 
-#endif //JUCECMAKEREPO_GUIELEMENTS_H
+#include "Includes/CustomStructsAndLockFreeQueue.h"
 
 
 using namespace std;
@@ -43,9 +43,10 @@ public:
             juce::Slider* newSlider = generateSlider(sliderTuple);
 
             // APVTS is used to send Slider/Rotary info to the APVM thread
-            auto paramID = "Slider_" + to_string(i);
+            auto paramID = label2ParamID(std::get<0>(sliderTuple)); // "Slider_" + to_string(i);
             std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> paramAttachment;
-            sliderAttachmentArray.push_back(std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(*apvtsPointer, paramID, *newSlider));
+            sliderAttachmentArray.push_back(std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+                    *apvtsPointer, paramID, *newSlider));
 
             sliderArray.add(newSlider);
             addAndMakeVisible(newSlider);
@@ -58,7 +59,7 @@ public:
             juce::Slider* newRotary = generateRotary(rotaryTuple);
 
             // APVTS is used to send Slider/Rotary info to the APVM thread
-            auto paramID = "Rotary_" + to_string(i);
+            auto paramID = label2ParamID(std::get<0>(rotaryTuple)); //"Rotary_" + to_string(i);
             std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> paramAttachment;
             rotaryAttachmentArray.push_back(std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(*apvtsPointer, paramID, *newRotary));
 
@@ -274,3 +275,4 @@ private:
 };
 
 
+#endif //JUCECMAKEREPO_GUIELEMENTS_H

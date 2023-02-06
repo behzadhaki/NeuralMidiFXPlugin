@@ -90,29 +90,16 @@ public:
         // notify if the thread is still running
         bool bExit = threadShouldExit();
 
-        auto current_slider_values = get_slider_values();
-        auto current_rotary_values = get_rotary_values();
         guiParams.print();
 
         while (!bExit) {
             if (APVTSPntr != nullptr) {
-                auto new_slider_values = get_slider_values();
-                if (new_slider_values != current_slider_values) {
-                    current_slider_values = new_slider_values;
-                    // Update Lock Free Queues with new values
-//                    APVM2ITP_slider_values_que->push(new_slider_values);
-//                    APVM2PPP_slider_values_que->push(new_slider_values);
-//                    APVM2MDL_slider_values_que->push(new_slider_values);
-//                    APVM2NMP_slider_values_que->push(new_slider_values);
-                }
 
-                auto new_rotary_values = get_rotary_values();
-                if (new_rotary_values != current_rotary_values) {
-                    current_rotary_values = new_rotary_values;
-//                    APVM2ITP_rotary_values_que->push(new_rotary_values);
-//                    APVM2PPP_rotary_values_que->push(new_rotary_values);
-//                    APVM2MDL_rotary_values_que->push(new_rotary_values);
-//                    APVM2NMP_rotary_values_que->push(new_rotary_values);
+                if (guiParams.update(APVTSPntr)) {
+                    guiParams.print();
+                    APVM2ITP_GuiParams_QuePntr->push(guiParams);
+                    APVM2MDL_GuiParams_QuePntr->push(guiParams);
+                    APVM2PPP_GuiParams_QuePntr->push(guiParams);
                 }
 
                 bExit = threadShouldExit();
@@ -144,30 +131,6 @@ public:
     }
 
 private:
-    // ============================================================================================================
-    // ===          Utility Methods and Parameters
-    // ============================================================================================================
-
-    std::vector<float> get_slider_values() {
-        std::vector<float> newSliderArray;
-        for (size_t i = 0; i < numSliders; ++i) {
-            auto paramRef = sliderParamIDS[i];
-            newSliderArray.push_back(float(*APVTSPntr->getRawParameterValue(paramRef)));
-        }
-        return newSliderArray;
-    }
-
-
-    std::vector<float> get_rotary_values() {
-        std::vector<float> newRotaryArray;
-        for (size_t i = 0; i < numRotaries; ++i) {
-            auto paramRef = rotaryParamIDS[i];
-            newRotaryArray.push_back(float(*APVTSPntr->getRawParameterValue(paramRef)));
-        }
-        return newRotaryArray;
-    }
-
-
 
     // ============================================================================================================
     // ===          Output Queues for Receiving/Sending Data

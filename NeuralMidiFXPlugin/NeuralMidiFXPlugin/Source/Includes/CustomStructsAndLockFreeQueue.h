@@ -132,44 +132,39 @@ public:
 // ============================================================================================================
 // ==========          GUI PARAM ID STRUCTS                          ==========================================
 // ============================================================================================================
+
+static string label2ParamID(const string &label) {
+    // capitalize label
+    string paramID = label;
+    std::transform(paramID.begin(), paramID.end(), paramID.begin(), ::toupper);
+    return paramID;
+}
+
 // to get the value of a parameter, use the following syntax:
 //      auto paramID = GuiParams.getParamValue(LabelOnGUi);
 struct GuiParams {
 
-    GuiParams() {
-        auto tabList = UIObjects::Tabs::tabList;
+    GuiParams() { construct(); }
 
-        int tab_count{0};
-        for (auto tab_list: tabList) {
-            auto slider_elementsList = std::make_pair("Slider_", std::get<1>(tab_list));
-            auto rotary_elementsList = std::make_pair("Rotary_", std::get<2>(tab_list));
+    explicit GuiParams(juce::AudioProcessorValueTreeState *apvts) {
+        construct();
+        for (size_t i = 0; i < paramLabels.size(); i++) {
+            paramValues[i] = double(*apvts->getRawParameterValue(paramIDs[i]));
+        }
+    }
 
-            for (const auto& paired_type_with_list: {slider_elementsList, rotary_elementsList}) {
-                auto elementType = paired_type_with_list.first;
-                auto elementsList = paired_type_with_list.second;
-                int count{0};
-                for (auto element: elementsList) {
-                    std::string label = std::get<0>(element);
-                    double defaultVal = std::get<3>(element);
-                    std::string paramID = elementType + to_string(tab_count) + to_string(count);
-
-                    // check that label doesn't already exist in vector
-                    // if it does, assert that it is unique
-                    for (const auto &past_labels: paramLabels) {
-                        // If you hit this assert, you have a duplicate label, which is not allowed
-                        // change the label in Settings.h's UIObjects
-                        if (label == past_labels) { DBG("Duplicate label found: " << label); }
-                        assert(label != past_labels);
-                    }
-
-                    paramLabels.push_back(label);
-                    paramIDs.push_back(paramID);
-                    paramValues.push_back(defaultVal);
-
-                    count++;
-                }
+    // checks if any of the parameters have changed, and updates the values
+    // returns true if any of the parameters have changed
+    bool update(juce::AudioProcessorValueTreeState *apvts) {
+        bool hasChanged = false;
+        for (size_t i = 0; i < paramLabels.size(); i++) {
+            auto newValue = double(*apvts->getRawParameterValue(paramIDs[i]));
+            if (newValue != paramValues[i]) {
+                paramValues[i] = newValue;
+                hasChanged = true;
             }
         }
+        return hasChanged;
     }
 
     void print() {
@@ -197,4 +192,37 @@ private:
     vector<string> paramLabels{};
     vector<string> paramIDs{};
     vector<double> paramValues{};
+
+    void construct() {
+        auto tabList = UIObjects::Tabs::tabList;
+
+        for (auto tab_list: tabList) {
+            auto slider_elementsList = std::make_pair("Slider_", std::get<1>(tab_list));
+            auto rotary_elementsList = std::make_pair("Rotary_", std::get<2>(tab_list));
+
+            for (const auto &paired_type_with_list: {slider_elementsList, rotary_elementsList}) {
+                auto elementType = paired_type_with_list.first;
+                auto elementsList = paired_type_with_list.second;
+                for (auto element: elementsList) {
+                    std::string label = std::get<0>(element);
+                    double defaultVal = std::get<3>(element);
+                    std::string paramID = label2ParamID(label);
+
+                    // check that label doesn't already exist in vector
+                    // if it does, assert that it is unique
+                    for (const auto &past_labels: paramLabels) {
+                        // If you hit this assert, you have a duplicate label, which is not allowed
+                        // change the label in Settings.h's UIObjects
+                        if (label == past_labels) { DBG("Duplicate label found: " << label); }
+                        assert(label != past_labels);
+                    }
+
+                    paramLabels.push_back(label);
+                    paramIDs.push_back(paramID);
+                    paramValues.push_back(defaultVal);
+
+                }
+            }
+        }
+    }
 };

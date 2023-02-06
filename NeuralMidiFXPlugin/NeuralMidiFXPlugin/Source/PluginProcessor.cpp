@@ -15,6 +15,12 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
     MDL2PPP_ModelOutput_Que = make_unique<LockFreeQueue<ModelOutput, queue_settings::MDL2PPP_que_size>>();
     PPP2NMP_GenerationEvent_Que = make_unique<LockFreeQueue<GenerationEvent, queue_settings::PPP2NMP_que_size>>();
 
+    //     Make_unique pointers for APVM Queues
+    // --------------------------------------------------------------------------------------
+    APVM2ITP_GuiParams_Que = make_unique<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>>();
+    APVM2MDL_GuiParams_Que = make_unique<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>>();
+    APVM2PPP_GuiParams_Que = make_unique<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>>();
+
     //       Create shared pointers for Threads (shared with APVTSMediator)
     // --------------------------------------------------------------------------------------
     inputTensorPreparatorThread = make_shared<InputTensorPreparatorThread>();
@@ -215,7 +221,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
     UIObjects::rotary_tuple rotaryTuple;
     UIObjects::button_tuple buttonTuple;
 
-    // Iterate through each tab
+
     for (size_t j = 0; j < numTabs; j++) {
         tabTuple = UIObjects::Tabs::tabList[j];
 
@@ -233,7 +239,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
             std::tie(name, minValue, maxValue, initValue) = sliderTuple;
 
             // Param ID will read "Slider" + [tab, item] i.e. 'Slider_13"
-            juce::String paramIDstr = "Slider_" + to_string(j) + to_string(i);
+            juce::String paramIDstr = label2ParamID(name);
             juce::ParameterID paramID = juce::ParameterID(paramIDstr, version_hint);
 
             layout.add(std::make_unique<juce::AudioParameterFloat>(paramID, name, minValue, maxValue, initValue));
@@ -244,7 +250,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
             rotaryTuple = rotaryList[i];
             std::tie(name, minValue,maxValue, initValue) = rotaryTuple;
 
-            auto paramIDstr = "Rotary_" + to_string(j) + to_string(i);
+            auto paramIDstr = label2ParamID(name);
             juce::ParameterID paramID = juce::ParameterID(paramIDstr, version_hint);
 
             layout.add (std::make_unique<juce::AudioParameterFloat> (paramID, name, minValue, maxValue, initValue));
