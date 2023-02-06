@@ -28,8 +28,10 @@ public:
         numButtons = buttonsList.size();
     }
 
-    void generateGuiElements(juce::Rectangle<int> paramsArea, juce::AudioProcessorValueTreeState *apvtsPointer) {
+    void generateGuiElements(juce::Rectangle<int> paramsArea, juce::AudioProcessorValueTreeState *apvtsPointer_) {
         setSize(paramsArea.getWidth(), paramsArea.getHeight());
+        //
+        apvtsPointer = apvtsPointer_;
 
         // Hold the string IDS to connect to APVTS in audio process thread
         std::vector<std::string> sliderParamIDS;
@@ -56,14 +58,24 @@ public:
         }
 
         for (const auto &buttonTuple: buttonsList) {
+
             juce::TextButton *textButton = generateButton(buttonTuple);
+            auto isToggleable = bool(std::get<1>(buttonTuple));
+            // only need a listener for buttons that are not connected to APVTS
+
             auto paramID = label2ParamID(std::get<0>(buttonTuple));
+
+            if (!isToggleable) {
+                textButton->addListener(this);
+            } else {
             buttonAttachmentArray.push_back(std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
                     *apvtsPointer, paramID, *textButton));
-            // Array will be used to resize the components later on
-            buttonArray.add(textButton);
 
-            textButton->addListener(this);
+            }
+
+            buttonArray.add(textButton);
+            buttonParameterIDs.push_back(paramID);
+
             addAndMakeVisible(textButton);
         }
     }
@@ -101,16 +113,33 @@ public:
 
     void resized() override {}
 
-    void buttonClicked(juce::Button *button) override {}
+    void buttonClicked(juce::Button *button) override {
+        // only need to increment button push count when
+        // button is not toggeleable
+        if (button -> isToggleable()) { return; }
+        size_t count = 0;
+        for (auto b_ : buttonArray) {
+            if (b_ == button) {
+                auto param_pntr = apvtsPointer->getRawParameterValue(buttonParameterIDs[count]);
+                *param_pntr = (*param_pntr) + 1;
+                break;
+            }
+            count++;
+        }
+    }
 
 private:
 
     const char *name{};
     double minValue{}, maxValue{}, initValue{};
 
+    // In Runtime, APVTS used only for untoggleable buttons
+    juce::AudioProcessorValueTreeState *apvtsPointer{nullptr};
+
     juce::OwnedArray<juce::Slider> sliderArray;
     juce::OwnedArray<juce::Slider> rotaryArray;
     juce::OwnedArray<juce::Button> buttonArray;
+    std::vector<juce::String> buttonParameterIDs;
 
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>> sliderAttachmentArray;
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>> rotaryAttachmentArray;

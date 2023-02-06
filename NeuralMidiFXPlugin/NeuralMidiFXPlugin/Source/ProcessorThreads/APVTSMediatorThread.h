@@ -40,7 +40,7 @@ public:
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 1 . Construct
     // ------------------------------------------------------------------------------------------------------------
-    APVTSMediatorThread(): juce::Thread("APVTSMediatorThread"){}
+    APVTSMediatorThread() : juce::Thread("APVTSMediatorThread") {}
 
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 2 . give access to resources needed to communicate with other threads
