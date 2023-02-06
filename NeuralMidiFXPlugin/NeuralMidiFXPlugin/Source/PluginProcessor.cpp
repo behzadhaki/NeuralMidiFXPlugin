@@ -2,6 +2,7 @@
 #include "PluginEditor.h"
 #include "Includes/GenerationEvent.h"
 #include "Includes/InputEvent.h"
+#include "ProcessorThreads/APVTSMediatorThread.h"
 
 using namespace std;
 
@@ -19,6 +20,7 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
     inputTensorPreparatorThread = make_shared<InputTensorPreparatorThread>();
     modelThread = make_shared<ModelThread>();
     playbackPreparatorThread = make_shared<PlaybackPreparatorThread>();
+    apvtsMediatorThread = make_unique<APVTSMediatorThread>();
 
     //       give access to resources and run threads
     // --------------------------------------------------------------------------------------
@@ -28,7 +30,10 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
                                                    MDL2PPP_ModelOutput_Que.get());
     playbackPreparatorThread->startThreadUsingProvidedResources(MDL2PPP_ModelOutput_Que.get(),
                                                                 PPP2NMP_GenerationEvent_Que.get());
-
+    apvtsMediatorThread->startThreadUsingProvidedResources(&apvts,
+                                                           APVM2ITP_GuiParams_Que.get(),
+                                                           APVM2MDL_GuiParams_Que.get(),
+                                                           APVM2PPP_GuiParams_Que.get());
 }
 
 NeuralMidiFXPluginProcessor::~NeuralMidiFXPluginProcessor() {
@@ -187,9 +192,72 @@ float NeuralMidiFXPluginProcessor::get_playhead_pos() const {
     return playhead_pos;
 }
 
-
 juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor::createParameterLayout() {
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
+
+    int version_hint = 1;
+
+    const char* name;
+    double minValue, maxValue, initValue;
+
+    size_t numTabs = UIObjects::Tabs::tabList.size();
+    size_t numSliders;
+    size_t numRotaries;
+    size_t numButtons;
+
+    UIObjects::tab_tuple tabTuple;
+
+    UIObjects::slider_list sliderList;
+    UIObjects::rotary_list rotaryList;
+    UIObjects::button_list buttonList;
+
+    UIObjects::slider_tuple sliderTuple;
+    UIObjects::rotary_tuple rotaryTuple;
+    UIObjects::button_tuple buttonTuple;
+
+    // Iterate through each tab
+    for (size_t j = 0; j < numTabs; j++) {
+        tabTuple = UIObjects::Tabs::tabList[j];
+
+        sliderList = std::get<1>(tabTuple);
+        rotaryList = std::get<2>(tabTuple);
+        buttonList = std::get<3>(tabTuple);
+
+        numSliders = sliderList.size();
+        numRotaries = rotaryList.size();
+        numButtons = buttonList.size();
+
+        // Sliders
+        for (size_t i = 0; i < numSliders; ++i) {
+            sliderTuple = sliderList[i];
+            std::tie(name, minValue, maxValue, initValue) = sliderTuple;
+
+            // Param ID will read "Slider" + [tab, item] i.e. 'Slider_13"
+            juce::String paramIDstr = "Slider_" + to_string(j) + to_string(i);
+            juce::ParameterID paramID = juce::ParameterID(paramIDstr, version_hint);
+
+            layout.add(std::make_unique<juce::AudioParameterFloat>(paramID, name, minValue, maxValue, initValue));
+        }
+
+        // Rotaries
+        for (size_t i = 0; i < numRotaries; ++i) {
+            rotaryTuple = rotaryList[i];
+            std::tie(name, minValue,maxValue, initValue) = rotaryTuple;
+
+            auto paramIDstr = "Rotary_" + to_string(j) + to_string(i);
+            juce::ParameterID paramID = juce::ParameterID(paramIDstr, version_hint);
+
+            layout.add (std::make_unique<juce::AudioParameterFloat> (paramID, name, minValue, maxValue, initValue));
+        }
+
+        // Buttons
+        for (size_t i = 0; i < numButtons; ++i) {
+            auto paramIDstr = "Button_" + to_string(j) + to_string(i);
+            juce::ParameterID paramID = juce::ParameterID(paramIDstr, version_hint);
+            layout.add (std::make_unique<juce::AudioParameterInt> (paramID, name, 0, 1, 0));
+        }
+    }
+
     return layout;
 }
 

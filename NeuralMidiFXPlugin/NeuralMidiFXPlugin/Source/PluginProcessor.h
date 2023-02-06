@@ -7,6 +7,7 @@
 #include "ProcessorThreads/InputTensorPreparatorThread.h"
 #include "ProcessorThreads/ModelThread.h"
 #include "ProcessorThreads/PlaybackPreparatorThread.h"
+#include "ProcessorThreads/APVTSMediatorThread.h"
 #include "Includes/GenerationEvent.h"
 
 // #include "gui/CustomGuiTextEditors.h"
@@ -32,6 +33,11 @@ public:
     unique_ptr<LockFreeQueue<ModelOutput, queue_settings::MDL2PPP_que_size>> MDL2PPP_ModelOutput_Que;
     unique_ptr<LockFreeQueue<GenerationEvent, queue_settings::PPP2NMP_que_size>> PPP2NMP_GenerationEvent_Que;
 
+    // APVTS Queues
+    unique_ptr<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>> APVM2ITP_GuiParams_Que;
+    unique_ptr<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>> APVM2MDL_GuiParams_Que;
+    unique_ptr<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>> APVM2PPP_GuiParams_Que;
+
     // Threads used for generating patterns in the background
     shared_ptr<InputTensorPreparatorThread> inputTensorPreparatorThread;
     shared_ptr<ModelThread> modelThread;
@@ -39,6 +45,7 @@ public:
 
     // APVTS
     juce::AudioProcessorValueTreeState apvts;
+    unique_ptr<APVTSMediatorThread> apvtsMediatorThread;
 
     void getStateInformation(juce::MemoryBlock &destData) override;
     void setStateInformation(const void *data, int sizeInBytes) override;
