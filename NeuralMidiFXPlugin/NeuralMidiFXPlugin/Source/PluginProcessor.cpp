@@ -204,6 +204,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
     int version_hint = 1;
 
     const char* name;
+    bool isToggleable;
     double minValue, maxValue, initValue;
 
     size_t numTabs = UIObjects::Tabs::tabList.size();
@@ -258,7 +259,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
 
         // Buttons
         for (size_t i = 0; i < numButtons; ++i) {
-            auto paramIDstr = "Button_" + to_string(j) + to_string(i);
+            std::tie(name, isToggleable) = buttonList[i];
+            auto paramIDstr = label2ParamID(name);
             juce::ParameterID paramID = juce::ParameterID(paramIDstr, version_hint);
             layout.add (std::make_unique<juce::AudioParameterInt> (paramID, name, 0, 1, 0));
         }

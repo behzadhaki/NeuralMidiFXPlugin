@@ -2,8 +2,8 @@
 // Created by Julian Lenz on 22/12/2022.
 //
 
-#ifndef JUCECMAKEREPO_GUIELEMENTS_H
-#define JUCECMAKEREPO_GUIELEMENTS_H
+#pragma once
+
 
 #include "Includes/CustomStructsAndLockFreeQueue.h"
 
@@ -57,6 +57,9 @@ public:
 
         for (const auto &buttonTuple: buttonsList) {
             juce::TextButton *textButton = generateButton(buttonTuple);
+            auto paramID = label2ParamID(std::get<0>(buttonTuple));
+            buttonAttachmentArray.push_back(std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
+                    *apvtsPointer, paramID, *textButton));
             // Array will be used to resize the components later on
             buttonArray.add(textButton);
 
@@ -111,6 +114,7 @@ private:
 
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>> sliderAttachmentArray;
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>> rotaryAttachmentArray;
+    std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment>> buttonAttachmentArray;
 
     // Tuple of the current tab with all objects
     UIObjects::tab_tuple currentTab;
@@ -255,4 +259,3 @@ private:
 };
 
 
-#endif //JUCECMAKEREPO_GUIELEMENTS_H

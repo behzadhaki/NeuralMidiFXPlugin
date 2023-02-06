@@ -205,6 +205,7 @@ private:
         for (auto tab_list: tabList) {
             auto slidersList = std::get<1>(tab_list);
             auto rotariesList = std::get<2>(tab_list);
+            auto buttonsList = std::get<3>(tab_list);
 
             for (const auto &elementsList: {slidersList, rotariesList}) {
                 for (auto element: elementsList) {
@@ -226,6 +227,20 @@ private:
                     paramValues.push_back(defaultVal);
 
                 }
+            }
+
+            for (const auto &button: buttonsList) {
+                std::string label = std::get<0>(button);
+                std::string paramID = label2ParamID(label);
+                for (const auto &past_labels: paramLabels) {
+                    // If you hit this assert, you have a duplicate label, which is not allowed
+                    // change the label in Settings.h's UIObjects
+                    if (label == past_labels) { DBG("Duplicate label found: " << label); }
+                    assert(label != past_labels);
+                }
+                paramLabels.push_back(label);
+                paramIDs.push_back(paramID);
+                paramValues.push_back(0);
             }
         }
     }

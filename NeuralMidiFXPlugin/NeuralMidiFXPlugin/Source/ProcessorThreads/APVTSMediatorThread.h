@@ -61,23 +61,6 @@ public:
         auto tabList = UIObjects::Tabs::tabList;
         size_t numTabs = tabList.size();
 
-
-        // Naming of Slider + Rotary Parameter ID's per tab
-        for (size_t j = 0; j < numTabs; j++) {
-            numSliders = std::get<1>(tabList[j]).size();
-            numRotaries = std::get<2>(tabList[j]).size();
-
-            for (size_t i = 0; i < numSliders; i++) {
-                auto ID = "Slider_" + to_string(j) + to_string(i);
-                sliderParamIDS.push_back(ID);
-            }
-
-            for (size_t i = 0; i < numRotaries; i++) {
-                auto ID = "Rotary_" + to_string(j) + to_string(i);
-                rotaryParamIDS.push_back(ID);
-            }
-        }
-
         startThread();
     }
 
@@ -139,8 +122,6 @@ private:
     LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2MDL_GuiParams_QuePntr{nullptr};
     LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2PPP_GuiParams_QuePntr{nullptr};
 
-    std::vector<std::string> sliderParamIDS;
-    std::vector<std::string> rotaryParamIDS;
     GuiParams guiParams{};
 
 //    // ============================================================================================================
