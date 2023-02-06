@@ -127,3 +127,74 @@ public:
         return writingActive;
     }
 };
+
+
+// ============================================================================================================
+// ==========          GUI PARAM ID STRUCTS                          ==========================================
+// ============================================================================================================
+// to get the value of a parameter, use the following syntax:
+//      auto paramID = GuiParams.getParamValue(LabelOnGUi);
+struct GuiParams {
+
+    GuiParams() {
+        auto tabList = UIObjects::Tabs::tabList;
+
+        int tab_count{0};
+        for (auto tab_list: tabList) {
+            auto slider_elementsList = std::make_pair("Slider_", std::get<1>(tab_list));
+            auto rotary_elementsList = std::make_pair("Rotary_", std::get<2>(tab_list));
+
+            for (const auto& paired_type_with_list: {slider_elementsList, rotary_elementsList}) {
+                auto elementType = paired_type_with_list.first;
+                auto elementsList = paired_type_with_list.second;
+                int count{0};
+                for (auto element: elementsList) {
+                    std::string label = std::get<0>(element);
+                    double defaultVal = std::get<3>(element);
+                    std::string paramID = elementType + to_string(tab_count) + to_string(count);
+
+                    // check that label doesn't already exist in vector
+                    // if it does, assert that it is unique
+                    for (const auto &past_labels: paramLabels) {
+                        // If you hit this assert, you have a duplicate label, which is not allowed
+                        // change the label in Settings.h's UIObjects
+                        if (label == past_labels) { DBG("Duplicate label found: " << label); }
+                        assert(label != past_labels);
+                    }
+
+                    paramLabels.push_back(label);
+                    paramIDs.push_back(paramID);
+                    paramValues.push_back(defaultVal);
+
+                    count++;
+                }
+            }
+        }
+    }
+
+    void print() {
+        for (size_t i = 0; i < paramLabels.size(); i++) {
+            DBG("GUI Instance " <<  i << " : " << paramLabels[i] << ", value --> " << paramValues[i]);
+        }
+    }
+
+    double getParamValue(const string &label) {
+        for (size_t i = 0; i < paramLabels.size(); i++) {
+            if (paramLabels[i] == label) {
+                return paramValues[i];
+            }
+        }
+        std::stringstream ss;
+        ss << "Label not found. Choose one of ";
+        for (auto &paramLabel: paramLabels) {
+            ss << paramLabel << ", ";
+        }
+        DBG(ss.str());
+        assert(false);
+    }
+
+private:
+    vector<string> paramLabels{};
+    vector<string> paramIDs{};
+    vector<double> paramValues{};
+};
