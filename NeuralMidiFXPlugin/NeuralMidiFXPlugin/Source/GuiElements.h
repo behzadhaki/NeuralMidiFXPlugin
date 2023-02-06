@@ -70,7 +70,6 @@ public:
             } else {
             buttonAttachmentArray.push_back(std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
                     *apvtsPointer, paramID, *textButton));
-
             }
 
             buttonArray.add(textButton);

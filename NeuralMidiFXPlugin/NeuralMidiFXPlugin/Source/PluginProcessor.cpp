@@ -31,7 +31,8 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
     //       give access to resources and run threads
     // --------------------------------------------------------------------------------------
     inputTensorPreparatorThread->startThreadUsingProvidedResources(NMP2ITP_Event_Que.get(),
-                                                                   ITP2MDL_ModelInput_Que.get());
+                                                                   ITP2MDL_ModelInput_Que.get(),
+                                                                   APVM2ITP_GuiParams_Que.get());
     modelThread->startThreadUsingProvidedResources(ITP2MDL_ModelInput_Que.get(),
                                                    MDL2PPP_ModelOutput_Que.get());
     playbackPreparatorThread->startThreadUsingProvidedResources(MDL2PPP_ModelOutput_Que.get(),

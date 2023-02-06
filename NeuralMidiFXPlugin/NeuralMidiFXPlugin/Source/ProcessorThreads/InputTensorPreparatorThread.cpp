@@ -9,12 +9,14 @@ InputTensorPreparatorThread::InputTensorPreparatorThread() : juce::Thread("Input
 
 void InputTensorPreparatorThread::startThreadUsingProvidedResources(
         LockFreeQueue<Event, queue_settings::NMP2ITP_que_size> *NMP2ITP_Event_Que_ptr_,
-        LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size> *ITP2MDL_ModelInput_Que_ptr_) {
+        LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size> *ITP2MDL_ModelInput_Que_ptr_,
+        LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2ITP_Parameters_Queu_ptr_) {
 
     // Provide access to resources needed to communicate with other threads
     // ---------------------------------------------------------------------------------------------
     NMP2ITP_Event_Que_ptr = NMP2ITP_Event_Que_ptr_;
     ITP2MDL_ModelInput_Que_ptr = ITP2MDL_ModelInput_Que_ptr_;
+    APVM2ITP_Parameters_Queu_ptr = APVM2ITP_Parameters_Queu_ptr_;
 
     // Start the thread. This function internally calls run() method. DO NOT CALL run() DIRECTLY.
     // ---------------------------------------------------------------------------------------------
@@ -66,6 +68,12 @@ void InputTensorPreparatorThread::run() {
     while (!bExit) {
 
         if (readyToStop) { break; } // check if thread is ready to be stopped
+
+        if (APVM2ITP_Parameters_Queu_ptr->getNumReady() > 0) {
+            gui_params = APVM2ITP_Parameters_Queu_ptr->pop(); // pop the latest parameters from the queue
+            DBG(gui_params.getParamValue("Slider 1"));
+            DBG(gui_params.getParamValue("Button 2"));
+        }
 
         // Check if new events are available in the queue
         while (NMP2ITP_Event_Que_ptr->getNumReady() > 0) {
