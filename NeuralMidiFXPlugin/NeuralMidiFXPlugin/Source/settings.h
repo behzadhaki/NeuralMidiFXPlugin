@@ -43,12 +43,12 @@ namespace UIObjects {
                                 slider_tuple{"Slider 1", 0.0, 1.0, 0.0},
                                 slider_tuple{"Slider 2", 0.0, 25.0, 11.0}},
                         rotary_list{
-                                rotary_tuple{"Rotary 1A", 0.0, 1.0, 0.5},
-                                rotary_tuple{"Test 2A", 0.0, 4.0, 1.5},
+                                rotary_tuple{"Rotary 1", 0.0, 1.0, 0.5},
+                                rotary_tuple{"Rotary 2", 0.0, 4.0, 1.5},
                                 rotary_tuple{"Rotary 3", 0.0, 1.0, 0.0}},
                         button_list{
-                                button_tuple{"Button 1", true},
-                                button_tuple{"Button 2", false}}
+                                button_tuple{"ToggleButton 1", true},
+                                button_tuple{"ClickButton 1", false}}
                 },
 
                 tab_tuple{
@@ -60,8 +60,8 @@ namespace UIObjects {
                                 rotary_tuple{"Rotary 1B", 0.0, 1.0, 0.5},
                                 rotary_tuple{"Test 2B", 0.0, 4.0, 1.5}},
                         button_list{
-                                button_tuple{"Test Button", true},
-                                button_tuple{"Velocity", true},
+                                button_tuple{"ToggleButton 2", true},
+                                button_tuple{"ToggleButton 3", true},
                                 button_tuple{"Dynamics", false}}
                 }
         };

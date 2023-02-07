@@ -43,6 +43,10 @@ void InputTensorPreparatorThread::DisplayEvent(
     }
 }
 
+static string bool2str(bool b) {
+    if (b) { return "true"; } else { return "false"; }
+}
+
 void InputTensorPreparatorThread::run() {
     // notify if the thread is still running
     bool bExit = threadShouldExit();
@@ -68,11 +72,17 @@ void InputTensorPreparatorThread::run() {
     while (!bExit) {
 
         if (readyToStop) { break; } // check if thread is ready to be stopped
-
         if (APVM2ITP_Parameters_Queu_ptr->getNumReady() > 0) {
+            // print updated values for debugging
             gui_params = APVM2ITP_Parameters_Queu_ptr->pop(); // pop the latest parameters from the queue
-            DBG(gui_params.getParamValue("Slider 1"));
-            DBG(gui_params.getParamValue("Button 2"));
+            gui_params.printUpdatedParams();
+
+            // use getValueFor([slider/button name]) to get the value of a slider or rotary button
+            gui_params.getValueFor("Slider 1");
+            // use wasButtonClicked([button name]) to check if an UNTOGGLEABLE button was clicked
+            bool2str(gui_params.wasButtonClicked("ClickButton 1"));
+            // use isToggleButtonOn([button name]) to check if a TOGGLEABLE button is on
+            bool2str(gui_params.isToggleButtonOn("ToggleButton 1"));
         }
 
         // Check if new events are available in the queue

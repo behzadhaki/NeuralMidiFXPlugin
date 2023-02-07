@@ -1,7 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 #include "Includes/GenerationEvent.h"
-#include "Includes/InputEvent.h"
 #include "ProcessorThreads/APVTSMediatorThread.h"
 
 using namespace std;

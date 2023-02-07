@@ -51,8 +51,10 @@ public:
         // check if this object is null
         if (this == nullptr) {
             DBG(" [******] You've forgotten to Initialize the LockFreeQueue object! "
-                "Double check the processor constructor !!");
-            assert (false);
+                "");
+            assert( false &&"You've forgotten to Initialize the LockFreeQueue object! "
+                                        "Double check the processor constructor !!" );
+
         }
         int start1, start2, blockSize1, blockSize2;
         writingActive = true;
@@ -136,7 +138,7 @@ public:
 
 
 // ============================================================================================================
-// ==========          GUI PARAM ID STRUCTS                          ==========================================
+// ==========          param struct for gui objects  (holds single param)                 =====================
 // ============================================================================================================
 
 static string label2ParamID(const string &label) {
@@ -146,102 +148,236 @@ static string label2ParamID(const string &label) {
     return paramID;
 }
 
+
+struct param {
+    string label{};
+    double value{};
+    string paramID{};
+    std::optional<double> min = std::nullopt;
+    std::optional<double> max = std::nullopt;
+    std::optional<double> defaultVal = std::nullopt;       // for sliders, rotaries, comboBoxes,...
+    bool isSlider{false};           // for sliders
+    bool isRotary{false};           // for rotaries
+    bool isButton{false};
+    bool isToggle{false};           // for buttons
+    bool isChanged{false};
+
+    using slider_or_rotary_tuple = std::tuple<const char *, double, double, double>;
+
+    param() = default;
+
+    explicit param(slider_or_rotary_tuple slider_or_rotary_tuple, bool isSlider_) {
+        label = std::get<0>(slider_or_rotary_tuple);
+        value = std::get<3>(slider_or_rotary_tuple);
+        paramID = label2ParamID(label);
+        min = std::get<1>(slider_or_rotary_tuple);
+        max = std::get<2>(slider_or_rotary_tuple);
+        defaultVal = std::get<3>(slider_or_rotary_tuple);
+        isSlider = isSlider_;
+        isRotary = !isSlider_;
+        isButton = false;
+        isToggle = false;
+        isChanged = true;   // first time update is always true
+    }
+
+    explicit param(UIObjects::button_tuple button_tuple) {
+        label = std::get<0>(button_tuple);
+        value = 0;
+        paramID = label2ParamID(label);
+        min = std::nullopt;
+        max = std::nullopt;
+        defaultVal = 0;
+        isSlider = false;
+        isRotary = false;
+        isButton = true;
+        isToggle = std::get<1>(button_tuple);
+        isChanged = true; // first time update is always true
+    }
+
+    bool update(juce::AudioProcessorValueTreeState *apvts) {
+        auto new_val_ptr = apvts->getRawParameterValue(paramID);
+
+        if (value != *new_val_ptr) {
+            value = *new_val_ptr;
+            isChanged = true;
+        } else {
+            isChanged = false;
+        }
+        return isChanged;
+    }
+
+    // ensures new paramID is available
+    void assertIfSameLabelOrID(const string& new_string) const {
+        if (label == new_string) {
+            std::stringstream ss;
+            DBG("Duplicate label found: " << label) ;
+            assert(false && "Duplicate label found");
+        }
+
+    }
+};
+
+
+// ============================================================================================================
+// ==========          GUI PARAMS STRUCTS (holds all params)         ==========================================
+// ============================================================================================================
+
 // to get the value of a parameter, use the following syntax:
 //      auto paramID = GuiParams.getParamValue(LabelOnGUi);
 struct GuiParams {
 
     GuiParams() { construct(); }
 
-    explicit GuiParams(juce::AudioProcessorValueTreeState *apvts) {
+    explicit GuiParams(juce::AudioProcessorValueTreeState *apvtsPntr) {
         construct();
-        for (size_t i = 0; i < paramLabels.size(); i++) {
-            paramValues[i] = double(*apvts->getRawParameterValue(paramIDs[i]));
+        for (auto &parameter: Parameters) {
+            parameter.update(apvtsPntr);
         }
     }
 
-    // checks if any of the parameters have changed, and updates the values
-    // returns true if any of the parameters have changed
-    bool update(juce::AudioProcessorValueTreeState *apvts) {
-        bool hasChanged = false;
-        for (size_t i = 0; i < paramLabels.size(); i++) {
-            auto newValue = double(*apvts->getRawParameterValue(paramIDs[i]));
-            if (newValue != paramValues[i]) {
-                paramValues[i] = newValue;
-                hasChanged = true;
+    bool update(juce::AudioProcessorValueTreeState *apvtsPntr) {
+        bool anychanges = false;
+        for (auto &parameter: Parameters) {
+            if (parameter.update(apvtsPntr)) {
+                anychanges = true;
             }
         }
-        return hasChanged;
+        return anychanges;
     }
 
     void print() {
-        for (size_t i = 0; i < paramLabels.size(); i++) {
-            DBG("GUI Instance " <<  i << " : " << paramLabels[i] << ", value --> " << paramValues[i]);
+        for (auto &parameter: Parameters) {
+            DBG(parameter.label << " " << parameter.value);
         }
     }
 
-    double getParamValue(const string &label) {
-        for (size_t i = 0; i < paramLabels.size(); i++) {
-            if (paramIDs[i] == label2ParamID(label)) {
-                return paramValues[i];
+    bool wasParamUpdated(const string &label) {
+        for (auto &parameter: Parameters) {
+            if (parameter.paramID == label2ParamID(label)) {
+                return parameter.isChanged;
             }
         }
-        std::stringstream ss;
-        ss << "Label not found. Choose one of ";
-        for (auto &paramLabel: paramLabels) {
-            ss << paramLabel << ", ";
+    }
+
+    std::vector<string> getLabelsForUpdatedParams(){
+        std::vector<string> changedLabels;
+        for (auto &parameter: Parameters) {
+            if (parameter.isChanged) {
+                changedLabels.push_back(parameter.label);
+            }
         }
-        DBG(ss.str());
-        assert(false);
+        return changedLabels;
+    }
+
+    // only use this to get the value for a slider, rotary, or toggleable button
+    double getValueFor(const string &label) {
+        for (auto &parameter: Parameters) {
+            if (parameter.paramID == label2ParamID(label)) {
+                if (parameter.isRotary or parameter.isSlider or (parameter.isButton and parameter.isToggle)) {
+                    return parameter.value;
+                }
+                assert( false && "This method is to be used only with Rotary/Slider/Toggleable_Buttons" );
+            }
+        }
+        DBG("Label: " << label << " not found");
+        assert( false && "Invalid Label Used. Check settings.h/UISettings" );
+
+    }
+
+
+    // only use this to check whether the button was clicked (regardless of whether toggleable or not
+    bool wasButtonClicked(const string &label) {
+        for (auto &parameter: Parameters) {
+            if (parameter.paramID == label2ParamID(label)) {
+                if (parameter.isButton) {
+                    return parameter.isChanged;
+                }
+                assert( false && "This method is to be used only with Buttons (regardless of Toggleable)" );
+            }
+        }
+        DBG("Label: " << label << " not found");
+        assert( false && "Invalid Label Used. Check settings.h/UISettings" );
+    }
+
+    // only use this to check whether a Toggleable button is on
+    bool isToggleButtonOn(const string &label) {
+        for (auto &parameter: Parameters) {
+            if (parameter.paramID == label2ParamID(label)) {
+                if (parameter.isButton and parameter.isToggle) {
+                    return bool(parameter.value);
+                }
+                assert( false && "This method is to be used only with Toggleable Buttons" );
+            }
+        }
+        DBG("Label: " << label << " not found");
+        assert( false && "Invalid Label Used. Check settings.h/UISettings" );
+    }
+
+    void printUpdatedParams() {
+        for (auto &parameter: Parameters) {
+            if (parameter.isChanged and (parameter.isRotary or parameter.isSlider)) {
+                DBG("Param: `" << parameter.label << "` value changed to " << parameter.value <<
+                "-- use gui_params.getValueFor(" << parameter.label << ") to get the value");
+            }
+            if (parameter.isChanged and parameter.isButton and parameter.isToggle) {
+                if (parameter.value == 1.0) {
+                    DBG("Toggle Button: `" << parameter.label << "` " << bool2string(isToggleButtonOn(parameter.label))
+                    <<" -- use gui_params.isToggleButtonOn(" << parameter.label << ") to check toggle state");
+                } else {
+                    DBG("Toggle Button: `" << parameter.label << "` " << bool2string(isToggleButtonOn(parameter.label))
+                    <<" -- use gui_params.isToggleButtonOn(" << parameter.label << ") to check toggle state");
+                }
+            }
+            if (parameter.isChanged and parameter.isButton and !parameter.isToggle) {
+                DBG("Button `" << parameter.label << "` was clicked -- use gui_params.wasButtonClicked(" <<
+                parameter.label << ") to check toggle state");
+            }
+        }
     }
 
 private:
-    vector<string> paramLabels{};
-    vector<string> paramIDs{};
-    vector<double> paramValues{};
+    vector<param> Parameters;
+
+    void assertLabelIsUnique(const string &label_) {
+        for (const auto &previous_param: Parameters) {
+            // if assert is thrown, then you have a
+            // duplicate parameter label
+            previous_param.assertIfSameLabelOrID(label_);
+        }
+    }
 
     void construct() {
         auto tabList = UIObjects::Tabs::tabList;
 
         for (auto tab_list: tabList) {
+
             auto slidersList = std::get<1>(tab_list);
             auto rotariesList = std::get<2>(tab_list);
             auto buttonsList = std::get<3>(tab_list);
 
-            for (const auto &elementsList: {slidersList, rotariesList}) {
-                for (auto element: elementsList) {
-                    std::string label = std::get<0>(element);
-                    double defaultVal = std::get<3>(element);
-                    std::string paramID = label2ParamID(label);
-
-                    // check that label doesn't already exist in vector
-                    // if it does, assert that it is unique
-                    for (const auto &past_labels: paramLabels) {
-                        // If you hit this assert, you have a duplicate label, which is not allowed
-                        // change the label in Settings.h's UIObjects
-                        if (label == past_labels) { DBG("Duplicate label found: " << label); }
-                        assert(label != past_labels);
-                    }
-
-                    paramLabels.push_back(label);
-                    paramIDs.push_back(paramID);
-                    paramValues.push_back(defaultVal);
-
-                }
+            for (const auto &slider_tuple: slidersList) {
+                auto label = std::get<0>(slider_tuple);
+                assertLabelIsUnique(label);
+                Parameters.emplace_back(slider_tuple, true);
             }
 
-            for (const auto &button: buttonsList) {
-                std::string label = std::get<0>(button);
-                std::string paramID = label2ParamID(label);
-                for (const auto &past_labels: paramLabels) {
-                    // If you hit this assert, you have a duplicate label, which is not allowed
-                    // change the label in Settings.h's UIObjects
-                    if (label == past_labels) { DBG("Duplicate label found: " << label); }
-                    assert(label != past_labels);
-                }
-                paramLabels.push_back(label);
-                paramIDs.push_back(paramID);
-                paramValues.push_back(0);
+            for (const auto &rotary_tuple: rotariesList) {
+                auto label = std::get<0>(rotary_tuple);
+                assertLabelIsUnique(label);
+                Parameters.emplace_back(rotary_tuple, false);
+            }
+
+
+            for (const auto &button_tuple: buttonsList) {
+                std::string label = std::get<0>(button_tuple);
+                assertLabelIsUnique(label);
+                Parameters.emplace_back(button_tuple);
             }
         }
     }
+
+    static string bool2string(bool b) { return b ? "true" : "false"; }
 };
+
+
+

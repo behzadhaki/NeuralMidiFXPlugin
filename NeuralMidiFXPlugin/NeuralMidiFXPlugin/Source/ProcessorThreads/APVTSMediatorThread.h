@@ -77,9 +77,7 @@ public:
 
         while (!bExit) {
             if (APVTSPntr != nullptr) {
-
                 if (guiParams.update(APVTSPntr)) {
-                    guiParams.print();
                     APVM2ITP_GuiParams_QuePntr->push(guiParams);
                     APVM2MDL_GuiParams_QuePntr->push(guiParams);
                     APVM2PPP_GuiParams_QuePntr->push(guiParams);
