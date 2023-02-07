@@ -25,7 +25,7 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
         paramComponentPtr->generateGuiElements(getLocalBounds(), &NeuralMidiFXPluginProcessorPointer_->apvts);
         paramComponentPtr->resizeGuiElements(getLocalBounds());
 
-        tabs.addTab(tabName, juce::Colours::darkgrey, paramComponentPtr, true);
+        tabs.addTab(tabName, juce::Colours::lightgrey, paramComponentPtr, true);
     }
 
     addAndMakeVisible(tabs);

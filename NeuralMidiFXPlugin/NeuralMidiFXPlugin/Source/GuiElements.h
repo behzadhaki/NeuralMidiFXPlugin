@@ -165,7 +165,12 @@ private:
         auto *newSlider = new juce::Slider;
         newSlider->setSliderStyle(juce::Slider::SliderStyle::LinearVertical);
         newSlider->setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
-                                   newSlider->getTextBoxWidth(), 50);
+                                   newSlider->getTextBoxWidth(), 60);
+
+        newSlider->setColour(juce::Slider::textBoxBackgroundColourId, juce::Colours::darkgrey);
+        newSlider->setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::black);
+        newSlider->setColour(juce::Slider::textBoxTextColourId, juce::Colours::whitesmoke);
+
 
         std::tie(name, minValue, maxValue, initValue) = sliderTuple;
 
@@ -186,7 +191,12 @@ private:
         newRotary->setSliderStyle(juce::Slider::SliderStyle::RotaryVerticalDrag);
 
         newRotary->setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
-                                   newRotary->getTextBoxWidth(), 50);
+                                   newRotary->getTextBoxWidth(), 60);
+
+        newRotary->setColour(juce::Slider::textBoxBackgroundColourId, juce::Colours::darkgrey);
+        newRotary->setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::black);
+        newRotary->setColour(juce::Slider::textBoxTextColourId, juce::Colours::whitesmoke);
+        newRotary->setColour(juce::Slider::rotarySliderFillColourId , juce::Colours::lightskyblue);
 
         // Retrieve single rotary and its values
         std::tie(name, minValue, maxValue, initValue) = rotaryTuple;
@@ -216,7 +226,8 @@ private:
             newButton->setClickingTogglesState(true);
         }
 
-        newButton->setColour(juce::TextButton::ColourIds::buttonOnColourId, juce::Colours::yellow);
+        newButton->setColour(juce::TextButton::ColourIds::buttonOnColourId, juce::Colours::lightblue);
+        newButton->setColour(juce::TextButton::ColourIds::textColourOnId, juce::Colours::black);
 
         return newButton;
     }
