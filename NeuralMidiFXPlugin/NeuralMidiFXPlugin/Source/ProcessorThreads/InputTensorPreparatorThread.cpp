@@ -4,8 +4,136 @@
 
 #include "InputTensorPreparatorThread.h"
 
-InputTensorPreparatorThread::InputTensorPreparatorThread() : juce::Thread("InputPreparatorThread") {
+// ===================================================================================
+// $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+//                       YOUR IMPLEMENTATION SHOULD BE DONE HERE
+// $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+// ===================================================================================
+bool InputTensorPreparatorThread::deploy(
+        std::optional<Event> &new_event,
+        bool gui_params_changed_since_last_call) {
+
+    // A flag like this one can be used to check whether or not the model input
+    //    is ready to be sent to the model thread (MDL)
+    bool SHOULD_SEND_TO_MODEL_FOR_GENERATION_ = false;
+
+    // =================================================================================
+    // ===         1. ACCESSING GUI PARAMETERS
+    // =================================================================================
+    // **NOTE**
+    //     If you need to access information from the GUI, you can do so by using the
+    //     following methods:
+    //
+    //       Rotary/Sliders: gui_params.getValueFor([slider/button name])
+    //       Toggle Buttons: gui_params.isToggleButtonOn([button name])
+    //       Trigger Buttons: gui_params.wasButtonClicked([button name])
+    // **NOTE**
+    //    If you only need this data when the GUI parameters CHANGE, you can use the
+    //       provided gui_params_changed_since_last_call flag
+
+    auto Slider1 = gui_params.getValueFor("Slider 1");
+    auto ToggleButton1 = gui_params.isToggleButtonOn("ToggleButton 1");
+    auto ButtonTrigger = gui_params.wasButtonClicked("TriggerButton 1");
+
+
+    // =================================================================================
+    // ===         2. ACCESSING INFORMATION (EVENTS) RECEIVED FROM HOST
+    // =================================================================================
+    // **NOTE**
+    //     Information received from host are passed on to you via the new_event object.
+    //
+    //    Multiple Types of Events can be received from the host:
+    //
+    //       1. FirstBufferEvent --> always sent at the beginning of the host start
+    //
+    //       2. PlaybackSxtoppedEvent --> always sent when the host stops the playback
+    //
+    //       3. NewBufferEvent   --> sent at the beginning of every new buffer (if enabled in settings.h)
+    //                               OR when qpm, meter, ... changes (if specified in settings.h)
+    //
+    //       4. NewBarEvent     --> sent at the beginning of every new bar (if enabled in settings.h)
+    //
+    //       5. NewTimeShiftEvent --> sent every N QuarterNotes (if specified in settings.h)
+    //
+    //       6. NoteOn/NoteOff/CC Events --> sent when a note is played (if not filtered in settings.h)
+    //                     Access the note number, velocity, channel, etc. using the following methods:
+    //                          new_event->getNoteNumber(); new_event->getVelocity(); new_event->getChannel();
+    //                          new_event->getCCNumber();
+    // Regardless of the event type, you can access the following information at the time of the event:
+    //       1. new_event.qpm()
+    //       2. new_event.numerator(), new_event.denominator()
+    //       4. new_event.isPlaying(), new_event.isRecording()
+    //       5. new_event.BufferStartTime().inSeconds(),    --> time of the beginning of the buffer to which
+    //                                                         the event belongs. (in seconds)
+    //          new_event.BufferEndTime().inSamples(),      --> time of the end of the buffer to which
+    //                                                         the event belongs. (in samples)
+    //          new_event.BufferEndTime().inQuarterNotes()  --> time of the end of the buffer to which
+    //                                                         the event belongs. (in quarter notes)
+    //       6. new_event.Time().inSeconds(),               --> time of the event (in seconds,
+    //          new_event.Time().inSamples(),                                       samples,
+    //          new_event.Time().inQuarterNotes()                                  or quarter notes)
+    //       7. new_event.isLooping()                    --> whether or not the host is looping
+    //       8. new_event.loopStart(), new_event.loopEnd() --> loop start and end times (in quarter notes)
+    //       9. new_event.barCount()                     --> number of bars elapsed since beginning
+    //       10. new_event.lastBarPos()                  --> Position of last bar passed (in quarter notes)
+    if (new_event.has_value()) {
+        if (new_event->isFirstBufferEvent()) {
+
+        } else if (new_event->isPlaybackStoppedEvent()) {
+
+        } else if (new_event->isNewBufferEvent()) {
+
+        } else if (new_event->isNewBarEvent()) {
+
+            // the following line should be placed in the correct place in your code
+            // in this example we want to send the compiled data to the model
+            // on every bar, hence I'll set the flag to true here
+            SHOULD_SEND_TO_MODEL_FOR_GENERATION_ = true;
+
+        } else if (new_event->isNewTimeShiftEvent()) {
+
+
+        } else if (new_event->isNoteOnEvent()) {
+
+        } else if (new_event->isNoteOffEvent()) {
+
+        } else if (new_event->isCCEvent()) {
+
+        }
+        // =================================================================================
+
+        // =================================================================================
+        // ===         3. Sending data to the model thread (MDL)
+        // =================================================================================
+        // All data to be sent to the model thread (MDL) should be stored in the model_input
+        //    object. This object is defined in the header file of this class.
+        //    The class ModelInput is defined in the file model_input.h and should be modified
+        //    to include all the data you want to send to the model thread.
+        // Once prepared and should be sent, return true from this function! Otherwise,
+        // return false. --> NOTE: This is necessary so that the wrapper can know when to
+        // send the data to the model thread.
+        if (SHOULD_SEND_TO_MODEL_FOR_GENERATION_) {
+            // Example:
+            //      If should send to model, update model_input and return true
+            model_input.tensor1 = torch::rand({1, 32, 27}, torch::kFloat32);
+            model_input.someDouble = 0.5f;
+            /*  ... set other model_input fields */
+
+            // Notify ITP thread to send the updated data by returning true
+            return true;
+        } else {
+            return false;
+        }
+        // =================================================================================
+    }
 }
+
+
+
+// $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+//                                    DO NOT CHANGE ANYTHING BELOW THIS LINE
+// $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+InputTensorPreparatorThread::InputTensorPreparatorThread() : juce::Thread("InputPreparatorThread") {}
 
 void InputTensorPreparatorThread::startThreadUsingProvidedResources(
         LockFreeQueue<Event, queue_settings::NMP2ITP_que_size> *NMP2ITP_Event_Que_ptr_,
@@ -51,175 +179,68 @@ void InputTensorPreparatorThread::run() {
     // notify if the thread is still running
     bool bExit = threadShouldExit();
 
-    double cnt = 0;
+    double param_change_cnt = 0;
+    double events_received_count = 0;
 
-    Event last_event{};
-    Event first_frame_metadata_event{};     // keeps metadata of the first frame
-    Event frame_metadata_event{};           // keeps metadata of the next frame
-    Event last_bar_event{};                // keeps metadata of the last bar passed
-    Event last_complete_note_duration_event{};               // keeps metadata of the last beat passed
+    std::optional<Event> new_event{};
+    std::optional<ModelInput> ModelInput2send2MDL;
 
-    /* Use the following to keep track of when/how often to send the updated
-     tensor to the neural network for inference
-     you can set this flag to true, anywhere in the code below.
-
-     For example,
-     if you want to generate a new pattern on every bar:
-
-        >> if (event.isBarEvent()) { SHOULD_SEND_TO_MODEL_FOR_GENERATION_ = true; }  */
-    bool SHOULD_SEND_TO_MODEL_FOR_GENERATION_ = false;
-
+    DBG("InputTensorPreparatorThread::run() started");
     while (!bExit) {
 
         if (readyToStop) { break; } // check if thread is ready to be stopped
         if (APVM2ITP_Parameters_Queu_ptr->getNumReady() > 0) {
             // print updated values for debugging
+            DBG("NEW PARAMETER CHANGE RECEVIEVED BY ITP");
             gui_params = APVM2ITP_Parameters_Queu_ptr->pop(); // pop the latest parameters from the queue
             gui_params.printUpdatedParams();
-
-            // use getValueFor([slider/button name]) to get the value of a slider or rotary button
-            gui_params.getValueFor("Slider 1");
-            // use wasButtonClicked([button name]) to check if an UNTOGGLEABLE button was clicked
-            bool2str(gui_params.wasButtonClicked("ClickButton 1"));
-            // use isToggleButtonOn([button name]) to check if a TOGGLEABLE button is on
-            bool2str(gui_params.isToggleButtonOn("ToggleButton 1"));
+            param_change_cnt++;
+        } else {
+            gui_params.setChanged(false); // no change in parameters since last check
         }
 
-        // Check if new events are available in the queue
-        while (NMP2ITP_Event_Que_ptr->getNumReady() > 0) {
+        if (NMP2ITP_Event_Que_ptr->getNumReady() > 0) {
+            new_event = NMP2ITP_Event_Que_ptr->pop();      // get the next available event
+            events_received_count++;
 
-            // =================================================================================
-            // ===         Step 1 . Get New Events if Any
-            // =================================================================================
-            auto new_event = NMP2ITP_Event_Que_ptr->pop();      // get the next available event
+            DisplayEvent(*new_event, false, events_received_count);   // display the event
 
-            DisplayEvent(new_event, false, cnt);                // display the event
+        } else {
+            new_event = std::nullopt;
+        }
 
-            // =================================================================================
-            // ===         Step 2 . Process/Tokenize the Event
-            // =================================================================================
-            /*                         [Replace With Your Code Here]                          */
-            if (new_event.isFirstBufferEvent()) {
-                first_frame_metadata_event = new_event;
-                /* get bpm, time signature, etc. from the event
-                 exp:
-                 auto qpm = new_event.bufferMetaData.qpm
-                 auto numerator = new_event.bufferMetaData.numerator
-                 auto denominator = new_event.bufferMetaData.denominator
-                 ...
-                 */
-            } else if (new_event.isNewBufferEvent()) {
-                frame_metadata_event = new_event;
-                /* These events are only available if the following flags are specified
-                      in the settings.h file:
-                          SendEventAtBeginningOfNewBuffers_FLAG     ---> Must be set to True
-                          SendEventForNewBufferIfMetadataChanged_FLAG ---> True or False
-                 ...
-                 */
-                if (frame_metadata_event.bufferMetaData.playhead_force_moved_backward) {
-                    // get the amount by which the playhead has moved forward
-                    /*frame_metadata_event.bufferMetaData.delta_time_in_samples;
-                    frame_metadata_event.bufferMetaData.delta_time_in_seconds;
-                    frame_metadata_event.bufferMetaData.delta_time_in_ppq;*/
-                } else if (frame_metadata_event.bufferMetaData.playhead_force_moved_forward) {
-                    // get the amount by which the playhead has moved forward
-                    /*frame_metadata_event.bufferMetaData.delta_time_in_samples;
-                    frame_metadata_event.bufferMetaData.delta_time_in_seconds;
-                    frame_metadata_event.bufferMetaData.delta_time_in_ppq;*/
-                }
-            } else if (new_event.isNewBarEvent()) {
-                last_bar_event = new_event;
-                /* These events are only available if the following flags are specified
-                      in the settings.h file:
-                          SendNewBarEvents_FLAG     ---> Must be set to True
-
-                 You can check the extact timing of the event, or the metadata of the
-                    buffer in which the event occurred, by using the following functions:
-                 last_bar_event.time_in_samples; last_bar_event.time_in_seconds;
-                 last_bar_event.bufferMetaData.qpm;
-                 last_bar_event.bufferMetaData.time_in_ppq; --> time of the beginning of
-                                                                the corresponding buffer
-                 ...
-                 */
-
-                // the following line should be placed in the correct place in your code
-                // in this example we want to send the compiled data to the model
-                // on every bar, hence I'll set the flag to true here
-                SHOULD_SEND_TO_MODEL_FOR_GENERATION_ = true;
-
-            } else if (new_event.isNewTimeShiftEvent()) {
-                last_complete_note_duration_event = new_event;
-                /* These events are only available if the following flags are specified
-                      in the settings.h file:
-                          SendTimeShiftEvents_FLAG{true};
-                          delta_TimeShiftEventRatioOfQuarterNote{0.5}; --> half a quarter, or 1/8 note
-                 you can check the extact timing of the event, or the metadata of the
-                  buffer in which the event occurred, by using the following functions:
-                 last_complete_note_duration_event.time_in_samples; last_bar_event.time_in_seconds;
-                 last_complete_note_duration_event.bufferMetaData.qpm;
-                 last_complete_note_duration_event.bufferMetaData.time_in_ppq; --> time of the beginning of
-                                                                                   the corresponding buffer
-                 ...
-                 */
-            } else if (new_event.isNoteOnEvent()) {
-
-                /* only available if FilterNoteOnEvents_FLAG is false in settings.h
-                 auto pitch = new_event.message.getNoteNumber();
-                 auto velocity = new_event.message.getVelocity();
-                 auto channel = new_event.message.getChannel();
-                 auto time_in_ppq = new_event.time_in_ppq;
-                 auto bpm = new_event.bufferMetaData.qpm; */
-            } else if (new_event.isNoteOffEvent()) {
-                /* only available if FilterNoteOnEvents_FLAG is false in settings.h
-                 similar to note on events */
-            } else if (new_event.isCCEvent()) {
-                /* only available if FilterCCEvents_FLAG is false in settings.h
-                 auto cc_number = new_event.message.getControllerNumber();
-                 auto cc_value = new_event.message.getControllerValue();
-                 auto channel = new_event.message.getChannel();
-                 ....
-                 */
-            }
-            // =================================================================================
-
-            // =================================================================================
-            // ===         Step 3. Send to Model Thread if
-            //                     SHOULD_SEND_TO_MODEL_FOR_GENERATION_ is set to TRUE
-            // =================================================================================
-            if (SHOULD_SEND_TO_MODEL_FOR_GENERATION_) {
-                /* Prepare the input structure for the model
-                 see ModelInput struct in model_settings.h*/
-                ModelInput model_input{};
-                model_input.metadata = new_event.bufferMetaData;
-                model_input.tensor1 = torch::rand({1, 32, 27}, torch::kFloat32);
-                model_input.someDouble = 0.5f;
-                /*  ... set other model_input fields */
-
-                /* Send to Model Thread */
+        if (new_event.has_value() or gui_params.changed()) {
+            DBG("===============================================");
+            auto ready2send2MDL = deploy(new_event, gui_params.changed());
+            // push to next thread if a new input is provided
+            if (ready2send2MDL) {
                 ITP2MDL_ModelInput_Que_ptr->push(model_input);
-
-                // reset the generation flag
-                SHOULD_SEND_TO_MODEL_FOR_GENERATION_ = false;
             }
-            // =================================================================================
-
-
-            // =================================================================================
-            // Don't Modify the Following
-            last_event = new_event;
-            cnt++;
-            // =================================================================================
         }
 
-        // ============================================================================================================
+        // update event trackers accordingly if applicable
+        if (new_event.has_value()) {
+
+            if (new_event->isFirstBufferEvent()) { first_frame_metadata_event = *new_event; }
+            else if (new_event->isNewBufferEvent()) { frame_metadata_event = *new_event; }
+            else if (new_event->isNewBarEvent()) { last_bar_event = *new_event; }
+            else if (new_event->isNewTimeShiftEvent()) { last_complete_note_duration_event = *new_event; }
+
+            last_event = *new_event;
+        }
 
         // check if thread is still running
         bExit = threadShouldExit();
+
+        if (!new_event.has_value() and !gui_params.changed()) {
+            // wait for a few ms to avoid burning the CPU if new data is not available
+            sleep(thread_configurations::InputTensorPreparator::waitTimeBtnIters);
+        }
     }
 
-    // wait for a few ms to avoid burning the CPU
-    sleep(thread_configurations::InputTensorPreparator::waitTimeBtnIters);
+
 }
+
 
 void InputTensorPreparatorThread::prepareToStop() {
     // Need to wait enough to ensure the run() method is over before killing thread

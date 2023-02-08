@@ -23,18 +23,6 @@ namespace UIObjects {
     using tab_tuple = std::tuple<const char *, slider_list, rotary_list, button_list>;
 
     namespace Tabs {
-        // To access:
-//      std::string tabName = std::get<0>(tabList[0]);
-//      slider_list sliders = std::get<1>(tabList[0]);
-//      rotary_list rotaries = std::get<2>(tabList[0]);
-//      button_list buttons = std::get<3>(tabList[0]);
-//
-//      slider_tuple firstSlider = std::get<0>(sliders);
-//      double sliderValue = std::get<1>(firstSlider);
-
-
-        const std::vector<std::vector<int>> myVec = {{0, 0},
-                                                     {1, 1}};
         const std::vector<tab_tuple> tabList{
 
                 tab_tuple{
@@ -48,7 +36,7 @@ namespace UIObjects {
                                 rotary_tuple{"Rotary 3", 0.0, 1.0, 0.0}},
                         button_list{
                                 button_tuple{"ToggleButton 1", true},
-                                button_tuple{"ClickButton 1", false}}
+                                button_tuple{"TriggerButton 1", false}}
                 },
 
                 tab_tuple{

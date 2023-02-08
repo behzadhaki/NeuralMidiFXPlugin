@@ -236,19 +236,27 @@ struct GuiParams {
     }
 
     bool update(juce::AudioProcessorValueTreeState *apvtsPntr) {
-        bool anychanges = false;
+        isChanged = false;
         for (auto &parameter: Parameters) {
             if (parameter.update(apvtsPntr)) {
-                anychanges = true;
+                isChanged = true;
             }
         }
-        return anychanges;
+        return isChanged;
     }
 
     void print() {
         for (auto &parameter: Parameters) {
             DBG(parameter.label << " " << parameter.value);
         }
+    }
+
+    bool changed() const {
+        return isChanged;
+    }
+
+    void setChanged(bool isChanged_) {
+        isChanged = isChanged_;
     }
 
     bool wasParamUpdated(const string &label) {
@@ -337,6 +345,7 @@ struct GuiParams {
 
 private:
     vector<param> Parameters;
+    bool isChanged = false;
 
     void assertLabelIsUnique(const string &label_) {
         for (const auto &previous_param: Parameters) {

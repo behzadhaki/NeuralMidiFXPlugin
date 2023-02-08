@@ -12,6 +12,61 @@
 
 using namespace juce;
 
+struct time_ {
+    explicit time_(double seconds_, int64_t samples_, double ppq_) :
+    seconds(seconds_), samples(samples_), ppq(ppq_) {}
+
+    double inSeconds() const { return seconds; }
+    int64_t inSamples() const { return samples; }
+    double inQuarterNotes() const { return ppq; }
+
+    time_ operator-(const time_ &e) const {
+        return time_(this->inSeconds() - e.inSeconds(),
+                     this->inSamples() - e.inSamples(),
+                     this->inQuarterNotes() - e.inQuarterNotes());
+    }
+
+    bool operator==(const time_ &e) const {
+        return (this->inSeconds() == e.inSeconds()) &&
+               (this->inSamples() == e.inSamples()) &&
+               (this->inQuarterNotes() == e.inQuarterNotes());
+    }
+
+    bool operator!=(const time_ &e) const {
+        return !(*this == e);
+    }
+
+    bool operator<(const time_ &e) const {
+        return (this->inSeconds() < e.inSeconds()) &&
+               (this->inSamples() < e.inSamples()) &&
+               (this->inQuarterNotes() < e.inQuarterNotes());
+    }
+
+    bool operator>(const time_ &e) const {
+        return (this->inSeconds() > e.inSeconds()) &&
+               (this->inSamples() > e.inSamples()) &&
+               (this->inQuarterNotes() > e.inQuarterNotes());
+    }
+
+    bool operator<=(const time_ &e) const {
+        return (this->inSeconds() <= e.inSeconds()) &&
+               (this->inSamples() <= e.inSamples()) &&
+               (this->inQuarterNotes() <= e.inQuarterNotes());
+    }
+
+    bool operator>=(const time_ &e) const {
+        return (this->inSeconds() >= e.inSeconds()) &&
+               (this->inSamples() >= e.inSamples()) &&
+               (this->inQuarterNotes() >= e.inQuarterNotes());
+    }
+
+private:
+    double seconds{};
+    int64_t samples{};
+    double ppq{};
+};
+
+
 /*
  * This structure holds the metadata for a given buffer received from the host.
  * All necessary information is embedded in this structure:
@@ -27,9 +82,6 @@ using namespace juce;
  *  - time_in_seconds: starting point of the buffer in seconds
  *  - time_in_ppq: starting point of the buffer in quarter notes
  *
- *  - delta_time_in_samples: amount of time in samples that the playhead has moved since previous buffer
- *  - delta_time_in_seconds: amount of time in seconds that the playhead has moved since previous buffer
- *  - delta_time_in_ppq: amount of time in quarter notes that the playhead has moved since previous buffer
  *  - playhead_force_moved_forward: has the playhead has been moved forcibly ahead of the next expected buffer
  *  - playhead_force_moved_backward: has the playhead has been moved forcibly behind the next expected buffer
  *
@@ -95,9 +147,6 @@ struct BufferMetaData {
     double time_in_seconds{-1};
     double time_in_ppq{-1};
 
-    int64_t delta_time_in_samples{0};
-    double delta_time_in_seconds{0};
-    double delta_time_in_ppq{0};
     bool playhead_force_moved_forward{false};
     bool playhead_force_moved_backward{false};
 
@@ -137,30 +186,6 @@ struct BufferMetaData {
         }
     }
 
-    void set_time_shift_compared_to_last_frame(const BufferMetaData& last_frame_meta_data) {
-        // calculate time shift compared to last frame
-        delta_time_in_samples = time_in_samples - last_frame_meta_data.time_in_samples;
-        delta_time_in_seconds = time_in_seconds - last_frame_meta_data.time_in_seconds;
-        delta_time_in_ppq = time_in_ppq - last_frame_meta_data.time_in_ppq;
-
-        // check if playhead was manually moved forward or backward
-        auto expected_next_frame_sample = last_frame_meta_data.time_in_samples +
-                last_frame_meta_data.buffer_size_in_samples;
-        if ((expected_next_frame_sample < this->time_in_samples) and (qpm == last_frame_meta_data.qpm)) {
-            playhead_force_moved_forward = true;
-        } else if ((expected_next_frame_sample > this->time_in_samples) and (qpm == last_frame_meta_data.qpm)) {
-            playhead_force_moved_backward = true;
-        }
-    }
-
-    bool wasPlayheadManuallyMovedBackward() const {
-        return playhead_force_moved_backward;
-    }
-
-    bool wasPlayheadManuallyMovedForward() const {
-        return playhead_force_moved_forward;
-    }
-
     bool operator==(const BufferMetaData &e) const {
         return (qpm == e.qpm) and (numerator == e.numerator) and (denominator == e.denominator) and
                (isPlaying == e.isPlaying) and (isRecording == e.isRecording) and
@@ -183,9 +208,6 @@ struct BufferMetaData {
         this->time_in_samples = e.time_in_samples;
         this->time_in_seconds = e.time_in_seconds;
         this->time_in_ppq = e.time_in_ppq;
-        this->delta_time_in_samples = e.delta_time_in_samples;
-        this->delta_time_in_seconds = e.delta_time_in_seconds;
-        this->delta_time_in_ppq = e.delta_time_in_ppq;
         this->playhead_force_moved_forward = e.playhead_force_moved_forward;
         this->playhead_force_moved_backward = e.playhead_force_moved_backward;
         this->isLooping = e.isLooping;
@@ -254,18 +276,6 @@ struct BufferMetaData {
 class Event {
 public:
 
-    int type{0};
-
-    BufferMetaData bufferMetaData;
-
-    // The actual time of the event. If event is a midiMessage, this time stamp
-    // can be different from the starting time stam of the buffer found in bufferMetaData.time_in_* fields
-    int64_t time_in_samples{-1};
-    double time_in_seconds{-1};
-    double time_in_ppq{-1};
-
-    juce::MidiMessage message{};
-
     Event() = default;
 
     Event(juce::Optional<juce::AudioPlayHead::PositionInfo> Pinfo,
@@ -281,10 +291,10 @@ public:
     }
 
     Event(juce::Optional<juce::AudioPlayHead::PositionInfo> Pinfo, double sample_rate_,
-          int64_t buffer_size_in_samples_, juce::MidiMessage message_) {
+          int64_t buffer_size_in_samples_, juce::MidiMessage &message_) {
 
         type = 10;
-        message = juce::MidiMessage(message_);
+        message = std::move(message_);
         message.getDescription();
 
         bufferMetaData = BufferMetaData(Pinfo, sample_rate_, buffer_size_in_samples_);
@@ -366,7 +376,7 @@ public:
         type = -1;
     }
 
-    int Type() const { return type; }
+    [[nodiscard]] int Type() const { return type; }
 
     bool isFirstBufferEvent() const { return type == 1; }
 
@@ -386,6 +396,26 @@ public:
 
     bool isCCEvent() const { return message.isController() and isMidiMessageEvent(); }
 
+    int getNoteNumber() const {
+        assert ((isNoteOnEvent() or isNoteOffEvent()) && "Can only get note number for note on/off events");
+        return message.getNoteNumber();
+    }
+
+    float getVelocity() const {
+        assert ((isNoteOnEvent() or isNoteOffEvent()) && "Can only get velocity for note on/off events");
+        return message.getFloatVelocity();
+    }
+
+    int getCCNumber() const {
+        assert (isCCEvent() && "Can only get CC number for CC events");
+        return message.getControllerNumber();
+    }
+
+    int getChannel() const {
+        assert (isMidiMessageEvent() && "Can only get channel for midi events");
+        return message.getChannel();
+    }
+
     static double n_samples_to_ppq(double audioSamplePos, double qpm, double sample_rate) {
         auto tmp_ppq = audioSamplePos * qpm / (60 * sample_rate);
         return tmp_ppq;
@@ -397,7 +427,7 @@ public:
     }
 
     std::stringstream getDescriptionOfChangedFeatures(
-            Event other, bool ignore_time_changes_for_new_buffer_events) const {
+            const Event& other, bool ignore_time_changes_for_new_buffer_events) const {
         std::stringstream ss;
         ss << "++ ";
 
@@ -409,19 +439,6 @@ public:
 
         if (isMidiMessageEvent()) {
             ss << " | message: " << message.getDescription();
-        } else {
-            if (bufferMetaData.wasPlayheadManuallyMovedBackward()) {
-                ss << " | Playhead Manually Moved BACKWARD";
-                ss << " by " << bufferMetaData.delta_time_in_samples << " samples, ";
-                ss << bufferMetaData.delta_time_in_seconds << " seconds, ";
-                ss << bufferMetaData.delta_time_in_ppq << " ppq ";
-            }
-            if (bufferMetaData.wasPlayheadManuallyMovedForward()) {
-                ss << " | Playhead Manually Moved FORWARD";
-                ss << " by " << bufferMetaData.delta_time_in_samples << " samples, ";
-                ss << bufferMetaData.delta_time_in_seconds << " seconds, ";
-                ss << bufferMetaData.delta_time_in_ppq << " ppq ";
-            }
         }
 
         if (bufferMetaData.qpm != other.bufferMetaData.qpm) {
@@ -486,19 +503,6 @@ public:
         if (isNewBarEvent()) { ss << " |  New  Bar   "; }
         if (isMidiMessageEvent()) {
             ss << " | message:    " << message.getDescription();
-        } else {
-            if (bufferMetaData.wasPlayheadManuallyMovedBackward()) {
-                ss << " | Playhead Manually Moved BACKWARD";
-                ss << " by " << bufferMetaData.delta_time_in_samples << " samples, ";
-                ss << bufferMetaData.delta_time_in_seconds << " seconds, ";
-                ss << bufferMetaData.delta_time_in_ppq << " ppq ";
-            }
-            if (bufferMetaData.wasPlayheadManuallyMovedForward()) {
-                ss << " | Playhead Manually Moved FORWARD";
-                ss << " by " << bufferMetaData.delta_time_in_samples << " samples, ";
-                ss << bufferMetaData.delta_time_in_seconds << " seconds, ";
-                ss << bufferMetaData.delta_time_in_ppq << " ppq ";
-            }
         }
 
         ss << " | qpm: " << bufferMetaData.qpm;
@@ -529,14 +533,59 @@ public:
     // Operators for sorting using time stamp
     // ==================================================
 
-    bool operator<(const Event &e) const { return time_in_samples < e.time_in_samples; }
+//    bool operator<(const Event &e) const { return time_in_samples < e.time_in_samples; }
+//
+//    bool operator<=(const Event &e) const { return time_in_samples <= e.time_in_samples; }
+//
+//    bool operator>(const Event &e) const { return time_in_samples > e.time_in_samples; }
+//
+//    bool operator>=(const Event &e) const { return time_in_samples >= e.time_in_samples; }
+//
+//    bool operator==(const Event &e) const { return time_in_samples == e.time_in_samples; }
 
-    bool operator<=(const Event &e) const { return time_in_samples <= e.time_in_samples; }
+    // getter methods
+    double qpm() const { return bufferMetaData.qpm; }
+    double numerator() const { return bufferMetaData.numerator; }
+    double denominator() const { return bufferMetaData.denominator; }
+    bool isPlaying() const { return bufferMetaData.isPlaying; }
+    bool isRecording() const { return bufferMetaData.isRecording; }
+    time_ BufferStartTime() const {
+        return time_(bufferMetaData.time_in_seconds,
+                     bufferMetaData.time_in_samples,
+                     bufferMetaData.time_in_ppq);
+    }
+    time_ Time() const {
+        return time_(time_in_seconds,
+                     time_in_samples,
+                     time_in_ppq);
+    }
 
-    bool operator>(const Event &e) const { return time_in_samples > e.time_in_samples; }
+    bool isLooping() const { return bufferMetaData.isLooping; }
+    double loopStart() const { return bufferMetaData.loop_start_in_ppq; }
+    double loopEnd() const { return bufferMetaData.loop_end_in_ppq; }
 
-    bool operator>=(const Event &e) const { return time_in_samples >= e.time_in_samples; }
+    int64_t barCount() const { return bufferMetaData.bar_count; }
+    double lastBarPos() const { return bufferMetaData.ppq_position_of_last_bar_start; }
 
-    bool operator==(const Event &e) const { return time_in_samples == e.time_in_samples; }
+    time_ time_from(Event e) {
+        return time_(time_in_seconds - e.time_in_seconds,
+                     time_in_samples - e.time_in_samples,
+                     time_in_ppq - e.time_in_ppq);
+    }
 
+    void setIsPlaying(bool isPlaying) { bufferMetaData.isPlaying = isPlaying; }
+
+    BufferMetaData getBufferMetaData() const { return bufferMetaData; }
+private:
+    int type{0};
+
+    juce::MidiMessage message{};
+    BufferMetaData bufferMetaData;
+
+    // The actual time of the event. If event is a midiMessage, this time stamp
+    // can be different from the starting time stam of the buffer found in bufferMetaData.time_in_* fields
+    int64_t time_in_samples{-1};
+    double time_in_seconds{-1};
+    double time_in_ppq{-1};
 };
+

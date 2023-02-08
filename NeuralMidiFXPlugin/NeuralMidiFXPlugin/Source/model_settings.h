@@ -27,7 +27,6 @@ struct ModelInput {
     // torch::Tensor tensor2{};
     // torch::Tensor tensor3{};
     double someDouble{};
-    BufferMetaData metadata{};
 };
 
 /* Similarly, all necessary data to be sent from MDL to PPP thread (i.e. model output)

@@ -33,10 +33,13 @@ public:
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 3 . start run() thread by calling startThread().
     // ---                  !!DO NOT!! Call run() directly. startThread() internally makes a call to run().
-    // ---                  (Implement what the thread does inside the run() method
     // ------------------------------------------------------------------------------------------------------------
     void run() override;
 
+    // ------------------------------------------------------------------------------------------------------------
+    // ---         Step 4 . Implement Deploy Method -----> DO NOT MODIFY ANY PART EXCEPT THE BODY OF THE METHOD
+    // ------------------------------------------------------------------------------------------------------------
+    bool deploy(std::optional<Event> &new_event, bool did_any_gui_params_change);
     // ============================================================================================================
 
     // ============================================================================================================
@@ -48,6 +51,20 @@ public:
     // ============================================================================================================
 
 private:
+    // ============================================================================================================
+    // ===          Deployment Data
+    // ===        (If you need additional data for input processing, add them here)
+    // ===  NOTE: All data needed by the model MUST be wrapped as ModelInput struct (modifiable in ModelInput.h)
+    // ============================================================================================================
+    ModelInput model_input{};
+
+    /* Some data are pre-implemented for easier access */
+    Event last_event{};
+    Event first_frame_metadata_event{};                      // keeps metadata of the first frame
+    Event frame_metadata_event{};                            // keeps metadata of the next frame
+    Event last_bar_event{};                                  // keeps metadata of the last bar passed
+    Event last_complete_note_duration_event{};               // keeps metadata of the last beat passed
+
     // ============================================================================================================
     // ===          I/O Queues for Receiving/Sending Data
     // ============================================================================================================

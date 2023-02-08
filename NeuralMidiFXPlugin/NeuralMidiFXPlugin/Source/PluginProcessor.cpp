@@ -89,9 +89,9 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
     using namespace event_communication_settings;
     if (Pinfo) {
 
-        if (last_frame_meta_data.bufferMetaData.isPlaying xor Pinfo->getIsPlaying()) {
+        if (last_frame_meta_data.isPlaying() xor Pinfo->getIsPlaying()) {
             // if just started, register the playhead starting position
-            if ((not last_frame_meta_data.bufferMetaData.isPlaying) and Pinfo->getIsPlaying()) {
+            if ((not last_frame_meta_data.isPlaying()) and Pinfo->getIsPlaying()) {
                 DBG("**NMP** Started playing");
                 auto frame_meta_data = Event{Pinfo, fs, buffSize, true};
                 NMP2ITP_Event_Que->push(frame_meta_data);
@@ -107,11 +107,9 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
             // if still playing, register the playhead position
             if (Pinfo->getIsPlaying()) {
                 auto frame_meta_data = Event{Pinfo, fs, buffSize, false};
-                frame_meta_data.bufferMetaData.set_time_shift_compared_to_last_frame(
-                        last_frame_meta_data.bufferMetaData);
                 if (SendEventAtBeginningOfNewBuffers_FLAG) {
                     if (SendEventForNewBufferIfMetadataChanged_FLAG) {
-                        if (frame_meta_data.bufferMetaData != last_frame_meta_data.bufferMetaData) {
+                        if (frame_meta_data.getBufferMetaData() != last_frame_meta_data.getBufferMetaData()) {
                             NMP2ITP_Event_Que->push(frame_meta_data);
                         }
                     } else {
@@ -131,7 +129,7 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
         } else {
             NewBarEvent = std::nullopt;
             NewTimeShiftEvent = std::nullopt;
-            last_frame_meta_data.bufferMetaData.isPlaying = false;     // reset last frame meta data
+            last_frame_meta_data.setIsPlaying(false);     // reset last frame meta data
         }
 
         // Step 4. see if new notes are played on the input side
@@ -143,7 +141,7 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
 
                 // check if new bar event exists and it is before the current midi event
                 if (NewBarEvent.has_value() and SendNewBarEvents_FLAG) {
-                    if (midiEvent.time_in_samples >= NewBarEvent->time_in_samples) {
+                    if (midiEvent.Time().inSamples() >= NewBarEvent->Time().inSamples()) {
                         NMP2ITP_Event_Que->push(*NewBarEvent);
                         NewBarEvent = std::nullopt;
                     }
@@ -151,22 +149,24 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
 
                 // check if a specified number of whole notes has passed
                 if (NewTimeShiftEvent.has_value() and SendTimeShiftEvents_FLAG) {
-                    if (midiEvent.time_in_samples >= NewTimeShiftEvent->time_in_samples) {
+                    if (midiEvent.Time().inSamples() >= NewTimeShiftEvent->Time().inSamples()) {
                         NMP2ITP_Event_Que->push(*NewTimeShiftEvent);
                         NewTimeShiftEvent = std::nullopt;
                     }
                 }
 
-                if (midiEvent.message.isNoteOn()) {
-                    if (!FilterNoteOnEvents_FLAG) { NMP2ITP_Event_Que->push(midiEvent); }
-                }
+                if (midiEvent.isMidiMessageEvent()) {
+                    if (midiEvent.isNoteOnEvent()) {
+                        if (!FilterNoteOnEvents_FLAG) { NMP2ITP_Event_Que->push(midiEvent); }
+                    }
 
-                if (midiEvent.message.isNoteOff()) {
-                    if (!FilterNoteOffEvents_FLAG) { NMP2ITP_Event_Que->push(midiEvent); }
-                }
+                    if (midiEvent.isNoteOffEvent()) {
+                        if (!FilterNoteOffEvents_FLAG) { NMP2ITP_Event_Que->push(midiEvent); }
+                    }
 
-                if (midiEvent.message.isController()) {
-                    if (!FilterCCEvents_FLAG) { NMP2ITP_Event_Que->push(midiEvent); }
+                    if (midiEvent.isCCEvent()) {
+                        if (!FilterCCEvents_FLAG) { NMP2ITP_Event_Que->push(midiEvent); }
+                    }
                 }
             }
         }

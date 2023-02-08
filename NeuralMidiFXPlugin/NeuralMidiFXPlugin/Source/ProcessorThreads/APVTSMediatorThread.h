@@ -57,6 +57,7 @@ public:
         APVM2MDL_GuiParams_QuePntr = APVM2MDL_GuiParams_QuePntr_;
         APVM2PPP_GuiParams_QuePntr = APVM2PPP_GuiParams_QuePntr_;
 
+        guiParamsPntr = make_unique<GuiParams>(APVTSPntr_);
         // Get UIObjects in settings.h
         auto tabList = UIObjects::Tabs::tabList;
         size_t numTabs = tabList.size();
@@ -73,14 +74,13 @@ public:
         // notify if the thread is still running
         bool bExit = threadShouldExit();
 
-        guiParams.print();
-
         while (!bExit) {
             if (APVTSPntr != nullptr) {
-                if (guiParams.update(APVTSPntr)) {
-                    APVM2ITP_GuiParams_QuePntr->push(guiParams);
-                    APVM2MDL_GuiParams_QuePntr->push(guiParams);
-                    APVM2PPP_GuiParams_QuePntr->push(guiParams);
+                if (guiParamsPntr->update(APVTSPntr)) {
+                    // guiParamsPntr->print();
+                    APVM2ITP_GuiParams_QuePntr->push(*guiParamsPntr);
+                    APVM2MDL_GuiParams_QuePntr->push(*guiParamsPntr);
+                    APVM2PPP_GuiParams_QuePntr->push(*guiParamsPntr);
                 }
 
                 bExit = threadShouldExit();
@@ -120,7 +120,7 @@ private:
     LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2MDL_GuiParams_QuePntr{nullptr};
     LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2PPP_GuiParams_QuePntr{nullptr};
 
-    GuiParams guiParams{};
+    unique_ptr<GuiParams> guiParamsPntr;
 
 //    // ============================================================================================================
 //    // ===          pointer to NeuralMidiFXPluginProcessor
