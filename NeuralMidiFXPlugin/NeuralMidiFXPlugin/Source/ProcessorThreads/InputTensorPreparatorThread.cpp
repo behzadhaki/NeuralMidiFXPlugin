@@ -13,23 +13,24 @@ bool InputTensorPreparatorThread::deploy(
         std::optional<Event> &new_event,
         bool gui_params_changed_since_last_call) {
 
-    // A flag like this one can be used to check whether or not the model input
-    //    is ready to be sent to the model thread (MDL)
+    /* A flag like this one can be used to check whether or not the model input
+        is ready to be sent to the model thread (MDL)*/
     bool SHOULD_SEND_TO_MODEL_FOR_GENERATION_ = false;
 
     // =================================================================================
     // ===         1. ACCESSING GUI PARAMETERS
     // =================================================================================
-    // **NOTE**
-    //     If you need to access information from the GUI, you can do so by using the
-    //     following methods:
-    //
-    //       Rotary/Sliders: gui_params.getValueFor([slider/button name])
-    //       Toggle Buttons: gui_params.isToggleButtonOn([button name])
-    //       Trigger Buttons: gui_params.wasButtonClicked([button name])
-    // **NOTE**
-    //    If you only need this data when the GUI parameters CHANGE, you can use the
-    //       provided gui_params_changed_since_last_call flag
+
+     /* **NOTE**
+         If you need to access information from the GUI, you can do so by using the
+         following methods:
+
+           Rotary/Sliders: gui_params.getValueFor([slider/button name])
+           Toggle Buttons: gui_params.isToggleButtonOn([button name])
+           Trigger Buttons: gui_params.wasButtonClicked([button name])
+     **NOTE**
+        If you only need this data when the GUI parameters CHANGE, you can use the
+           provided gui_params_changed_since_last_call flag */
 
     auto Slider1 = gui_params.getValueFor("Slider 1");
     auto ToggleButton1 = gui_params.isToggleButtonOn("ToggleButton 1");
@@ -39,43 +40,40 @@ bool InputTensorPreparatorThread::deploy(
     // =================================================================================
     // ===         2. ACCESSING INFORMATION (EVENTS) RECEIVED FROM HOST
     // =================================================================================
-    // **NOTE**
-    //     Information received from host are passed on to you via the new_event object.
-    //
-    //    Multiple Types of Events can be received from the host:
-    //
-    //       1. FirstBufferEvent --> always sent at the beginning of the host start
-    //
-    //       2. PlaybackSxtoppedEvent --> always sent when the host stops the playback
-    //
-    //       3. NewBufferEvent   --> sent at the beginning of every new buffer (if enabled in settings.h)
-    //                               OR when qpm, meter, ... changes (if specified in settings.h)
-    //
-    //       4. NewBarEvent     --> sent at the beginning of every new bar (if enabled in settings.h)
-    //
-    //       5. NewTimeShiftEvent --> sent every N QuarterNotes (if specified in settings.h)
-    //
-    //       6. NoteOn/NoteOff/CC Events --> sent when a note is played (if not filtered in settings.h)
-    //                     Access the note number, velocity, channel, etc. using the following methods:
-    //                          new_event->getNoteNumber(); new_event->getVelocity(); new_event->getChannel();
-    //                          new_event->getCCNumber();
-    // Regardless of the event type, you can access the following information at the time of the event:
-    //       1. new_event.qpm()
-    //       2. new_event.numerator(), new_event.denominator()
-    //       4. new_event.isPlaying(), new_event.isRecording()
-    //       5. new_event.BufferStartTime().inSeconds(),    --> time of the beginning of the buffer to which
-    //                                                         the event belongs. (in seconds)
-    //          new_event.BufferEndTime().inSamples(),      --> time of the end of the buffer to which
-    //                                                         the event belongs. (in samples)
-    //          new_event.BufferEndTime().inQuarterNotes()  --> time of the end of the buffer to which
-    //                                                         the event belongs. (in quarter notes)
-    //       6. new_event.Time().inSeconds(),               --> time of the event (in seconds,
-    //          new_event.Time().inSamples(),                                       samples,
-    //          new_event.Time().inQuarterNotes()                                  or quarter notes)
-    //       7. new_event.isLooping()                    --> whether or not the host is looping
-    //       8. new_event.loopStart(), new_event.loopEnd() --> loop start and end times (in quarter notes)
-    //       9. new_event.barCount()                     --> number of bars elapsed since beginning
-    //       10. new_event.lastBarPos()                  --> Position of last bar passed (in quarter notes)
+
+     /**NOTE**
+         Information received from host are passed on to you via the new_event object.
+
+        Multiple Types of Events can be received from the host:
+
+           1. FirstBufferEvent --> always sent at the beginning of the host start
+           2. PlaybackSxtoppedEvent --> always sent when the host stops the playback
+           3. NewBufferEvent   --> sent at the beginning of every new buffer (if enabled in settings.h)
+                                   OR when qpm, meter, ... changes (if specified in settings.h)
+           4. NewBarEvent     --> sent at the beginning of every new bar (if enabled in settings.h)
+           5. NewTimeShiftEvent --> sent every N QuarterNotes (if specified in settings.h)
+           6. NoteOn/NoteOff/CC Events --> sent when a note is played (if not filtered in settings.h)
+                         Access the note number, velocity, channel, etc. using the following methods:
+                              new_event->getNoteNumber(); new_event->getVelocity(); new_event->getChannel();
+                              new_event->getCCNumber();
+     Regardless of the event type, you can access the following information at the time of the event:
+           1. new_event.qpm()
+           2. new_event.numerator(), new_event.denominator()
+           4. new_event.isPlaying(), new_event.isRecording()
+           5. new_event.BufferStartTime().inSeconds(),    --> time of the beginning of the buffer to which
+                                                             the event belongs. (in seconds)
+              new_event.BufferEndTime().inSamples(),      --> time of the end of the buffer to which
+                                                             the event belongs. (in samples)
+              new_event.BufferEndTime().inQuarterNotes()  --> time of the end of the buffer to which
+                                                             the event belongs. (in quarter notes)
+           6. new_event.Time().inSeconds(),               --> time of the event (in seconds,
+              new_event.Time().inSamples(),                                       samples,
+              new_event.Time().inQuarterNotes()                                  or quarter notes)
+           7. new_event.isLooping()                    --> whether or not the host is looping
+           8. new_event.loopStart(), new_event.loopEnd() --> loop start and end times (in quarter notes)
+           9. new_event.barCount()                     --> number of bars elapsed since beginning
+           10. new_event.lastBarPos()                  --> Position of last bar passed (in quarter notes)*/
+
     if (new_event.has_value()) {
         if (new_event->isFirstBufferEvent()) {
 
@@ -105,13 +103,16 @@ bool InputTensorPreparatorThread::deploy(
         // =================================================================================
         // ===         3. Sending data to the model thread (MDL)
         // =================================================================================
-        // All data to be sent to the model thread (MDL) should be stored in the model_input
-        //    object. This object is defined in the header file of this class.
-        //    The class ModelInput is defined in the file model_input.h and should be modified
-        //    to include all the data you want to send to the model thread.
-        // Once prepared and should be sent, return true from this function! Otherwise,
-        // return false. --> NOTE: This is necessary so that the wrapper can know when to
-        // send the data to the model thread.
+
+        /* All data to be sent to the model thread (MDL) should be stored in the model_input
+            object. This object is defined in the header file of this class.
+            The class ModelInput is defined in the file model_input.h and should be modified
+            to include all the data you want to send to the model thread.
+
+         Once prepared and should be sent, return true from this function! Otherwise,
+         return false. --> NOTE: This is necessary so that the wrapper can know when to
+         send the data to the model thread. */
+
         if (SHOULD_SEND_TO_MODEL_FOR_GENERATION_) {
             // Example:
             //      If should send to model, update model_input and return true
