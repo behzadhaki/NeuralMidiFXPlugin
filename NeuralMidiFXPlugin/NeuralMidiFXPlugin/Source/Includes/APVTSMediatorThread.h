@@ -4,9 +4,11 @@
 
 #pragma once
 
-#include <shared_plugin_helpers/shared_plugin_helpers.h>
-#include "../settings.h"
-#include "../Includes/CustomStructsAndLockFreeQueue.h"
+#include "shared_plugin_helpers/shared_plugin_helpers.h"
+#include "../DeploymentSettings/ThreadsAndQueuesAndInputEvents.h"
+#include "GuiParameters.h"
+#include "../Includes/LockFreeQueue.h"
+
 
 // ============================================================================================================
 // ==========         This Thread is in charge of checking which parameters in APVTS have been changed.
@@ -22,7 +24,7 @@
 // ==========           they can read from APVTS directly. Regardless, in future iterations, perhaps
 // ==========           these requirements change. To be future-proof, this thread has been implemented
 // ==========           to take care of mediating the communication of parameters in the APVTS to the
-// ==========           ProcessorThreads as well as the processBlock()
+// ==========           DeploymentThreads as well as the processBlock()
 // ============================================================================================================
 class APVTSMediatorThread: public juce::Thread
 {

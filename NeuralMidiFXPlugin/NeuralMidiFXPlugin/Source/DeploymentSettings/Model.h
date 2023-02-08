@@ -5,8 +5,8 @@
 #pragma once
 
 #include <torch/script.h> // One-stop header.
-#include "Includes/CustomStructsAndLockFreeQueue.h"
-#include "includes/InputEvent.h"
+#include "../Includes/GuiParameters.h"
+#include "../Includes/InputEvent.h"
 
 // ======================================================================================
 // ==================       MODEL  IO Structures             ============================

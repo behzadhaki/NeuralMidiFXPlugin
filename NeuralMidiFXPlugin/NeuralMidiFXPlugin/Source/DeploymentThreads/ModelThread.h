@@ -6,9 +6,10 @@
 #define JUCECMAKEREPO_MODELTHREAD_H
 
 #include <shared_plugin_helpers/shared_plugin_helpers.h>
-#include "../Includes/CustomStructsAndLockFreeQueue.h"
-#include "../settings.h"
-#include "../model_settings.h"
+#include "../Includes/GuiParameters.h"
+#include "../Includes/LockFreeQueue.h"
+#include "../DeploymentSettings/ThreadsAndQueuesAndInputEvents.h"
+#include "../DeploymentSettings/Model.h"
 
 class ModelThread : public juce::Thread {
 public:

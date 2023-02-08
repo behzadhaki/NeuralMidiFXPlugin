@@ -7,10 +7,11 @@
 
 
 #include <shared_plugin_helpers/shared_plugin_helpers.h>
-#include "../Includes/CustomStructsAndLockFreeQueue.h"
+#include "../Includes/GuiParameters.h"
 #include "../Includes/GenerationEvent.h"
-#include "../settings.h"
-#include "../model_settings.h"
+#include "../Includes/LockFreeQueue.h"
+#include "../DeploymentSettings/ThreadsAndQueuesAndInputEvents.h"
+#include "../DeploymentSettings/Model.h"
 
 
 class PlaybackPreparatorThread : public juce::Thread {

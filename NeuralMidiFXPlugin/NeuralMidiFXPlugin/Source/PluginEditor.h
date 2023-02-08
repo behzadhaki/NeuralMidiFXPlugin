@@ -1,7 +1,7 @@
 #pragma once
 
 #include "PluginProcessor.h"
-#include "GuiElements.h"
+#include "Includes/GuiElements.h"
 
 using namespace std;
 
@@ -10,7 +10,7 @@ class NeuralMidiFXPluginEditor : public juce::AudioProcessorEditor,
 
 {
 public:
-    explicit NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor&) ;
+    explicit NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor&);
     ~NeuralMidiFXPluginEditor() override;
     void paint(juce::Graphics&) override;
     void resized() override;

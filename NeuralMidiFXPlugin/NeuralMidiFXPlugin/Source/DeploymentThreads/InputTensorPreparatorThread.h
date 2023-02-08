@@ -7,11 +7,11 @@
 
 
 #include <shared_plugin_helpers/shared_plugin_helpers.h>
-#include "../Includes/CustomStructsAndLockFreeQueue.h"
-#include "../settings.h"
-#include "../model_settings.h"
+#include "../Includes/GuiParameters.h"
 #include "../includes/InputEvent.h"
-
+#include "../Includes/LockFreeQueue.h"
+#include "../DeploymentSettings/ThreadsAndQueuesAndInputEvents.h"
+#include "../DeploymentSettings/Model.h"
 class InputTensorPreparatorThread : public juce::Thread {
 public:
     // ============================================================================================================
@@ -82,6 +82,7 @@ private:
     // ===          Debugging Methods
     // ============================================================================================================
     static void DisplayEvent(const Event &event, bool compact_mode, double event_count);
+    static void PrintMessage(std::string input);
 };
 
 

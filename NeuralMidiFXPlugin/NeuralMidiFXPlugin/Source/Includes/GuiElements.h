@@ -5,7 +5,7 @@
 #pragma once
 
 
-#include "Includes/CustomStructsAndLockFreeQueue.h"
+#include "GuiParameters.h"
 
 
 using namespace std;

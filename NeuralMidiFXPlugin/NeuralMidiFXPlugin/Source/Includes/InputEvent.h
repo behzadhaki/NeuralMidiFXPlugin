@@ -5,8 +5,8 @@
 #pragma once
 
 #include <shared_plugin_helpers/shared_plugin_helpers.h>
-#include "../Includes/CustomStructsAndLockFreeQueue.h"
-#include "../settings.h"
+#include "../Includes/GuiParameters.h"
+#include "../DeploymentSettings/ThreadsAndQueuesAndInputEvents.h"
 #include <utility>
 
 

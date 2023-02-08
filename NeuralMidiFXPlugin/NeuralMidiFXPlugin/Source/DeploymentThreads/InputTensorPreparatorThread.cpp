@@ -13,6 +13,11 @@ bool InputTensorPreparatorThread::deploy(
         std::optional<Event> &new_event,
         bool gui_params_changed_since_last_call) {
 
+    /*              IF YOU NEED TO PRINT TO CONSOLE FOR DEBUGGING,
+     *                  YOU CAN USE THE FOLLOWING METHOD:
+     *                      PrintMessage("YOUR MESSAGE HERE");
+     */
+
     /* A flag like this one can be used to check whether or not the model input
         is ready to be sent to the model thread (MDL)*/
     bool SHOULD_SEND_TO_MODEL_FOR_GENERATION_ = false;
@@ -165,15 +170,20 @@ void InputTensorPreparatorThread::DisplayEvent(
         const Event &event, bool compact_mode, double event_count) {
     if (event.isFirstBufferEvent() or !compact_mode) {
         auto dscrptn = event.getDescription().str();
-        if (dscrptn.length() > 0) { DBG(dscrptn << " | event # " << event_count); }
+        if (dscrptn.length() > 0) { PrintMessage(dscrptn); }
     } else {
         auto dscrptn = event.getDescriptionOfChangedFeatures(event, true).str();
-        if (dscrptn.length() > 0) { DBG(dscrptn << " | event # " << event_count); }
+        if (dscrptn.length() > 0) { PrintMessage(dscrptn); }
     }
 }
 
 static string bool2str(bool b) {
     if (b) { return "true"; } else { return "false"; }
+}
+
+void InputTensorPreparatorThread::PrintMessage(std::string input) {
+    DBG("----- ITP ----------");
+    DBG(input);
 }
 
 void InputTensorPreparatorThread::run() {
@@ -186,15 +196,13 @@ void InputTensorPreparatorThread::run() {
     std::optional<Event> new_event{};
     std::optional<ModelInput> ModelInput2send2MDL;
 
-    DBG("InputTensorPreparatorThread::run() started");
     while (!bExit) {
 
         if (readyToStop) { break; } // check if thread is ready to be stopped
         if (APVM2ITP_Parameters_Queu_ptr->getNumReady() > 0) {
             // print updated values for debugging
-            DBG("NEW PARAMETER CHANGE RECEVIEVED BY ITP");
             gui_params = APVM2ITP_Parameters_Queu_ptr->pop(); // pop the latest parameters from the queue
-            gui_params.printUpdatedParams();
+            PrintMessage(gui_params.getDescriptionOfUpdatedParams());
             param_change_cnt++;
         } else {
             gui_params.setChanged(false); // no change in parameters since last check
@@ -211,7 +219,6 @@ void InputTensorPreparatorThread::run() {
         }
 
         if (new_event.has_value() or gui_params.changed()) {
-            DBG("===============================================");
             auto ready2send2MDL = deploy(new_event, gui_params.changed());
             // push to next thread if a new input is provided
             if (ready2send2MDL) {

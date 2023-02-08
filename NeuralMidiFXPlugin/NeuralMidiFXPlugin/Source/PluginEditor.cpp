@@ -1,6 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-#include "settings.h"
+#include "DeploymentSettings/GuiAndParams.h"
 
 NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& NeuralMidiFXPluginProcessorPointer)
     : AudioProcessorEditor(&NeuralMidiFXPluginProcessorPointer),

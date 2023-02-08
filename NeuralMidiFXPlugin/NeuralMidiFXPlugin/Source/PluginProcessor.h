@@ -3,12 +3,13 @@
 #include <shared_plugin_helpers/shared_plugin_helpers.h>
 //#include <vector>
 #include <torch/torch.h>
-#include "model_settings.h"
-#include "ProcessorThreads/InputTensorPreparatorThread.h"
-#include "ProcessorThreads/ModelThread.h"
-#include "ProcessorThreads/PlaybackPreparatorThread.h"
-#include "ProcessorThreads/APVTSMediatorThread.h"
+#include "DeploymentSettings/Model.h"
+#include "DeploymentThreads/InputTensorPreparatorThread.h"
+#include "DeploymentThreads/ModelThread.h"
+#include "DeploymentThreads/PlaybackPreparatorThread.h"
+#include "Includes/APVTSMediatorThread.h"
 #include "Includes/GenerationEvent.h"
+#include "Includes/LockFreeQueue.h"
 
 // #include "gui/CustomGuiTextEditors.h"
 
