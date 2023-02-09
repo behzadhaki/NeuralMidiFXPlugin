@@ -5,7 +5,7 @@ project(JUCECMakeRepo)
 #https://github.com/TheLartians/CPM.cmake
 include(CMake/CPM.cmake)
 
-list(APPEND CMAKE_PREFIX_PATH "~/libtorch/share/cmake")
+#list(APPEND CMAKE_PREFIX_PATH "~/libtorch/share/cmake")
 
 #Compile commands, useful for some IDEs like VS-Code
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)

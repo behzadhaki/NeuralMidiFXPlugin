@@ -2,6 +2,10 @@ project(NeuralMidiFXPlugin VERSION 0.0.1)
 
 set (BaseTargetName NeuralMidiFXPlugin)
 
+# Include the libtorch setup file
+include(libtorch_setup.cmake)
+
+
 juce_add_plugin("${BaseTargetName}"
         # VERSION ...                               # Set this if the plugin version is different to the project version
         # ICON_BIG ...                              # ICON_* arguments specify a path to an image file to use as an icon for the Standalone
@@ -18,6 +22,9 @@ juce_add_plugin("${BaseTargetName}"
         FORMATS AU VST3 Standalone
         PRODUCT_NAME "NeuralMidiFXPlugin")           # Replace with your plugin title
 
+# Include the libtorch setup file
+include(libtorch_setup.cmake)
+
 target_sources(${BaseTargetName} PRIVATE
         Source/PluginProcessor.cpp
         Source/PluginEditor.cpp
@@ -33,6 +40,7 @@ target_compile_definitions(${BaseTargetName}
         JUCE_VST3_CAN_REPLACE_VST2=0)
 
 find_package(Torch REQUIRED)
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
 
 target_link_libraries(${BaseTargetName} PRIVATE
@@ -42,3 +50,6 @@ target_link_libraries(${BaseTargetName} PRIVATE
         juce_recommended_warning_flags
         ${TORCH_LIBRARIES}
         )
+
+# Add libtorch headers to the include directories
+target_include_directories(${BaseTargetName} PRIVATE "${TORCH_INCLUDE_DIRS}")
