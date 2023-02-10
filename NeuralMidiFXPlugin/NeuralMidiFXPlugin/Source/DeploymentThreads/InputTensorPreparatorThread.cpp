@@ -168,12 +168,23 @@ void InputTensorPreparatorThread::startThreadUsingProvidedResources(
  */
 void InputTensorPreparatorThread::DisplayEvent(
         const Event &event, bool compact_mode, double event_count) {
+
+    auto showMessage = [](const std::string& input) {
+        // if input is multiline, split it into lines and print each line separately
+        std::stringstream ss(input);
+        std::string line;
+
+        while (std::getline(ss, line)) {
+            std::cout << clr::green << "[ITP] " << line << std::endl;
+        }
+    };
+
     if (event.isFirstBufferEvent() or !compact_mode) {
         auto dscrptn = event.getDescription().str();
-        if (dscrptn.length() > 0) { PrintMessage(dscrptn); }
+        if (dscrptn.length() > 0) { showMessage(dscrptn); }
     } else {
         auto dscrptn = event.getDescriptionOfChangedFeatures(event, true).str();
-        if (dscrptn.length() > 0) { PrintMessage(dscrptn); }
+        if (dscrptn.length() > 0) { showMessage(dscrptn); }
     }
 }
 
@@ -183,18 +194,28 @@ static string bool2str(bool b) {
 }
 
 void InputTensorPreparatorThread::PrintMessage(const std::string& input) {
+    using namespace debugging_settings::InputTensorPreparatorThread;
+    if (disable_user_print_requests) { return; }
+
     // if input is multiline, split it into lines and print each line separately
     std::stringstream ss(input);
     std::string line;
-
-    while (std::getline(ss, line)) {
-        std::cout << clr::green << "[ITP] " << line << std::endl;
-    }
-
-    // std::cout << clr::green << "[ITP] " << input;
+    while (std::getline(ss, line)) { std::cout << clr::green << "[ITP] " << line << std::endl; }
 }
 
 void InputTensorPreparatorThread::run() {
+
+    // convert showMessage to a lambda function
+    auto showMessage = [](const std::string& input) {
+        // if input is multiline, split it into lines and print each line separately
+        std::stringstream ss(input);
+        std::string line;
+
+        while (std::getline(ss, line)) {
+            std::cout << clr::green << "[ITP] " << line << std::endl;
+        }
+    };
+
     // notify if the thread is still running
     bool bExit = threadShouldExit();
 
@@ -218,7 +239,7 @@ void InputTensorPreparatorThread::run() {
             gui_params.registerAccess();                      // set the time when the parameters were accessed
 
             if (print_received_gui_params) { // if set in Debugging.h
-                PrintMessage(gui_params.getDescriptionOfUpdatedParams());
+                showMessage(gui_params.getDescriptionOfUpdatedParams());
             }
 
         } else {
@@ -245,7 +266,7 @@ void InputTensorPreparatorThread::run() {
             chrono_timed_deploy.registerEndTime();
 
             if (print_deploy_method_time and chrono_timed_deploy.isValid()) { // if set in Debugging.h
-                PrintMessage(*chrono_timed_deploy.getDescription(" deploy() execution time: "));
+                showMessage(*chrono_timed_deploy.getDescription(" deploy() execution time: "));
             }
 
             // push to next thread if a new input is provided
@@ -257,10 +278,10 @@ void InputTensorPreparatorThread::run() {
                     if (inputs_sent_count > 1) {
                         auto text = "Time Duration Between ModelInput #" + std::to_string(inputs_sent_count);
                         text += " and #" + std::to_string(inputs_sent_count - 1) + ": ";
-                        PrintMessage(*chrono_timed_consecutive_pushes.getDescription(text));
+                        showMessage(*chrono_timed_consecutive_pushes.getDescription(text));
                     } else {
                         auto text = "Time Duration Between Start and First Pushed ModelInput: ";
-                        PrintMessage(*chrono_timed_consecutive_pushes.getDescription(text));
+                        showMessage(*chrono_timed_consecutive_pushes.getDescription(text));
                     }
                 }
                 chrono_timed_consecutive_pushes.registerStartTime();

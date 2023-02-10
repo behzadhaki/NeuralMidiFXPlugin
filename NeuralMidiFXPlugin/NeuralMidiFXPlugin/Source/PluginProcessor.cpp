@@ -4,6 +4,7 @@
 #include "Includes/APVTSMediatorThread.h"
 
 using namespace std;
+using namespace debugging_settings::ProcessorThread;
 
 NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
         *this, nullptr, "PARAMETERS", createParameterLayout()) {
@@ -33,7 +34,8 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
                                                                    ITP2MDL_ModelInput_Que.get(),
                                                                    APVM2ITP_GuiParams_Que.get());
     modelThread->startThreadUsingProvidedResources(ITP2MDL_ModelInput_Que.get(),
-                                                   MDL2PPP_ModelOutput_Que.get());
+                                                   MDL2PPP_ModelOutput_Que.get(),
+                                                   APVM2MDL_GuiParams_Que.get());
     playbackPreparatorThread->startThreadUsingProvidedResources(MDL2PPP_ModelOutput_Que.get(),
                                                                 PPP2NMP_GenerationEvent_Que.get());
     apvtsMediatorThread->startThreadUsingProvidedResources(&apvts,
@@ -54,6 +56,23 @@ NeuralMidiFXPluginProcessor::~NeuralMidiFXPluginProcessor() {
     }
 }
 
+void NeuralMidiFXPluginProcessor::PrintMessage(const std::string& input) {
+    using namespace debugging_settings::ModelThread;
+    if (disable_user_print_requests) { return; }
+
+    // if input is multiline, split it into lines and print each line separately
+    std::stringstream ss(input);
+    std::string line;
+
+    // get string from now
+    auto now = std::chrono::system_clock::now();
+    auto now_c = std::chrono::system_clock::to_time_t(now);
+    std::string now_str = std::ctime(&now_c);
+    // remove newline
+    now_str.erase(std::remove(now_str.begin(), now_str.end(), '\n'), now_str.end());
+
+    while (std::getline(ss, line)) { std::cout << clr::grey << "[NMP] " << now_str << "|" << line << std::endl; }
+}
 
 void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                                                juce::MidiBuffer &midiMessages) {
@@ -71,11 +90,13 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     // step 2 see if any generations are ready
     if (PPP2NMP_GenerationEvent_Que->getNumReady() > 0) {
         auto event = PPP2NMP_GenerationEvent_Que->pop();
-        if (event.IsNewPlaybackPolicyEvent()) {
-            DBG("**NMP** GenerationEvent received" << event.getNewPlaybackPolicyEvent().getPlaybackPolicyType());
+        if (event.IsNewPlaybackPolicyEvent() and print_generation_policy_reception) {
+            PrintMessage("New Generation Policy Received" );
+        }
+        if (event.IsNewMidiMessageSequence() and print_generation_stream_reception) {
+            PrintMessage("New Sequence of Generations Received");
         }
     }
-
 
     midiMessages.swapWith(tempBuffer);
 
@@ -92,13 +113,14 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
         if (last_frame_meta_data.isPlaying() xor Pinfo->getIsPlaying()) {
             // if just started, register the playhead starting position
             if ((not last_frame_meta_data.isPlaying()) and Pinfo->getIsPlaying()) {
-                DBG("**NMP** Started playing");
+                if (print_start_stop_times) { PrintMessage("Started playing"); }
                 auto frame_meta_data = Event{Pinfo, fs, buffSize, true};
                 NMP2ITP_Event_Que->push(frame_meta_data);
                 last_frame_meta_data = frame_meta_data;
             } else {
                 // if just stopped, register the playhead stopping position
                 auto frame_meta_data = Event{Pinfo, fs, buffSize, false};
+                if (print_start_stop_times) { PrintMessage("Stopped playing"); }
                 frame_meta_data.setPlaybackStoppedEvent();
                 NMP2ITP_Event_Que->push(frame_meta_data);
                 last_frame_meta_data = frame_meta_data;     // reset last frame meta data
@@ -106,6 +128,7 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
         } else {
             // if still playing, register the playhead position
             if (Pinfo->getIsPlaying()) {
+                if (print_new_buffer_started) { PrintMessage("New Buffer Arrived"); }
                 auto frame_meta_data = Event{Pinfo, fs, buffSize, false};
                 if (SendEventAtBeginningOfNewBuffers_FLAG) {
                     if (SendEventForNewBufferIfMetadataChanged_FLAG) {

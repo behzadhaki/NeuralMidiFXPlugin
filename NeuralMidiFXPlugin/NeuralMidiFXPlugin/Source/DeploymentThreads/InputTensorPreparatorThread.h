@@ -10,9 +10,9 @@
 #include "../Includes/GuiParameters.h"
 #include "../includes/InputEvent.h"
 #include "../Includes/LockFreeQueue.h"
-#include "../Includes/colored_cout.h"
 #include "../DeploymentSettings/ThreadsAndQueuesAndInputEvents.h"
 #include "../DeploymentSettings/Model.h"
+#include "../Includes/colored_cout.h"
 #include "../Includes/chrono_timer.h"
 #include "../DeploymentSettings/Debugging.h"
 
@@ -86,7 +86,7 @@ private:
     // ===          Debugging Methods
     // ============================================================================================================
     static void DisplayEvent(const Event &event, bool compact_mode, double event_count);
-    static void PrintMessage(const std::string& input);
+    static void PrintMessage(const std::string &input);
 };
 
 

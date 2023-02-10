@@ -8,8 +8,10 @@
 #include "DeploymentThreads/ModelThread.h"
 #include "DeploymentThreads/PlaybackPreparatorThread.h"
 #include "Includes/APVTSMediatorThread.h"
-#include "Includes/GenerationEvent.h"
 #include "Includes/LockFreeQueue.h"
+#include "Includes/GenerationEvent.h"
+#include "Includes/APVTSMediatorThread.h"
+#include <chrono>
 
 // #include "gui/CustomGuiTextEditors.h"
 
@@ -84,4 +86,8 @@ private:
     std::optional<GenerationPlaybackPolicies> playbackPolicies{std::nullopt};
     BufferMetaData phead_at_start_of_new_stream{};
 
+    chrono::system_clock::time_point now;
+
+    // utility methods
+    void PrintMessage(const std::string& input);
 };
