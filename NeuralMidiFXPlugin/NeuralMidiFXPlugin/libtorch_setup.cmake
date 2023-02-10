@@ -3,6 +3,7 @@
 # find_package(Torch REQUIRED)
 
 # Download libtorch if it's not installed
+find_package(Torch)
 if(NOT Torch_FOUND)
   message(STATUS "Downloading libtorch...")
 

@@ -13,6 +13,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 #Minimum MacOS target, set globally
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.10" CACHE STRING "Minimum OS X deployment version" FORCE)
 
+# if ON, bults a universal binary for mac (x86_64 and arm64)
+# if OFF, builds a native binary for the current architecture
 option(UniversalBinary "Build universal binary for mac" OFF)
 
 if (UniversalBinary)

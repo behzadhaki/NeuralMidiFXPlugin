@@ -6,6 +6,7 @@
 
 #include <shared_plugin_helpers/shared_plugin_helpers.h>
 #include "../Includes/GuiParameters.h"
+#include "../Includes/chrono_timer.h"
 #include "../DeploymentSettings/ThreadsAndQueuesAndInputEvents.h"
 #include <utility>
 
@@ -273,6 +274,9 @@ struct BufferMetaData {
  *      >> constexpr bool FilterCCEvents_FLAG{false};
  * -
  */
+
+using chrono_time = std::chrono::time_point<std::chrono::system_clock>;
+
 class Event {
 public:
 
@@ -280,6 +284,8 @@ public:
 
     Event(juce::Optional<juce::AudioPlayHead::PositionInfo> Pinfo,
           double sample_rate_, int64_t buffer_size_in_samples_, bool isFirstFrame) {
+
+        chrono_timed.registerStartTime();
 
         type = isFirstFrame ? 1 : 2;
 
@@ -292,6 +298,8 @@ public:
 
     Event(juce::Optional<juce::AudioPlayHead::PositionInfo> Pinfo, double sample_rate_,
           int64_t buffer_size_in_samples_, juce::MidiMessage &message_) {
+
+        chrono_timed.registerStartTime();
 
         type = 10;
         message = std::move(message_);
@@ -437,43 +445,41 @@ public:
         if (isNewBarEvent()) { ss << " | New Bar"; }
         if (isNewTimeShiftEvent()) { ss << " | New Time Shift"; }
 
-        if (isMidiMessageEvent()) {
-            ss << " | message: " << message.getDescription();
-        }
+        if (isMidiMessageEvent()) { ss << " | message: " << message.getDescription(); }
 
         if (bufferMetaData.qpm != other.bufferMetaData.qpm) {
             ss << " | qpm: " << bufferMetaData.qpm;
         }
         if (bufferMetaData.numerator != other.bufferMetaData.numerator) {
-            ss << " | ts numerator: " << bufferMetaData.numerator;
+            ss << " | num: " << bufferMetaData.numerator;
         }
         if (bufferMetaData.denominator != other.bufferMetaData.denominator) {
-            ss << " | ts denominator: " << bufferMetaData.denominator;
+            ss << " | den: " << bufferMetaData.denominator;
         }
 
         if (bufferMetaData.isPlaying != other.bufferMetaData.isPlaying) {
-            ss << " | isPlaying: " << bufferMetaData.isPlaying;
+            ss << " | isPly: " << bufferMetaData.isPlaying;
         }
         if (bufferMetaData.isRecording != other.bufferMetaData.isRecording) {
-            ss << " | isRecording: " << bufferMetaData.isRecording;
+            ss << " | isRec: " << bufferMetaData.isRecording;
         }
         if (bufferMetaData.isLooping != other.bufferMetaData.isLooping) {
-            ss << " | isLooping: " << bufferMetaData.isLooping;
+            ss << " | isLp: " << bufferMetaData.isLooping;
         }
         if (bufferMetaData.loop_start_in_ppq != other.bufferMetaData.loop_start_in_ppq) {
-            ss << " | loop_start_in_ppq: " << bufferMetaData.loop_start_in_ppq;
+            ss << " | lp_str_ppq: " << bufferMetaData.loop_start_in_ppq;
         }
         if (bufferMetaData.loop_end_in_ppq != other.bufferMetaData.loop_end_in_ppq) {
-            ss << " | loop_end_in_ppq: " << bufferMetaData.loop_end_in_ppq;
+            ss << " | lp_end_ppq: " << bufferMetaData.loop_end_in_ppq;
         }
         if (bufferMetaData.bar_count != other.bufferMetaData.bar_count) {
-            ss << " | bar_count: " << bufferMetaData.bar_count;
+            ss << " | bar_ccnt: " << bufferMetaData.bar_count;
         }
         if (bufferMetaData.sample_rate != other.bufferMetaData.sample_rate) {
-            ss << " | sample_rate: " << bufferMetaData.sample_rate;
+            ss << " | sr: " << bufferMetaData.sample_rate;
         }
         if (bufferMetaData.buffer_size_in_samples != other.bufferMetaData.buffer_size_in_samples) {
-            ss << " | buffer_size_in_samples: " << bufferMetaData.buffer_size_in_samples;
+            ss << " | smpls_in_bfr: " << bufferMetaData.buffer_size_in_samples;
         }
         if (!(ignore_time_changes_for_new_buffer_events and isNewBufferEvent())) {
             if (time_in_samples != other.time_in_samples) {
@@ -485,6 +491,10 @@ public:
             if (time_in_ppq != other.time_in_ppq) {
                 ss << " | time_in_ppq: " << time_in_ppq;
             }
+        }
+
+        if (chrono_timed.isValid()) {
+            ss << *chrono_timed.getDescription(" | CreationToConsumption Delay: ");
         }
 
         if (ss.str().length() > 3) {
@@ -501,30 +511,32 @@ public:
         if (isPlaybackStoppedEvent()) { ss << " | Stop  Buffer"; }
         if (isNewBufferEvent()) { ss << " |  New Buffer "; }
         if (isNewBarEvent()) { ss << " |  New  Bar   "; }
-        if (isMidiMessageEvent()) {
-            ss << " | message:    " << message.getDescription();
-        }
+        if (isMidiMessageEvent()) { ss << " | message:    " << message.getDescription(); }
 
         ss << " | qpm: " << bufferMetaData.qpm;
-        ss << " | ts numerator: " << bufferMetaData.numerator;
-        ss << " | ts denominator: " << bufferMetaData.denominator;
-        ss << " | isPlaying: " << bufferMetaData.isPlaying;
-        ss << " | isRecording: " << bufferMetaData.isRecording;
-        ss << " | isLooping: " << bufferMetaData.isLooping;
-        ss << " | loop_start_in_ppq: " << bufferMetaData.loop_start_in_ppq;
-        ss << " | loop_end_in_ppq: " << bufferMetaData.loop_end_in_ppq;
-        ss << " | bar_count: " << bufferMetaData.bar_count;
-        ss << " | ppq_position_of_last_bar_start: " << bufferMetaData.ppq_position_of_last_bar_start;
-        ss << " | sample_rate: " << bufferMetaData.sample_rate;
-        ss << " | buffer_size_in_samples: " << bufferMetaData.buffer_size_in_samples;
+        ss << " | num: " << bufferMetaData.numerator;
+        ss << " | den: " << bufferMetaData.denominator;
+        ss << " | isPly: " << bufferMetaData.isPlaying;
+        ss << " | isRec: " << bufferMetaData.isRecording;
+        ss << " | isLp: " << bufferMetaData.isLooping;
+        ss << " | lp_str_ppq: " << bufferMetaData.loop_start_in_ppq;
+        ss << " | lp_end_ppq: " << bufferMetaData.loop_end_in_ppq;
+        ss << " | bar_ccnt: " << bufferMetaData.bar_count;
+        ss << " | last_bar_ppq: " << bufferMetaData.ppq_position_of_last_bar_start;
+        ss << " | sr: " << bufferMetaData.sample_rate;
+        ss << " | smpls_in_bfr: " << bufferMetaData.buffer_size_in_samples;
         ss << " | time_in_samples: " << time_in_samples;
         ss << " | time_in_seconds: " << time_in_seconds;
         ss << " | time_in_ppq: " << time_in_ppq;
 
+        if (chrono_timed.isValid()) {
+            ss << *chrono_timed.getDescription(" | CreationToConsumption Delay: ");
+        }
+
         if (ss.str().length() > 3) {
             return ss;
         } else {
-            return std::stringstream();
+            return {};
         }
 
     }
@@ -576,6 +588,9 @@ public:
     void setIsPlaying(bool isPlaying) { bufferMetaData.isPlaying = isPlaying; }
 
     BufferMetaData getBufferMetaData() const { return bufferMetaData; }
+
+    void registerAccess() { chrono_timed.registerEndTime(); }
+
 private:
     int type{0};
 
@@ -587,5 +602,10 @@ private:
     int64_t time_in_samples{-1};
     double time_in_seconds{-1};
     double time_in_ppq{-1};
+
+    // uses chrono::system_clock to time events (for debugging only)
+    // don't use this for anything else than debugging.
+    // used to keep track of when the object was created and when it was accessed
+    chrono_timer chrono_timed;
 };
 

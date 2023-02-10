@@ -10,6 +10,7 @@
 #include "../Includes/LockFreeQueue.h"
 #include "../DeploymentSettings/ThreadsAndQueuesAndInputEvents.h"
 #include "../DeploymentSettings/Model.h"
+#include "../DeploymentSettings/Debugging.h"
 
 class ModelThread : public juce::Thread {
 public:

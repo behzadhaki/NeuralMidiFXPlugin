@@ -31,6 +31,7 @@ target_sources(${BaseTargetName} PRIVATE
         Source/DeploymentThreads/InputTensorPreparatorThread.cpp
         Source/DeploymentThreads/ModelThread.cpp
         Source/DeploymentThreads/PlaybackPreparatorThread.cpp
+        Source/Includes/colored_cout.cpp
         )
 
 target_compile_definitions(${BaseTargetName}

@@ -9,6 +9,8 @@
 #include "GuiParameters.h"
 #include "../Includes/LockFreeQueue.h"
 
+#pragma once
+
 
 // ============================================================================================================
 // ==========         This Thread is in charge of checking which parameters in APVTS have been changed.

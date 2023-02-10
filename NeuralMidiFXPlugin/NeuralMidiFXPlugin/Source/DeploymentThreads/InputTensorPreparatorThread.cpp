@@ -178,23 +178,36 @@ void InputTensorPreparatorThread::DisplayEvent(
 }
 
 static string bool2str(bool b) {
+    std::to_string(b);
     if (b) { return "true"; } else { return "false"; }
 }
 
-void InputTensorPreparatorThread::PrintMessage(std::string input) {
-    DBG("----- ITP ----------");
-    DBG(input);
+void InputTensorPreparatorThread::PrintMessage(const std::string& input) {
+    // if input is multiline, split it into lines and print each line separately
+    std::stringstream ss(input);
+    std::string line;
+
+    while (std::getline(ss, line)) {
+        std::cout << clr::green << "[ITP] " << line << std::endl;
+    }
+
+    // std::cout << clr::green << "[ITP] " << input;
 }
 
 void InputTensorPreparatorThread::run() {
     // notify if the thread is still running
     bool bExit = threadShouldExit();
 
-    double param_change_cnt = 0;
     double events_received_count = 0;
+    int inputs_sent_count = 0;
 
+    chrono_timer chrono_timed_deploy;
+    chrono_timer chrono_timed_consecutive_pushes;
+    chrono_timed_consecutive_pushes.registerStartTime();
     std::optional<Event> new_event{};
     std::optional<ModelInput> ModelInput2send2MDL;
+
+    using namespace debugging_settings::InputTensorPreparatorThread;
 
     while (!bExit) {
 
@@ -202,27 +215,55 @@ void InputTensorPreparatorThread::run() {
         if (APVM2ITP_Parameters_Queu_ptr->getNumReady() > 0) {
             // print updated values for debugging
             gui_params = APVM2ITP_Parameters_Queu_ptr->pop(); // pop the latest parameters from the queue
-            PrintMessage(gui_params.getDescriptionOfUpdatedParams());
-            param_change_cnt++;
+            gui_params.registerAccess();                      // set the time when the parameters were accessed
+
+            if (print_received_gui_params) { // if set in Debugging.h
+                PrintMessage(gui_params.getDescriptionOfUpdatedParams());
+            }
+
         } else {
             gui_params.setChanged(false); // no change in parameters since last check
         }
 
         if (NMP2ITP_Event_Que_ptr->getNumReady() > 0) {
             new_event = NMP2ITP_Event_Que_ptr->pop();      // get the next available event
+            new_event->registerAccess();                    // set the time when the event was accessed
+
             events_received_count++;
 
-            DisplayEvent(*new_event, false, events_received_count);   // display the event
+            if (print_input_events) { // if set in Debugging.h
+                DisplayEvent(*new_event, false, events_received_count);   // display the event
+            }
 
         } else {
             new_event = std::nullopt;
         }
 
         if (new_event.has_value() or gui_params.changed()) {
+            chrono_timed_deploy.registerStartTime();
             auto ready2send2MDL = deploy(new_event, gui_params.changed());
+            chrono_timed_deploy.registerEndTime();
+
+            if (print_deploy_method_time and chrono_timed_deploy.isValid()) { // if set in Debugging.h
+                PrintMessage(*chrono_timed_deploy.getDescription(" deploy() execution time: "));
+            }
+
             // push to next thread if a new input is provided
             if (ready2send2MDL) {
                 ITP2MDL_ModelInput_Que_ptr->push(model_input);
+                inputs_sent_count++;
+                chrono_timed_consecutive_pushes.registerEndTime();
+                if (print_timed_consecutive_ModelInputs_pushed and chrono_timed_consecutive_pushes.isValid()) {
+                    if (inputs_sent_count > 1) {
+                        auto text = "Time Duration Between ModelInput #" + std::to_string(inputs_sent_count);
+                        text += " and #" + std::to_string(inputs_sent_count - 1) + ": ";
+                        PrintMessage(*chrono_timed_consecutive_pushes.getDescription(text));
+                    } else {
+                        auto text = "Time Duration Between Start and First Pushed ModelInput: ";
+                        PrintMessage(*chrono_timed_consecutive_pushes.getDescription(text));
+                    }
+                }
+                chrono_timed_consecutive_pushes.registerStartTime();
             }
         }
 

@@ -7,7 +7,7 @@
 
 #include "../DeploymentSettings/ThreadsAndQueuesAndInputEvents.h"
 #include "../DeploymentSettings/GuiAndParams.h"
-
+#include "../Includes/chrono_timer.h"
 #include <torch/script.h> // One-stop header.
 
 #include <utility>
@@ -114,6 +114,7 @@ struct GuiParams {
     }
 
     bool update(juce::AudioProcessorValueTreeState *apvtsPntr) {
+        chrono_timed.registerStartTime();
         isChanged = false;
         for (auto &parameter: Parameters) {
             if (parameter.update(apvtsPntr)) {
@@ -203,33 +204,34 @@ struct GuiParams {
         std::stringstream ss;
         for (auto &parameter: Parameters) {
             if (parameter.isChanged and (parameter.isRotary or parameter.isSlider)) {
-                ss << "Param: `" << parameter.label << "` value changed to " << parameter.value <<
-                "-- use gui_params.getValueFor(" << parameter.label << ") to get the value" << std::endl;
+                ss << " | Slider/Rotary: `" << parameter.label << "` :" << parameter.value ;
             }
             if (parameter.isChanged and parameter.isButton and parameter.isToggle) {
-                if (parameter.value == 1.0) {
-                    ss << "Toggle Button: `" << parameter.label <<
-                    "` " << bool2string(isToggleButtonOn(parameter.label))
-                    << " -- use gui_params.isToggleButtonOn(" << parameter.label <<
-                    ") to check toggle state" << std::endl;
-                } else {
-                    ss << "Toggle Button: `" << parameter.label << "` " <<
-                    bool2string(isToggleButtonOn(parameter.label))
-                    <<" -- use gui_params.isToggleButtonOn(" << parameter.label <<
-                    ") to check toggle state" << std::endl;
-                }
+                ss << " | Toggle Button: `" << parameter.label << "` :" << bool2string(
+                        isToggleButtonOn(parameter.label));
             }
             if (parameter.isChanged and parameter.isButton and !parameter.isToggle) {
-                ss << "Button `" << parameter.label << "` was clicked -- use gui_params.wasButtonClicked(" <<
-                parameter.label << ") to check toggle state" << std::endl;
+                ss << " | Trigger Button:  `" << parameter.label << "` was clicked";
             }
+        }
+        if (chrono_timed.isValid()) {
+            ss << *chrono_timed.getDescription(", ReceptionFromHostToAccess Delay: ") << std::endl;
+        } else {
+            ss << std::endl;
         }
         return ss.str();
     }
 
+    void registerAccess() { chrono_timed.registerEndTime(); }
+
 private:
     vector<param> Parameters;
     bool isChanged = false;
+
+    // uses chrono::system_clock to time parameter arrival to consumption (for debugging only)
+    // don't use this for anything else than debugging.
+    // used to keep track of when the object was created and when it was accessed
+    chrono_timer chrono_timed;
 
     void assertLabelIsUnique(const string &label_) {
         for (const auto &previous_param: Parameters) {
@@ -240,6 +242,8 @@ private:
     }
 
     void construct() {
+        chrono_timed.registerStartTime();
+
         auto tabList = UIObjects::Tabs::tabList;
 
         for (auto tab_list: tabList) {
