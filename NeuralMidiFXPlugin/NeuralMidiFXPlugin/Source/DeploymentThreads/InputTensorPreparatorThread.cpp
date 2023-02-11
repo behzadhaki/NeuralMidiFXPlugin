@@ -271,6 +271,7 @@ void InputTensorPreparatorThread::run() {
 
             // push to next thread if a new input is provided
             if (ready2send2MDL) {
+                model_input.timer.registerStartTime();
                 ITP2MDL_ModelInput_Que_ptr->push(model_input);
                 inputs_sent_count++;
                 chrono_timed_consecutive_pushes.registerEndTime();

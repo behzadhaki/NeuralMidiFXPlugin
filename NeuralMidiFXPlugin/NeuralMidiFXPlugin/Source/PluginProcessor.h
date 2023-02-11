@@ -61,6 +61,10 @@ private:
 
     // holds the playhead position for displaying on GUI
     float playhead_pos{-1.0f};
+    time_ playhead_start_time{};
+    std::optional<juce::MidiMessage> getMessageIfToBePlayed(
+            time_ now_, const juce::MidiMessage &msg,
+            int buffSize, double fs, double qpm);
 
     //  midiBuffer to fill up with generated data
     juce::MidiBuffer tempBuffer;
@@ -82,12 +86,12 @@ private:
             int buffSize);
 
     // Playback Data
-    juce::MidiMessageSequence playbackSequence{};  // holds messages to play
-    std::optional<GenerationPlaybackPolicies> playbackPolicies{std::nullopt};
+    PlaybackPolicies playbackPolicies{};
+    juce::MidiMessageSequence playbackMessageSequence{};
     BufferMetaData phead_at_start_of_new_stream{};
-
-    chrono::system_clock::time_point now;
+    time_ time_anchor_for_playback{};
 
     // utility methods
     void PrintMessage(const std::string& input);
+
 };

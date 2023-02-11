@@ -19,9 +19,10 @@ using namespace juce;
        3. relative to playback start (stream should be played relative to the time when playback started)
  
   Time_unit:
-    1. seconds
-    2. ppq
-    3. audio samples
+    1. audio samples
+    2. seconds
+    3. ppq
+
  
   Overwrite Policy:
    1. delete all events in previous stream and use new stream
@@ -30,9 +31,9 @@ using namespace juce;
 */
 
 
-struct GenerationPlaybackPolicies {
+struct PlaybackPolicies {
 
-    GenerationPlaybackPolicies() = default;
+    PlaybackPolicies() = default;
 
     void SetPaybackPolicy_RelativeToNow() { PlaybackPolicy = 1; }
 
@@ -40,18 +41,24 @@ struct GenerationPlaybackPolicies {
 
     void SetPplaybackPolicy_RelativeToPlaybackStart() { PlaybackPolicy = 3; }
 
-    void SetTimeUnitIsSeconds() { TimeUnit = 1; }
-
-    void SetTimeUnitIsPPQ() { TimeUnit = 2; }
-
     void SetTimeUnitIsAudioSamples() { TimeUnit = 1; }
+
+    void SetTimeUnitIsSeconds() { TimeUnit = 2; }
+
+    void SetTimeUnitIsPPQ() { TimeUnit = 3; }
+
 
     void SetOverwritePolicy_DeleteAllEventsInPreviousStreamAndUseNewStream() { OverwritePolicy = 1; }
     void SetOverwritePolicy_DeleteAllEventsAfterNow() { OverwritePolicy = 2; }
     void SetOverwritePolicy_KeepAllPreviousEvents() { OverwritePolicy = 3; }
 
     // Checks if data is ready for transmission
-    bool IsReadyForTransmission() const { return PlaybackPolicy != -1 && TimeUnit != -1 && OverwritePolicy != -1; }
+    bool IsReadyForTransmission() const {
+        assert (PlaybackPolicy != -1 && "PlaybackPolicy Not Set");
+        assert (TimeUnit != -1 && "TimeUnit Not Set");
+        assert (OverwritePolicy != -1 && "OverwritePolicy Not Set");
+        return PlaybackPolicy != -1 && TimeUnit != -1 && OverwritePolicy != -1;
+    }
 
     // ============================================================================================================
 
@@ -59,9 +66,10 @@ struct GenerationPlaybackPolicies {
     bool IsPlaybackPolicy_RelativeToAbsoluteZero() const { return PlaybackPolicy == 2; }
     bool IsPlaybackPolicy_RelativeToPlaybackStart() const { return PlaybackPolicy == 3; }
 
-    bool IsTimeUnitIsSeconds() const { return TimeUnit == 1; }
-    bool IsTimeUnitIsPPQ() const { return TimeUnit == 2; }
-    bool IsTimeUnitIsAudioSamples() const { return TimeUnit == 3; }
+    bool IsTimeUnitIsAudioSamples() const { return TimeUnit == 1; }
+    bool IsTimeUnitIsSeconds() const { return TimeUnit == 2; }
+    bool IsTimeUnitIsPPQ() const { return TimeUnit == 3; }
+    int getTimeUnitIndex() const { return TimeUnit; }
 
     bool IsOverwritePolicy_DeleteAllEventsInPreviousStreamAndUseNewStream() const { return OverwritePolicy == 1; }
     bool IsOverwritePolicy_DeleteAllEventsAfterNow() const { return OverwritePolicy == 2; }
@@ -78,34 +86,213 @@ private:
     int OverwritePolicy{-1};
 };
 
+struct noteOn_ge {
+    int channel;
+    int noteNumber;
+    float velocity;
+    double time;
+
+    string getDescription() const {
+        std::stringstream ss;
+        ss << "Note On: " << "Channel: " << channel << " | Note Number: " << noteNumber << " | Velocity: " << velocity
+           << " | Time: " << time;
+        return ss.str();
+    }
+};
+
+struct noteOff_ge {
+    int channel;
+    int noteNumber;
+    float velocity;
+    double time;
+
+    string getDescription() const {
+        std::stringstream ss;
+        ss << "Note Off: " << "Channel: " << channel << " | Note Number: " << noteNumber << " | Velocity: " << velocity
+           << " | Time: " << time;
+        return ss.str();
+    }
+};
+
+struct paired_note {
+    noteOn_ge noteOn;
+    double duration{0};
+};
+
+struct controller_ge {
+    int channel;
+    int controllerNumber;
+    int controllerValue;
+    double time;
+
+    string getDescription() const {
+        std::stringstream ss;
+        ss << "Controller: " << "Channel: " << channel << " | Controller Number: " << controllerNumber << " | Controller Value: " << controllerValue
+           << " | Time: " << time;
+        return ss.str();
+    }
+};
+
+struct PlaybackSequence {
+    PlaybackSequence() = default;
+
+    void clear() {
+        messageSequence.clear();
+    }
+
+    void clearStartingAt(double time) {
+        int ix{0};
+        for (auto &event : messageSequence) {
+            if (event->message.getTimeStamp() >= time) {
+                messageSequence.deleteEvent(ix, false);
+            }
+            ix++;
+        }
+    }
+
+    // adds a note on event to the sequence
+    void addNoteOn(int channel, int noteNumber, float velocity, double time) {
+        messageSequence.addEvent(MidiMessage::noteOn(channel, noteNumber, velocity), time);
+    }
+
+    // adds a note off event to the sequence
+    void addNoteOff(int channel, int noteNumber, float velocity, double time) {
+        messageSequence.addEvent(MidiMessage::noteOff(channel, noteNumber, velocity), time);
+    }
+
+    // adds a controller event to the sequence
+    void addController(int channel, int controllerNumber, int controllerValue, double time) {
+        messageSequence.addEvent(MidiMessage::controllerEvent(channel, controllerNumber, controllerValue), time);
+    }
+
+    // automatically creates note-on and note-off events for a note with a given duration
+    void addNoteWithDuration(int channel, int noteNumber, float velocity, double time, double duration) {
+        messageSequence.addEvent(MidiMessage::noteOn(channel, noteNumber, velocity), time);
+        messageSequence.addEvent(MidiMessage::noteOff(channel, noteNumber, velocity), time + duration);
+        messageSequence.updateMatchedPairs();
+    }
+
+    // get NoteOn Info
+    std::vector<noteOn_ge> getNoteOnEvents()  {
+        messageSequence.updateMatchedPairs();
+        std::vector<noteOn_ge> noteOnEvents;
+        for (auto &event : messageSequence) {
+            if (event->message.isNoteOn()) {
+                noteOn_ge noteOn;
+                noteOn.channel = event->message.getChannel();
+                noteOn.noteNumber = event->message.getNoteNumber();
+                noteOn.velocity = event->message.getVelocity();
+                noteOn.time = event->message.getTimeStamp();
+                noteOnEvents.push_back(noteOn);
+            }
+        }
+        return noteOnEvents;
+    }
+
+    // get NoteOff Info
+    std::vector<noteOff_ge> getNoteOffEvents() {
+        messageSequence.updateMatchedPairs();
+        std::vector<noteOff_ge> noteOffEvents;
+        for (auto &event : messageSequence) {
+            if (event->message.isNoteOff()) {
+                noteOff_ge noteOff;
+                noteOff.channel = event->message.getChannel();
+                noteOff.noteNumber = event->message.getNoteNumber();
+                noteOff.velocity = event->message.getVelocity();
+                noteOff.time = event->message.getTimeStamp();
+                noteOffEvents.push_back(noteOff);
+            }
+        }
+        return noteOffEvents;
+    }
+
+    std::vector<controller_ge> getControllerEvents() {
+        messageSequence.updateMatchedPairs();
+        std::vector<controller_ge> controllerEvents;
+        for (auto &event : messageSequence) {
+            if (event->message.isController()) {
+                controller_ge controller;
+                controller.channel = event->message.getChannel();
+                controller.controllerNumber = event->message.getControllerNumber();
+                controller.controllerValue = event->message.getControllerValue();
+                controller.time = event->message.getTimeStamp();
+                controllerEvents.push_back(controller);
+            }
+        }
+        return controllerEvents;
+    }
+
+    std::vector<paired_note> getPairedNotes() {
+        messageSequence.updateMatchedPairs();
+        std::vector<paired_note> pairedNotes;
+        int ix = 0;
+        for (auto &event : messageSequence) {
+            auto message = messageSequence.getEventPointer(ix)->message;
+            if (message.isNoteOn()) {
+                paired_note note;
+                note.noteOn = noteOn_ge();
+                note.noteOn.channel = message.getChannel();
+                note.noteOn.noteNumber = message.getNoteNumber();
+                note.noteOn.velocity = message.getVelocity();
+                note.noteOn.time = message.getTimeStamp();
+                auto noteOfftime = messageSequence.getTimeOfMatchingKeyUp(ix);
+                note.duration =  noteOfftime - note.noteOn.time;
+                pairedNotes.push_back(note);
+            }
+            ix++;
+        }
+        return pairedNotes;
+    }
+
+    juce::MidiMessageSequence getAsJuceMidMessageSequence() const {
+        return messageSequence;
+    }
+
+private:
+    juce::MidiMessageSequence messageSequence{};
+
+};
 
 /*
 
   Type:
-   1. GenerationPlaybackPolicies --> notifies the plugin how to deal with the new stream of generations coming in next
-   2. MidiMessageSequence --> contains the new stream of generations to be played
+   1. PlaybackPolicies --> notifies the plugin how to deal with the new stream of generations coming in next
+   2. PlaybackSequence --> contains the new stream of generations to be played
 */
 struct GenerationEvent {
-    GenerationPlaybackPolicies playbackPolicies {};
-    juce::MidiMessageSequence messageSequence {};
+
 
     int type{-1};
 
     GenerationEvent() = default;
 
-    explicit GenerationEvent(GenerationPlaybackPolicies nse) {
+    explicit GenerationEvent(PlaybackPolicies nse) {
+        timer.registerStartTime();
         type = 1;
         playbackPolicies = nse;
     }
 
-    explicit GenerationEvent(juce::MidiMessageSequence ms) {
+    explicit GenerationEvent(PlaybackSequence ps) {
+        timer.registerStartTime();
         type = 2;
-        messageSequence = ms;
+        playbackSequence = ps;
     }
 
     bool IsNewPlaybackPolicyEvent() const { return type == 1; }
-    GenerationPlaybackPolicies getNewPlaybackPolicyEvent () const { return playbackPolicies; }
+    PlaybackPolicies getNewPlaybackPolicyEvent () const { return playbackPolicies; }
 
-    bool IsNewMidiMessageSequence() const { return type == 2; }
-    juce::MidiMessageSequence getNewMidiMessageSequence() const { return messageSequence; }
+    bool IsNewPlaybackSequence() const { return type == 2; }
+    PlaybackSequence getNewPlaybackSequence() const { return playbackSequence; }
+
+    juce::MidiMessageSequence getAsJuceMidMessageSequence() const {
+        return playbackSequence.getAsJuceMidMessageSequence();
+    }
+private:
+    PlaybackPolicies playbackPolicies {};
+    PlaybackSequence playbackSequence {};
+
+    // uses chrono::system_clock to time events (for debugging only)
+    // don't use this for anything else than debugging.
+    // used to keep track of when the object was created and when it was accessed
+    chrono_timer timer;
 };

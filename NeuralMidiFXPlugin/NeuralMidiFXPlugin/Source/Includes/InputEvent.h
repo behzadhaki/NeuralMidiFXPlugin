@@ -13,17 +13,35 @@
 
 using namespace juce;
 
+
 struct time_ {
-    explicit time_(double seconds_, int64_t samples_, double ppq_) :
+    time_(): seconds(0.0), samples(0), ppq(0.0) {}
+
+    explicit time_(int64_t samples_, double seconds_, double ppq_) :
     seconds(seconds_), samples(samples_), ppq(ppq_) {}
 
     double inSeconds() const { return seconds; }
     int64_t inSamples() const { return samples; }
     double inQuarterNotes() const { return ppq; }
 
+    // unitType == 1 --> samples
+    // unitType == 2 --> seconds
+    // unitType == 3 --> quarter notes
+    double getTimeWithUnitType(int unitType) const {
+        switch (unitType) {
+            case 1:
+                return inSamples();
+            case 2:
+                return inSeconds();
+            case 3:
+                return inQuarterNotes();
+            default:
+                assert("Invalid unit type");
+        }
+    }
     time_ operator-(const time_ &e) const {
-        return time_(this->inSeconds() - e.inSeconds(),
-                     this->inSamples() - e.inSamples(),
+        return time_(this->inSamples() - e.inSamples(),
+                     this->inSeconds() - e.inSeconds(),
                      this->inQuarterNotes() - e.inQuarterNotes());
     }
 
@@ -562,13 +580,13 @@ public:
     bool isPlaying() const { return bufferMetaData.isPlaying; }
     bool isRecording() const { return bufferMetaData.isRecording; }
     time_ BufferStartTime() const {
-        return time_(bufferMetaData.time_in_seconds,
-                     bufferMetaData.time_in_samples,
+        return time_(bufferMetaData.time_in_samples,
+                     bufferMetaData.time_in_seconds,
                      bufferMetaData.time_in_ppq);
     }
     time_ Time() const {
-        return time_(time_in_seconds,
-                     time_in_samples,
+        return time_(time_in_samples,
+                     time_in_seconds,
                      time_in_ppq);
     }
 
@@ -580,8 +598,8 @@ public:
     double lastBarPos() const { return bufferMetaData.ppq_position_of_last_bar_start; }
 
     time_ time_from(Event e) {
-        return time_(time_in_seconds - e.time_in_seconds,
-                     time_in_samples - e.time_in_samples,
+        return time_(time_in_samples - e.time_in_samples,
+                     time_in_seconds - e.time_in_seconds,
                      time_in_ppq - e.time_in_ppq);
     }
 

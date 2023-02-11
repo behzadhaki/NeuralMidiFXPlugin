@@ -50,7 +50,15 @@ namespace UIObjects {
                                 button_tuple{"ToggleButton 2", true},
                                 button_tuple{"ToggleButton 3", true},
                                 button_tuple{"Dynamics", false}}
-                }
+                },
+
+                tab_tuple{
+                        "Generation",
+                        slider_list{
+                                slider_tuple{"Generation Playback Delay", 0.0, 10.0, 0.0}},
+                        rotary_list{},
+                        button_list{}
+                },
         };
     }
 }

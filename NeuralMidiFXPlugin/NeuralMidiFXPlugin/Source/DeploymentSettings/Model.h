@@ -7,6 +7,7 @@
 #include <torch/script.h> // One-stop header.
 #include "../Includes/GuiParameters.h"
 #include "../Includes/InputEvent.h"
+#include "../Includes/colored_cout.h"
 
 // ======================================================================================
 // ==================       MODEL  IO Structures             ============================
@@ -27,6 +28,14 @@ struct ModelInput {
     // torch::Tensor tensor2{};
     // torch::Tensor tensor3{};
     double someDouble{};
+
+    // ==============================================
+    // Don't Change Anything in the following section
+    // ==============================================
+    // used to measure the time it takes
+    // for a prepared instance to be
+    // sent to the next thread
+    chrono_timer timer{};
 };
 
 /* Similarly, all necessary data to be sent from MDL to PPP thread (i.e. model output)
@@ -40,6 +49,14 @@ struct ModelOutput {
     torch::Tensor tensor2{};
     torch::Tensor tensor3{};
     // std::vector<int> intVector{};
+
+    // ==============================================
+    // Don't Change Anything in the following section
+    // ==============================================
+    // used to measure the time it takes
+    // for a prepared instance to be
+    // sent to the next thread
+    chrono_timer timer{};
 };
 
 
@@ -135,5 +152,6 @@ struct Model {
         /* return the output */
         return outputStruct;                                        // don't delete this line!!
     }
+
 };
 

@@ -84,6 +84,8 @@ namespace thread_configurations::Model {
 namespace thread_configurations::PlaybackPreparator {
     // waittime between iterations in ms
     constexpr double waitTimeBtnIters{0.5};
+
+
 }
 
 namespace thread_configurations::APVTSMediatorThread {

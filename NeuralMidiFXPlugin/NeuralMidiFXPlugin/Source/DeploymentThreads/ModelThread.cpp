@@ -185,6 +185,7 @@ void ModelThread::run() {
         {
             new_model_output_to_push = deploy(new_model_input_received, gui_params.changed());
             if (new_model_output_to_push) {
+                model_output.timer.registerStartTime();
                 MDL2PPP_ModelOutput_Que_ptr->push(model_output);
                 generation_cnt++;
                 chrono_timed_deploy.registerEndTime();
