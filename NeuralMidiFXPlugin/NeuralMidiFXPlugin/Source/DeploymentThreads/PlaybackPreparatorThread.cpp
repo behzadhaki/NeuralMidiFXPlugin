@@ -98,8 +98,8 @@ std::pair<bool, bool> PlaybackPreparatorThread::deploy(bool new_model_output_rec
         playbackPolicy.SetTimeUnitIsPPQ(); // or
         // playbackPolicy.SetTimeUnitIsAudioSamples(); // or
 
-        // playbackPolicy.SetOverwritePolicy_DeleteAllEventsInPreviousStreamAndUseNewStream(); // or
-        playbackPolicy.SetOverwritePolicy_DeleteAllEventsAfterNow(); // or
+        playbackPolicy.SetOverwritePolicy_DeleteAllEventsInPreviousStreamAndUseNewStream(); // or
+        // playbackPolicy.SetOverwritePolicy_DeleteAllEventsAfterNow(); // or
         // playbackPolicy.SetOverwritePolicy_KeepAllPreviousEvents(); // or
 
         newPlaybackPolicyShouldBeSent = true;
@@ -115,12 +115,12 @@ std::pair<bool, bool> PlaybackPreparatorThread::deploy(bool new_model_output_rec
         double timestamp{4};
         double duration{3};
 
-        // add noteOn Offs
+        // add noteOn Offs (time stamp shifted by the slider value)
         playbackSequence.addNoteOn(channel, note, velocity,
                                    timestamp + newPlaybackDelaySlider);
         playbackSequence.addNoteOff(channel, note, velocity,
                                     timestamp + newPlaybackDelaySlider + duration);
-        // or add a note with duration
+        // or add a note with duration (an octave higher)
         playbackSequence.addNoteWithDuration(channel, note + 12, velocity,
                                              timestamp + newPlaybackDelaySlider, duration);
 

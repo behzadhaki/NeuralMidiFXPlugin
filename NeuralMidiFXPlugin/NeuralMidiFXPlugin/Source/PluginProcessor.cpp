@@ -118,7 +118,7 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                 playbackMessageSequence.clear();
             } else if (playbackPolicies.IsOverwritePolicy_DeleteAllEventsAfterNow()) {
                 auto delete_start_time = frame_now.getTimeWithUnitType(playbackPolicies.getTimeUnitIndex());
-                for (size_t i=0; i++; i<playbackMessageSequence.getNumEvents()) {
+                for (int i = 0; i < playbackMessageSequence.getNumEvents(); i++) {
                     auto msg = playbackMessageSequence.getEventPointer(i);
                     if (msg->message.getTimeStamp() >= delete_start_time) {
                         playbackMessageSequence.deleteEvent(i, false);
