@@ -148,9 +148,9 @@ private:
  *      filter out the midi events.
  *
  *      >>  constexpr bool FilterNoteOnEvents_FLAG{false};
- *      and/or
+ *      && /or
  *      >>  constexpr bool FilterNoteOffEvents_FLAG{false};
- *      and/or
+ *      && /or
  *      >>  constexpr bool FilterCCEvents_FLAG{false};
  *
  */
@@ -206,11 +206,11 @@ struct BufferMetaData {
     }
 
     bool operator==(const BufferMetaData &e) const {
-        return (qpm == e.qpm) and (numerator == e.numerator) and (denominator == e.denominator) and
-               (isPlaying == e.isPlaying) and (isRecording == e.isRecording) and
-               (isLooping == e.isLooping) and
-               (loop_start_in_ppq == e.loop_start_in_ppq) and (loop_end_in_ppq == e.loop_end_in_ppq) and
-               (sample_rate == e.sample_rate) and
+        return (qpm == e.qpm) && (numerator == e.numerator) && (denominator == e.denominator) && 
+               (isPlaying == e.isPlaying) && (isRecording == e.isRecording) && 
+               (isLooping == e.isLooping) && 
+               (loop_start_in_ppq == e.loop_start_in_ppq) && (loop_end_in_ppq == e.loop_end_in_ppq) && 
+               (sample_rate == e.sample_rate) && 
                (buffer_size_in_samples == e.buffer_size_in_samples);
     }
 
@@ -416,19 +416,19 @@ public:
 
     bool isMidiMessageEvent() const { return type == 10; }
 
-    bool isNoteOnEvent() const { return message.isNoteOn() and isMidiMessageEvent(); }
+    bool isNoteOnEvent() const { return message.isNoteOn() && isMidiMessageEvent(); }
 
-    bool isNoteOffEvent() const { return message.isNoteOff() and isMidiMessageEvent(); }
+    bool isNoteOffEvent() const { return message.isNoteOff() && isMidiMessageEvent(); }
 
-    bool isCCEvent() const { return message.isController() and isMidiMessageEvent(); }
+    bool isCCEvent() const { return message.isController() && isMidiMessageEvent(); }
 
     int getNoteNumber() const {
-        assert ((isNoteOnEvent() or isNoteOffEvent()) && "Can only get note number for note on/off events");
+        assert ((isNoteOnEvent() || isNoteOffEvent()) && "Can only get note number for note on/off events");
         return message.getNoteNumber();
     }
 
     float getVelocity() const {
-        assert ((isNoteOnEvent() or isNoteOffEvent()) && "Can only get velocity for note on/off events");
+        assert ((isNoteOnEvent() || isNoteOffEvent()) && "Can only get velocity for note on/off events");
         return message.getFloatVelocity();
     }
 
@@ -499,7 +499,7 @@ public:
         if (bufferMetaData.buffer_size_in_samples != other.bufferMetaData.buffer_size_in_samples) {
             ss << " | smpls_in_bfr: " << bufferMetaData.buffer_size_in_samples;
         }
-        if (!(ignore_time_changes_for_new_buffer_events and isNewBufferEvent())) {
+        if (!(ignore_time_changes_for_new_buffer_events && isNewBufferEvent())) {
             if (time_in_samples != other.time_in_samples) {
                 ss << " | time_in_samples: " << time_in_samples;
             }
@@ -623,7 +623,7 @@ private:
 
     // uses chrono::system_clock to time events (for debugging only)
     // don't use this for anything else than debugging.
-    // used to keep track of when the object was created and when it was accessed
+    // used to keep track of when the object was created && when it was accessed
     chrono_timer chrono_timed;
 };
 

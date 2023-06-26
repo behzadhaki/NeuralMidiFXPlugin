@@ -18,7 +18,7 @@ bool InputTensorPreparatorThread::deploy(
      *                      PrintMessage("YOUR MESSAGE HERE");
      */
 
-    /* A flag like this one can be used to check whether or not the model input
+    /* A flag like this one can be used to check whether || not the model input
         is ready to be sent to the model thread (MDL)*/
     bool SHOULD_SEND_TO_MODEL_FOR_GENERATION_ = false;
 
@@ -54,7 +54,7 @@ bool InputTensorPreparatorThread::deploy(
            1. FirstBufferEvent --> always sent at the beginning of the host start
            2. PlaybackSxtoppedEvent --> always sent when the host stops the playback
            3. NewBufferEvent   --> sent at the beginning of every new buffer (if enabled in settings.h)
-                                   OR when qpm, meter, ... changes (if specified in settings.h)
+                                   || when qpm, meter, ... changes (if specified in settings.h)
            4. NewBarEvent     --> sent at the beginning of every new bar (if enabled in settings.h)
            5. NewTimeShiftEvent --> sent every N QuarterNotes (if specified in settings.h)
            6. NoteOn/NoteOff/CC Events --> sent when a note is played (if not filtered in settings.h)
@@ -73,9 +73,9 @@ bool InputTensorPreparatorThread::deploy(
                                                              the event belongs. (in quarter notes)
            6. new_event.Time().inSeconds(),               --> time of the event (in seconds,
               new_event.Time().inSamples(),                                       samples,
-              new_event.Time().inQuarterNotes()                                  or quarter notes)
-           7. new_event.isLooping()                    --> whether or not the host is looping
-           8. new_event.loopStart(), new_event.loopEnd() --> loop start and end times (in quarter notes)
+              new_event.Time().inQuarterNotes()                                  || quarter notes)
+           7. new_event.isLooping()                    --> whether || not the host is looping
+           8. new_event.loopStart(), new_event.loopEnd() --> loop start && end times (in quarter notes)
            9. new_event.barCount()                     --> number of bars elapsed since beginning
            10. new_event.lastBarPos()                  --> Position of last bar passed (in quarter notes)*/
 
@@ -111,16 +111,16 @@ bool InputTensorPreparatorThread::deploy(
 
         /* All data to be sent to the model thread (MDL) should be stored in the model_input
             object. This object is defined in the header file of this class.
-            The class ModelInput is defined in the file model_input.h and should be modified
+            The class ModelInput is defined in the file model_input.h && should be modified
             to include all the data you want to send to the model thread.
 
-         Once prepared and should be sent, return true from this function! Otherwise,
+         Once prepared && should be sent, return true from this function! Otherwise,
          return false. --> NOTE: This is necessary so that the wrapper can know when to
          send the data to the model thread. */
 
         if (SHOULD_SEND_TO_MODEL_FOR_GENERATION_) {
             // Example:
-            //      If should send to model, update model_input and return true
+            //      If should send to model, update model_input && return true
             model_input.tensor1 = torch::rand({1, 32, 27}, torch::kFloat32);
             model_input.someDouble = 0.5f;
             /*  ... set other model_input fields */
@@ -170,7 +170,7 @@ void InputTensorPreparatorThread::DisplayEvent(
         const Event &event, bool compact_mode, double event_count) {
 
     auto showMessage = [](const std::string& input) {
-        // if input is multiline, split it into lines and print each line separately
+        // if input is multiline, split it into lines && print each line separately
         std::stringstream ss(input);
         std::string line;
 
@@ -179,7 +179,7 @@ void InputTensorPreparatorThread::DisplayEvent(
         }
     };
 
-    if (event.isFirstBufferEvent() or !compact_mode) {
+    if (event.isFirstBufferEvent() || !compact_mode) {
         auto dscrptn = event.getDescription().str();
         if (dscrptn.length() > 0) { showMessage(dscrptn); }
     } else {
@@ -197,7 +197,7 @@ void InputTensorPreparatorThread::PrintMessage(const std::string& input) {
     using namespace debugging_settings::InputTensorPreparatorThread;
     if (disable_user_print_requests) { return; }
 
-    // if input is multiline, split it into lines and print each line separately
+    // if input is multiline, split it into lines && print each line separately
     std::stringstream ss(input);
     std::string line;
     while (std::getline(ss, line)) { std::cout << clr::green << "[ITP] " << line << std::endl; }
@@ -207,7 +207,7 @@ void InputTensorPreparatorThread::run() {
 
     // convert showMessage to a lambda function
     auto showMessage = [](const std::string& input) {
-        // if input is multiline, split it into lines and print each line separately
+        // if input is multiline, split it into lines && print each line separately
         std::stringstream ss(input);
         std::string line;
 
@@ -260,12 +260,12 @@ void InputTensorPreparatorThread::run() {
             new_event = std::nullopt;
         }
 
-        if (new_event.has_value() or gui_params.changed()) {
+        if (new_event.has_value() || gui_params.changed()) {
             chrono_timed_deploy.registerStartTime();
             auto ready2send2MDL = deploy(new_event, gui_params.changed());
             chrono_timed_deploy.registerEndTime();
 
-            if (print_deploy_method_time and chrono_timed_deploy.isValid()) { // if set in Debugging.h
+            if (print_deploy_method_time && chrono_timed_deploy.isValid()) { // if set in Debugging.h
                 showMessage(*chrono_timed_deploy.getDescription(" deploy() execution time: "));
             }
 
@@ -275,13 +275,13 @@ void InputTensorPreparatorThread::run() {
                 ITP2MDL_ModelInput_Que_ptr->push(model_input);
                 inputs_sent_count++;
                 chrono_timed_consecutive_pushes.registerEndTime();
-                if (print_timed_consecutive_ModelInputs_pushed and chrono_timed_consecutive_pushes.isValid()) {
+                if (print_timed_consecutive_ModelInputs_pushed && chrono_timed_consecutive_pushes.isValid()) {
                     if (inputs_sent_count > 1) {
                         auto text = "Time Duration Between ModelInput #" + std::to_string(inputs_sent_count);
-                        text += " and #" + std::to_string(inputs_sent_count - 1) + ": ";
+                        text += " && #" + std::to_string(inputs_sent_count - 1) + ": ";
                         showMessage(*chrono_timed_consecutive_pushes.getDescription(text));
                     } else {
-                        auto text = "Time Duration Between Start and First Pushed ModelInput: ";
+                        auto text = "Time Duration Between Start && First Pushed ModelInput: ";
                         showMessage(*chrono_timed_consecutive_pushes.getDescription(text));
                     }
                 }
@@ -303,7 +303,7 @@ void InputTensorPreparatorThread::run() {
         // check if thread is still running
         bExit = threadShouldExit();
 
-        if (!new_event.has_value() and !gui_params.changed()) {
+        if (!new_event.has_value() && !gui_params.changed()) {
             // wait for a few ms to avoid burning the CPU if new data is not available
             sleep(thread_configurations::InputTensorPreparator::waitTimeBtnIters);
         }
@@ -321,7 +321,7 @@ void InputTensorPreparatorThread::prepareToStop() {
 }
 
 InputTensorPreparatorThread::~InputTensorPreparatorThread() {
-    if (not readyToStop) {
+    if (!readyToStop) {
         prepareToStop();
     }
 }

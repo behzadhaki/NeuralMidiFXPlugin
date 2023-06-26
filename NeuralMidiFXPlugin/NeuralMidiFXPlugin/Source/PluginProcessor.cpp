@@ -28,7 +28,7 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
     playbackPreparatorThread = make_shared<PlaybackPreparatorThread>();
     apvtsMediatorThread = make_unique<APVTSMediatorThread>();
 
-    //       give access to resources and run threads
+    //       give access to resources && run threads
     // --------------------------------------------------------------------------------------
     inputTensorPreparatorThread->startThreadUsingProvidedResources(NMP2ITP_Event_Que.get(),
                                                                    ITP2MDL_ModelInput_Que.get(),
@@ -61,7 +61,7 @@ void NeuralMidiFXPluginProcessor::PrintMessage(const std::string& input) {
     using namespace debugging_settings::ModelThread;
     if (disable_user_print_requests) { return; }
 
-    // if input is multiline, split it into lines and print each line separately
+    // if input is multiline, split it into lines && print each line separately
     std::stringstream ss(input);
     std::string line;
 
@@ -83,7 +83,7 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
 
 
 
-    // get Playhead info and buffer size and sample rate from host
+    // get Playhead info && buffer size && sample rate from host
     auto playhead = getPlayHead();
     auto Pinfo = playhead->getPosition();
     auto fs = getSampleRate();
@@ -100,7 +100,7 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     // see if any generations are ready
     if (PPP2NMP_GenerationEvent_Que->getNumReady() > 0) {
         auto event = PPP2NMP_GenerationEvent_Que->pop();
-        if (event.IsNewPlaybackPolicyEvent() and print_generation_policy_reception) {
+        if (event.IsNewPlaybackPolicyEvent() && print_generation_policy_reception) {
 
             // set anchor time relative to which timing information of generations should be interpreted
             playbackPolicies = event.getNewPlaybackPolicyEvent();
@@ -126,7 +126,7 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                 }
 
             } else if (playbackPolicies.IsOverwritePolicy_KeepAllPreviousEvents()) { /* do nothing */ } else {
-                assert ("PlaybackPolicies Overwrite Action not Specified!");
+                assert ("PlaybackPolicies Overwrite Action !Specified!");
             }
         }
 
@@ -176,7 +176,7 @@ std::optional<juce::MidiMessage> NeuralMidiFXPluginProcessor::getMessageIfToBePl
     switch (playbackPolicies.getTimeUnitIndex()) {
         case 1: {       // samples
             auto end = now_.inSamples() + buffSize;
-            if (now_in_user_unit <= adjusted_time and adjusted_time < end) {
+            if (now_in_user_unit <= adjusted_time && adjusted_time < end) {
                 auto msg_copy = msg;
                 msg_copy.setTimeStamp(adjusted_time - now_in_user_unit);
                 return msg_copy;
@@ -187,7 +187,7 @@ std::optional<juce::MidiMessage> NeuralMidiFXPluginProcessor::getMessageIfToBePl
         case 2: {      // seconds
             auto end = now_.inSeconds() + buffSize / fs;
 
-            if (now_in_user_unit <= adjusted_time and adjusted_time < end) {
+            if (now_in_user_unit <= adjusted_time && adjusted_time < end) {
                 auto msg_copy = msg;
                 auto time_diff = adjusted_time - now_in_user_unit;
                 msg_copy.setTimeStamp(std::floor(time_diff * fs));
@@ -198,7 +198,7 @@ std::optional<juce::MidiMessage> NeuralMidiFXPluginProcessor::getMessageIfToBePl
         }
         case 3: {      // QuarterNotes
             auto end = now_.inQuarterNotes() + buffSize / fs * qpm / 60.0f;
-            if (now_in_user_unit <= adjusted_time and adjusted_time < end) {
+            if (now_in_user_unit <= adjusted_time && adjusted_time < end) {
                 auto msg_copy = msg;
                 auto time_diff = adjusted_time - now_in_user_unit;
                 msg_copy.setTimeStamp(std::floor(time_diff * fs * 60.0f / qpm));
@@ -218,9 +218,9 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
     using namespace event_communication_settings;
     if (Pinfo) {
 
-        if (last_frame_meta_data.isPlaying() xor Pinfo->getIsPlaying()) {
+        if (!last_frame_meta_data.isPlaying() != !Pinfo->getIsPlaying()) {
             // if just started, register the playhead starting position
-            if ((not last_frame_meta_data.isPlaying()) and Pinfo->getIsPlaying()) {
+            if ((!last_frame_meta_data.isPlaying()) && Pinfo->getIsPlaying()) {
                 if (print_start_stop_times) { PrintMessage("Started playing"); }
                 playhead_start_time = time_{*Pinfo->getTimeInSamples(),
                                             *Pinfo->getTimeInSeconds(),
@@ -272,14 +272,14 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
         }
 
         // Step 4. see if new notes are played on the input side
-        if (not midiMessages.isEmpty() and Pinfo->getIsPlaying()) {
+        if (!midiMessages.isEmpty() && Pinfo->getIsPlaying()) {
             // if there are new notes, send them to the groove thread
             for (const auto midiMessage: midiMessages) {
                 auto msg = midiMessage.getMessage();
                 auto midiEvent = Event{Pinfo, fs, buffSize, msg};
 
-                // check if new bar event exists and it is before the current midi event
-                if (NewBarEvent.has_value() and SendNewBarEvents_FLAG) {
+                // check if new bar event exists && it is before the current midi event
+                if (NewBarEvent.has_value() && SendNewBarEvents_FLAG) {
                     if (midiEvent.Time().inSamples() >= NewBarEvent->Time().inSamples()) {
                         NMP2ITP_Event_Que->push(*NewBarEvent);
                         NewBarEvent = std::nullopt;
@@ -287,7 +287,7 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
                 }
 
                 // check if a specified number of whole notes has passed
-                if (NewTimeShiftEvent.has_value() and SendTimeShiftEvents_FLAG) {
+                if (NewTimeShiftEvent.has_value() && SendTimeShiftEvents_FLAG) {
                     if (midiEvent.Time().inSamples() >= NewTimeShiftEvent->Time().inSamples()) {
                         NMP2ITP_Event_Que->push(*NewTimeShiftEvent);
                         NewTimeShiftEvent = std::nullopt;
@@ -310,12 +310,12 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
             }
         }
 
-        // if there is a new bar event, and hasn't been sent yet, send it
-        if (NewBarEvent.has_value() and SendNewBarEvents_FLAG) {
+        // if there is a new bar event, && hasn't been sent yet, send it
+        if (NewBarEvent.has_value() && SendNewBarEvents_FLAG) {
             NMP2ITP_Event_Que->push(*NewBarEvent);
             NewBarEvent = std::nullopt;
         }
-        if (NewTimeShiftEvent.has_value() and SendTimeShiftEvents_FLAG) {
+        if (NewTimeShiftEvent.has_value() && SendTimeShiftEvents_FLAG) {
             NMP2ITP_Event_Que->push(*NewTimeShiftEvent);
             NewTimeShiftEvent = std::nullopt;
         }

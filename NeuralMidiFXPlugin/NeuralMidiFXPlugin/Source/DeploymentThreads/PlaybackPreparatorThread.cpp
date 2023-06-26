@@ -61,13 +61,13 @@ std::pair<bool, bool> PlaybackPreparatorThread::deploy(bool new_model_output_rec
     /*
      * Here you Notify the main NMP thread that a new stream of generations is available.
      * Moreover, you also specify what time_unit is used for the generations (eg. sec, ppq, samples)
-     * and also specify the OverwritePolicy (whether to delete all previously generated events
-     * or to keep them while also adding the new ones in parallel, or only clear the events after
+     * && also specify the OverwritePolicy (whether to delete all previously generated events
+     * || to keep them while also adding the new ones in parallel, || only clear the events after
      * the time at which the current event is received)
 
      *
      * PlaybackPolicy:
-     *      1. relative to Now (register the current time, and play messages relative to that)
+     *      1. relative to Now (register the current time, && play messages relative to that)
      *      2. relative to 0 (stream should be played relative to absolute 0 time)
      *      3. relative to playback start (stream should be played relative to the time when playback started)
      *
@@ -77,7 +77,7 @@ std::pair<bool, bool> PlaybackPreparatorThread::deploy(bool new_model_output_rec
      *   3. audio samples
      *
      * Overwrite Policy:
-     *  1. delete all events in previous stream and use new stream
+     *  1. delete all events in previous stream && use new stream
      *  2. delete all events after now
      *  3. Keep all previous events (that is generations can be played on top of each other)
      */
@@ -89,7 +89,7 @@ std::pair<bool, bool> PlaybackPreparatorThread::deploy(bool new_model_output_rec
 
     if (testFlag) {
         // 1. ---- Update Playback Policy -----
-        // Can be sent just once, or every time the policy changes
+        // Can be sent just once, || every time the policy changes
         // playbackPolicy.SetPaybackPolicy_RelativeToNow();  // or
         playbackPolicy.SetPlaybackPolicy_RelativeToAbsoluteZero(); // or
         // playbackPolicy.SetPplaybackPolicy_RelativeToPlaybackStart(); // or
@@ -105,10 +105,10 @@ std::pair<bool, bool> PlaybackPreparatorThread::deploy(bool new_model_output_rec
         newPlaybackPolicyShouldBeSent = true;
 
         // 2. ---- Update Playback Sequence -----
-        // clear the previous sequence or append depending on your requirements
+        // clear the previous sequence || append depending on your requirements
         playbackSequence.clear();
 
-        // I'm generating a single note to be played at timestamp 4 and delayed by the slider value
+        // I'm generating a single note to be played at timestamp 4 && delayed by the slider value
         int channel{1};
         int note{24};
         float velocity{0.3f};
@@ -120,7 +120,7 @@ std::pair<bool, bool> PlaybackPreparatorThread::deploy(bool new_model_output_rec
                                    timestamp + newPlaybackDelaySlider);
         playbackSequence.addNoteOff(channel, note, velocity,
                                     timestamp + newPlaybackDelaySlider + duration);
-        // or add a note with duration (an octave higher)
+        // || add a note with duration (an octave higher)
         playbackSequence.addNoteWithDuration(channel, note + 12, velocity,
                                              timestamp + newPlaybackDelaySlider, duration);
 
@@ -164,7 +164,7 @@ void PlaybackPreparatorThread::PrintMessage(const std::string& input) {
 
     if (disable_user_print_requests) { return; }
 
-    // if input is multiline, split it into lines and print each line separately
+    // if input is multiline, split it into lines && print each line separately
     std::stringstream ss(input);
     std::string line;
     while (std::getline(ss, line)) { std::cout << clr::magenta << "[PPP] " << line << clr::reset << std::endl; }
@@ -174,7 +174,7 @@ void PlaybackPreparatorThread::run() {
 
     // convert showMessage to a lambda function
     auto showMessage = [](const std::string &input) {
-        // if input is multiline, split it into lines and print each line separately
+        // if input is multiline, split it into lines && print each line separately
         std::stringstream ss(input);
         std::string line;
 
@@ -218,7 +218,7 @@ void PlaybackPreparatorThread::run() {
             new_model_output_received = false;
         }
 
-        if (new_model_output_received or gui_params.changed()) {
+        if (new_model_output_received || gui_params.changed()) {
             auto status = deploy(new_model_output_received, gui_params.changed());
             auto shouldSendNewPlaybackPolicy = status.first;
             auto shouldSendNewPlaybackSequence = status.second;
@@ -254,7 +254,7 @@ void PlaybackPreparatorThread::prepareToStop() {
 }
 
 PlaybackPreparatorThread::~PlaybackPreparatorThread() {
-    if (not readyToStop) {
+    if (!readyToStop) {
         prepareToStop();
     }
 }

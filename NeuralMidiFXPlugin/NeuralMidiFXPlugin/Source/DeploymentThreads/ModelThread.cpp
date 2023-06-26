@@ -18,7 +18,7 @@ bool ModelThread::deploy(bool new_model_input_received,
     *                      PrintMessage("YOUR MESSAGE HERE");
     */
 
-    /* A flag like this one can be used to check whether or not the model input
+    /* A flag like this one can be used to check whether || not the model input
         is ready to be sent to the model thread (MDL)*/
 
     // =================================================================================
@@ -181,7 +181,7 @@ void ModelThread::run() {
             new_model_input_received = false;
         }
 
-        if (new_model_input_received or gui_params.changed())
+        if (new_model_input_received || gui_params.changed())
         {
             new_model_output_to_push = deploy(new_model_input_received, gui_params.changed());
             if (new_model_output_to_push) {
@@ -220,7 +220,7 @@ void ModelThread::prepareToStop() {
 }
 
 ModelThread::~ModelThread() {
-    if (not readyToStop) {
+    if (!readyToStop) {
         prepareToStop();
     }
 }

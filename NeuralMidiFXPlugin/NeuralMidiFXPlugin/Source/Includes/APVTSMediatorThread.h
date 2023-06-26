@@ -110,7 +110,7 @@ public:
     }
 
     ~APVTSMediatorThread() override {
-        if (not readyToStop) {
+        if (!readyToStop) {
             prepareToStop();
         }
     }
