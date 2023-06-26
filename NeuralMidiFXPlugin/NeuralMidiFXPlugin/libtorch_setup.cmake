@@ -7,7 +7,7 @@ find_package(Torch)
 if(NOT Torch_FOUND)
 
 
-  set(TORCH_VERSION 1.13.1)
+  set(TORCH_VERSION 2.0.0)
   # Check if we're running on Windows
   if(MSVC)
     # https://download.pytorch.org/libtorch/cpu/libtorch-win-shared-with-deps-2.0.1%2Bcpu.zip
@@ -22,6 +22,14 @@ if(NOT Torch_FOUND)
     execute_process(COMMAND ${CMAKE_COMMAND} -E tar xf ${TORCH_FILE}
       WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     )
+
+    file(GLOB TORCH_DLLS "${TORCH_INSTALL_PREFIX}/lib/*.dll")
+    add_custom_command(TARGET example-app
+            POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${TORCH_DLLS}
+            $<TARGET_FILE_DIR:example-app>)
+
   else()
 
     message(STATUS "Downloading libtorch for MacOS...")
