@@ -23,12 +23,7 @@ if(NOT Torch_FOUND)
       WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     )
 
-    file(GLOB TORCH_DLLS "${TORCH_INSTALL_PREFIX}/lib/*.dll")
-    add_custom_command(TARGET example-app
-            POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            ${TORCH_DLLS}
-            $<TARGET_FILE_DIR:example-app>)
+
 
   else()
 

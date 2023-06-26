@@ -23,7 +23,7 @@ juce_add_plugin("${BaseTargetName}"
         PRODUCT_NAME "NeuralMidiFXPlugin")           # Replace with your plugin title
 
 # Include the libtorch setup file
-include(libtorch_setup.cmake)
+#include(libtorch_setup.cmake)
 
 target_sources(${BaseTargetName} PRIVATE
         Source/PluginProcessor.cpp
@@ -43,6 +43,15 @@ target_compile_definitions(${BaseTargetName}
 find_package(Torch REQUIRED)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
+
+if (MSVC)
+    file(GLOB TORCH_DLLS "${TORCH_INSTALL_PREFIX}/lib/*.dll")
+    add_custom_command(TARGET ${BaseTargetName}
+            POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${TORCH_DLLS}
+            $<TARGET_FILE_DIR:${BaseTargetName}>)
+endif()
 
 target_link_libraries(${BaseTargetName} PRIVATE
         shared_plugin_helpers
