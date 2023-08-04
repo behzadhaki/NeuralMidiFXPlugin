@@ -43,6 +43,13 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
                                                            APVM2ITP_GuiParams_Que.get(),
                                                            APVM2MDL_GuiParams_Que.get(),
                                                            APVM2PPP_GuiParams_Que.get());
+
+    if (JUCEApplicationBase::isStandaloneApp()) {
+        DBG("Running as standalone");
+    } else
+    {
+        DBG("Running as plugin");
+    }
 }
 
 NeuralMidiFXPluginProcessor::~NeuralMidiFXPluginProcessor() {
@@ -82,83 +89,87 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     tempBuffer.clear();
 
 
-
     // get Playhead info && buffer size && sample rate from host
     auto playhead = getPlayHead();
     auto Pinfo = playhead->getPosition();
     auto fs = getSampleRate();
     auto buffSize = buffer.getNumSamples();
 
-    // register current time for later use
-    auto frame_now = time_{*Pinfo->getTimeInSamples(),
-                     *Pinfo->getTimeInSeconds(),
-                     *Pinfo->getPpqPosition()};
 
-    // Send received events from host to ITP thread
-    sendReceivedInputsAsEvents(midiMessages, Pinfo, fs, buffSize);
+    if (Pinfo.hasValue() && Pinfo->getPpqPosition().hasValue()) {
+        // register current time for later use
+        auto frame_now = time_{*Pinfo->getTimeInSamples(),
+                                *Pinfo->getTimeInSeconds(),
+                                *Pinfo->getPpqPosition()};
 
-    // see if any generations are ready
-    if (PPP2NMP_GenerationEvent_Que->getNumReady() > 0) {
-        auto event = PPP2NMP_GenerationEvent_Que->pop();
-        if (event.IsNewPlaybackPolicyEvent() && print_generation_policy_reception) {
+        // Send received events from host to ITP thread
+        sendReceivedInputsAsEvents(midiMessages, Pinfo, fs, buffSize);
 
-            // set anchor time relative to which timing information of generations should be interpreted
-            playbackPolicies = event.getNewPlaybackPolicyEvent();
-            if (playbackPolicies.IsPlaybackPolicy_RelativeToNow()) {
-                time_anchor_for_playback = frame_now;
-            } else if (playbackPolicies.IsPlaybackPolicy_RelativeToAbsoluteZero()) {
-                time_anchor_for_playback = time_{0, 0.0f, 0.0f};
-            } else {
-                time_anchor_for_playback = playhead_start_time;
-            }
-            PrintMessage(" New Generation Policy Received" );
+        // see if any generations are ready
+        if (PPP2NMP_GenerationEvent_Que->getNumReady() > 0) {
+            auto event = PPP2NMP_GenerationEvent_Que->pop();
+            if (event.IsNewPlaybackPolicyEvent() && print_generation_policy_reception) {
 
-            // check overwrite policy
-            if (playbackPolicies.IsOverwritePolicy_DeleteAllEventsInPreviousStreamAndUseNewStream()) {
-                playbackMessageSequence.clear();
-            } else if (playbackPolicies.IsOverwritePolicy_DeleteAllEventsAfterNow()) {
-                auto delete_start_time = frame_now.getTimeWithUnitType(playbackPolicies.getTimeUnitIndex());
-                for (int i = 0; i < playbackMessageSequence.getNumEvents(); i++) {
-                    auto msg = playbackMessageSequence.getEventPointer(i);
-                    if (msg->message.getTimeStamp() >= delete_start_time) {
-                        playbackMessageSequence.deleteEvent(i, false);
-                    }
+                // set anchor time relative to which timing information of generations should be interpreted
+                playbackPolicies = event.getNewPlaybackPolicyEvent();
+                if (playbackPolicies.IsPlaybackPolicy_RelativeToNow()) {
+                    time_anchor_for_playback = frame_now;
+                } else if (playbackPolicies.IsPlaybackPolicy_RelativeToAbsoluteZero()) {
+                    time_anchor_for_playback = time_{0, 0.0f, 0.0f};
+                } else {
+                    time_anchor_for_playback = playhead_start_time;
                 }
+                PrintMessage(" New Generation Policy Received" );
 
-            } else if (playbackPolicies.IsOverwritePolicy_KeepAllPreviousEvents()) { /* do nothing */ } else {
-                assert ("PlaybackPolicies Overwrite Action !Specified!");
+                // check overwrite policy
+                if (playbackPolicies.IsOverwritePolicy_DeleteAllEventsInPreviousStreamAndUseNewStream()) {
+                    playbackMessageSequence.clear();
+                } else if (playbackPolicies.IsOverwritePolicy_DeleteAllEventsAfterNow()) {
+                    auto delete_start_time = frame_now.getTimeWithUnitType(playbackPolicies.getTimeUnitIndex());
+                    for (int i = 0; i < playbackMessageSequence.getNumEvents(); i++) {
+                        auto msg = playbackMessageSequence.getEventPointer(i);
+                        if (msg->message.getTimeStamp() >= delete_start_time) {
+                            playbackMessageSequence.deleteEvent(i, false);
+                        }
+                    }
+
+                } else if (playbackPolicies.IsOverwritePolicy_KeepAllPreviousEvents()) { /* do nothing */ } else {
+                    assert ("PlaybackPolicies Overwrite Action !Specified!");
+                }
+            }
+
+            // update midi message sequence if new one arrived
+            if (event.IsNewPlaybackSequence()) {
+                if (print_generation_stream_reception) { PrintMessage(" New Sequence of Generations Received"); }
+                // update according to policy (clearing already taken care of above)
+                playbackMessageSequence.addSequence(event.getNewPlaybackSequence().getAsJuceMidMessageSequence(), 0);
+                playbackMessageSequence.updateMatchedPairs();
             }
         }
 
-        // update midi message sequence if new one arrived
-        if (event.IsNewPlaybackSequence()) {
-            if (print_generation_stream_reception) { PrintMessage(" New Sequence of Generations Received"); }
-            // update according to policy (clearing already taken care of above)
-            playbackMessageSequence.addSequence(event.getNewPlaybackSequence().getAsJuceMidMessageSequence(), 0);
-            playbackMessageSequence.updateMatchedPairs();
-        }
-    }
-
-    // start playback if any
-    if (Pinfo->getIsPlaying()){
-        for (auto &msg: playbackMessageSequence) {
-            // PrintMessage(std::to_string(msg->message.getTimeStamp()));
-            // PrintMessage(std::to_string(playbackPolicies.getTimeUnitIndex()));
-            auto msg_to_play = getMessageIfToBePlayed(
+        // start playback if any
+        if (Pinfo->getIsPlaying()){
+            for (auto &msg: playbackMessageSequence) {
+                // PrintMessage(std::to_string(msg->message.getTimeStamp()));
+                // PrintMessage(std::to_string(playbackPolicies.getTimeUnitIndex()));
+                auto msg_to_play = getMessageIfToBePlayed(
                     frame_now, msg->message, buffSize, fs, *Pinfo->getBpm());
-            if (msg_to_play.has_value()) {
-                std::stringstream ss;
-                ss << "Playing: " << msg_to_play->getDescription() << " at time: " << msg_to_play->getTimeStamp();
-                PrintMessage(ss.str());
-                tempBuffer.addEvent(*msg_to_play, 0);
+                if (msg_to_play.has_value()) {
+                    std::stringstream ss;
+                    ss << "Playing: " << msg_to_play->getDescription() << " at time: " << msg_to_play->getTimeStamp();
+                    PrintMessage(ss.str());
+                    tempBuffer.addEvent(*msg_to_play, 0);
+                }
             }
         }
+        auto now_in_user_unit = frame_now.getTimeWithUnitType(playbackPolicies.getTimeUnitIndex());
+
+        midiMessages.swapWith(tempBuffer);
+
+        buffer.clear(); //
+
     }
-    auto now_in_user_unit = frame_now.getTimeWithUnitType(playbackPolicies.getTimeUnitIndex());
 
-    midiMessages.swapWith(tempBuffer);
-
-    buffer.clear(); //
 }
 
 // checks whether the note timing (adjusted by the time anchor) is within the current buffer
