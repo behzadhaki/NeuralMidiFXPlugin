@@ -31,12 +31,12 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
 
     addAndMakeVisible(tabs);
 
-    addAndMakeVisible(&midiPianoRollComponentPtr);
+    addAndMakeVisible(&midiPianoRoll);
     setInterceptsMouseClicks(false, true);
     resized(); // Is this a terrible idea?
     startTimer(50);
 
-    midiPianoRollComponentPtr.generateRandomMidiFile(10);
+    midiPianoRoll.generateRandomMidiFile(10);
 }
 
 NeuralMidiFXPluginEditor::~NeuralMidiFXPluginEditor()
@@ -50,7 +50,7 @@ void NeuralMidiFXPluginEditor::resized()
     auto area = getLocalBounds();
     setBounds(area);
 
-    midiPianoRollComponentPtr.setBounds(area.removeFromTop(area.proportionOfHeight(0.1)));
+    midiPianoRoll.setBounds(area.removeFromTop(area.proportionOfHeight(0.1)));
 
     tabs.setBounds(area);
 
@@ -84,3 +84,27 @@ void NeuralMidiFXPluginEditor::timerCallback()
 
 }
 
+bool NeuralMidiFXPluginEditor::isInterestedInFileDrag (const juce::StringArray& files)
+{
+    for (auto& file : files)
+        if (file.endsWith (".mid") || file.endsWith (".midi"))
+            return true;
+
+    return false;
+}
+
+void NeuralMidiFXPluginEditor::filesDropped (const juce::StringArray& files, int /*x*/, int /*y*/)
+{
+    for (auto& file : files)
+    {
+        if (file.endsWith(".mid") || file.endsWith(".midi"))
+        {
+            juce::File midiFileToLoad(file);
+            if (midiPianoRoll.loadMidiFile(midiFileToLoad))
+            {
+                repaint();
+                break;
+            }
+        }
+    }
+}

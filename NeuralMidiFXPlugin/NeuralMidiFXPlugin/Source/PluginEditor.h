@@ -7,7 +7,8 @@
 using namespace std;
 
 class NeuralMidiFXPluginEditor : public juce::AudioProcessorEditor,
-                                 public juce::Timer
+                                 public juce::Timer,
+                                 public juce::FileDragAndDropTarget
 
 {
 public:
@@ -17,6 +18,11 @@ public:
     void resized() override;
     void timerCallback() override;
 
+    bool isInterestedInFileDrag (const juce::StringArray& files) override;
+
+    void filesDropped (const juce::StringArray& files, int /*x*/, int /*y*/) override;
+
+
     juce::TabbedComponent tabs;
 
     const int numTabs = UIObjects::Tabs::tabList.size();
@@ -25,7 +31,7 @@ public:
     ParameterComponent* paramComponentPtr;
     std::vector<ParameterComponent*> paramComponentVector;
 
-    MidiPianoRollComponent midiPianoRollComponentPtr;
+    MidiPianoRollComponent midiPianoRoll;
 private:
 
     NeuralMidiFXPluginProcessor* NeuralMidiFXPluginProcessorPointer_;

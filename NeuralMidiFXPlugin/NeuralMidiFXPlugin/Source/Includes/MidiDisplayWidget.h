@@ -16,7 +16,10 @@ public:
     {
         // Load an empty MidiFile to start
         midiFile = juce::MidiFile();
-        // Set background color to grey
+
+        // Enable drag and drop
+        setInterceptsMouseClicks(false, true);
+
 
     }
 
@@ -90,6 +93,24 @@ public:
             }
         }
     }
+
+
+    bool loadMidiFile(const juce::File& file)
+    {
+        auto stream = file.createInputStream();
+        if (stream != nullptr)
+        {
+            if (midiFile.readFrom(*stream))
+            {
+                // Successfully read the MIDI file, so repaint the component
+                repaint();
+                return true;
+            }
+        }
+        return false;
+    }
+
+
 
 
 private:
