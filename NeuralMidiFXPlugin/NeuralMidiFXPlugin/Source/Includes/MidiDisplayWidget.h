@@ -16,19 +16,22 @@ public:
     {
         // Load an empty MidiFile to start
         midiFile = juce::MidiFile();
+        midiFile.setTicksPerQuarterNote(960);
+
 
         // Enable drag and drop
-        setInterceptsMouseClicks(false, true);
-
+//        setInterceptsMouseClicks(false, true);
+        setInterceptsMouseClicks(true, true);
 
     }
 
     ~MidiPianoRollComponent() {}
 
-    // Generate a random MidiFile
     void generateRandomMidiFile(int numNotes)
     {
         midiFile = juce::MidiFile();
+        int ticksPerQuarterNote = 960;
+        midiFile.setTicksPerQuarterNote(ticksPerQuarterNote);  // This line was missing
 
         juce::MidiMessageSequence sequence;
 
@@ -38,8 +41,9 @@ public:
             int velocity = juce::Random::getSystemRandom().nextInt({20, 127});
             double startTime = juce::Random::getSystemRandom().nextDouble() * 10.0;
             double noteDuration = juce::Random::getSystemRandom().nextDouble() * 2.0 + 0.5f; // duration in quarter notes
-            sequence.addEvent(juce::MidiMessage::noteOn(1, noteNumber, juce::uint8(velocity)), startTime);
-            sequence.addEvent(juce::MidiMessage::noteOff(1, noteNumber), startTime + noteDuration);
+
+            sequence.addEvent(juce::MidiMessage::noteOn(1, noteNumber, juce::uint8(velocity)), startTime * ticksPerQuarterNote);
+            sequence.addEvent(juce::MidiMessage::noteOff(1, noteNumber), (startTime + noteDuration) * ticksPerQuarterNote);
         }
 
         midiFile.addTrack(sequence);
@@ -47,25 +51,28 @@ public:
         repaint();
     }
 
+
     void paint(juce::Graphics& g) override
     {
         g.fillAll (juce::Colours::whitesmoke);
-        // Your own drawing code goes here
+
         if (midiFile.getNumTracks() > 0)
         {
             auto track = midiFile.getTrack(0);
             if (track != nullptr)
             {
                 double midiFileLength = track->getEndTime();
-                int numRows = 10;
+                int numRows = 24;  // number of pitch values
                 float rowHeight = getHeight() / numRows;
-                int note_count = 0;
+
                 for (int i = 0; i < track->getNumEvents(); ++i)
                 {
                     auto event = track->getEventPointer(i);
                     if (event != nullptr && event->message.isNoteOn())
                     {
-                        float y = (note_count % numRows) * rowHeight;
+                        int noteNumber = event->message.getNoteNumber() % 24;
+
+                        float y = (23 - noteNumber) * rowHeight;  // flip the y axis
                         float x = (event->message.getTimeStamp() / midiFileLength) * getWidth();
 
                         // find the corresponding "note off" event
@@ -73,7 +80,7 @@ public:
                         for (int j = i + 1; j < track->getNumEvents(); ++j)
                         {
                             auto offEvent = track->getEventPointer(j);
-                            if (offEvent != nullptr && offEvent->message.isNoteOff() && offEvent->message.getNoteNumber() == event->message.getNoteNumber())
+                            if (offEvent != nullptr && offEvent->message.isNoteOff() && offEvent->message.getNoteNumber() % 24 == noteNumber)
                             {
                                 double noteLength = offEvent->message.getTimeStamp() - event->message.getTimeStamp();
                                 length = (noteLength / midiFileLength) * getWidth();
@@ -83,17 +90,33 @@ public:
 
                         // set color according to the velocity
                         float velocity = event->message.getFloatVelocity();
-                        juce::Colour noteColour = juce::Colours::skyblue.withAlpha(velocity); // blue with opacity corresponding to velocity
+                        juce::Colour noteColour = juce::Colours::skyblue.withAlpha(velocity);
 
                         g.setColour(noteColour);
                         g.fillRect(juce::Rectangle<float>(x, y, length, rowHeight));
-                        note_count++;
                     }
                 }
             }
         }
     }
 
+    void mouseDrag(const juce::MouseEvent& event) override
+    {
+
+        juce::File outf = juce::File::getSpecialLocation(juce::File::SpecialLocationType::tempDirectory).getChildFile("test.mid");
+        juce::TemporaryFile tempf(outf);
+        {
+            auto p_os = std::make_unique<juce::FileOutputStream>(tempf.getFile());
+            if (p_os->openedOk()) {
+                midiFile.writeTo(*p_os, 0);
+            }
+        }
+
+        bool succeeded = tempf.overwriteTargetFileWithTemporary();
+        if (succeeded) {
+            juce::DragAndDropContainer::performExternalDragDropOfFiles({outf.getFullPathName()}, false);
+        }
+    }
 
     bool loadMidiFile(const juce::File& file)
     {
@@ -107,11 +130,9 @@ public:
                 return true;
             }
         }
+
         return false;
     }
-
-
-
 
 private:
     juce::MidiFile midiFile;
