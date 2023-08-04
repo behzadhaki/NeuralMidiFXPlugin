@@ -2,6 +2,7 @@
 #include "PluginEditor.h"
 #include "DeploymentSettings/GuiAndParams.h"
 
+
 NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& NeuralMidiFXPluginProcessorPointer)
     : AudioProcessorEditor(&NeuralMidiFXPluginProcessorPointer),
     tabs (juce::TabbedButtonBar::Orientation::TabsAtTop)
@@ -30,8 +31,12 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
 
     addAndMakeVisible(tabs);
 
+    addAndMakeVisible(&midiPianoRollComponentPtr);
+    setInterceptsMouseClicks(false, true);
     resized(); // Is this a terrible idea?
     startTimer(50);
+
+    midiPianoRollComponentPtr.generateRandomMidiFile(10);
 }
 
 NeuralMidiFXPluginEditor::~NeuralMidiFXPluginEditor()
@@ -44,6 +49,8 @@ void NeuralMidiFXPluginEditor::resized()
 {
     auto area = getLocalBounds();
     setBounds(area);
+
+    midiPianoRollComponentPtr.setBounds(area.removeFromTop(area.proportionOfHeight(0.1)));
 
     tabs.setBounds(area);
 
@@ -59,6 +66,7 @@ void NeuralMidiFXPluginEditor::resized()
     {
         paramComponentVector[i]->resizeGuiElements(area);
     }
+
 
     //parameterElements.resizeGuiElements(area);
 

@@ -2,6 +2,7 @@
 
 #include "PluginProcessor.h"
 #include "Includes/GuiElements.h"
+#include "Includes/MidiDisplayWidget.h"
 
 using namespace std;
 
@@ -24,6 +25,7 @@ public:
     ParameterComponent* paramComponentPtr;
     std::vector<ParameterComponent*> paramComponentVector;
 
+    MidiPianoRollComponent midiPianoRollComponentPtr;
 private:
 
     NeuralMidiFXPluginProcessor* NeuralMidiFXPluginProcessorPointer_;
