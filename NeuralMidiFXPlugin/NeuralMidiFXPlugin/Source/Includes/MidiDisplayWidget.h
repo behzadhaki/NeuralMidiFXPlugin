@@ -12,17 +12,20 @@ using namespace std;
 class MidiPianoRollComponent : public juce::Component
 {
 public:
-    MidiPianoRollComponent()
+
+    explicit MidiPianoRollComponent(bool isForGenerations)
     {
-        // Load an empty MidiFile to start
-        midiFile = juce::MidiFile();
-        midiFile.setTicksPerQuarterNote(960);
+        Initialize();
 
-
-        // Enable drag and drop
-//        setInterceptsMouseClicks(false, true);
-        setInterceptsMouseClicks(true, true);
-
+        if (isForGenerations) {
+            backgroundColour = juce::Colours::black;
+            noteColour = juce::Colours::white;
+            allow_drag_out = true;
+        } else {
+            backgroundColour = juce::Colours::whitesmoke;
+            noteColour = juce::Colours::skyblue;
+            allow_drag_in = true;
+        }
     }
 
     ~MidiPianoRollComponent() {}
@@ -51,10 +54,9 @@ public:
         repaint();
     }
 
-
     void paint(juce::Graphics& g) override
     {
-        g.fillAll (juce::Colours::whitesmoke);
+        g.fillAll (backgroundColour);
 
         if (midiFile.getNumTracks() > 0)
         {
@@ -90,9 +92,9 @@ public:
 
                         // set color according to the velocity
                         float velocity = event->message.getFloatVelocity();
-                        juce::Colour noteColour = juce::Colours::skyblue.withAlpha(velocity);
 
-                        g.setColour(noteColour);
+                        auto color = noteColour.withAlpha(velocity);
+                        g.setColour(color);
                         g.fillRect(juce::Rectangle<float>(x, y, length, rowHeight));
                     }
                 }
@@ -102,24 +104,31 @@ public:
 
     void mouseDrag(const juce::MouseEvent& event) override
     {
+        if (allow_drag_out) {
+            juce::String fileName = juce::Uuid().toString() + ".mid";  // Random filename
 
-        juce::File outf = juce::File::getSpecialLocation(juce::File::SpecialLocationType::tempDirectory).getChildFile("test.mid");
-        juce::TemporaryFile tempf(outf);
-        {
-            auto p_os = std::make_unique<juce::FileOutputStream>(tempf.getFile());
-            if (p_os->openedOk()) {
-                midiFile.writeTo(*p_os, 0);
+            juce::File outf = juce::File::getSpecialLocation(juce::File::SpecialLocationType::tempDirectory).getChildFile(fileName);
+            juce::TemporaryFile tempf(outf);
+            {
+                auto p_os = std::make_unique<juce::FileOutputStream>(tempf.getFile());
+                if (p_os->openedOk()) {
+                    midiFile.writeTo(*p_os, 0);
+                }
             }
-        }
 
-        bool succeeded = tempf.overwriteTargetFileWithTemporary();
-        if (succeeded) {
-            juce::DragAndDropContainer::performExternalDragDropOfFiles({outf.getFullPathName()}, false);
+            bool succeeded = tempf.overwriteTargetFileWithTemporary();
+            if (succeeded) {
+                juce::DragAndDropContainer::performExternalDragDropOfFiles({outf.getFullPathName()}, false);
+            }
         }
     }
 
     bool loadMidiFile(const juce::File& file)
     {
+        if (!allow_drag_in) {
+            return false;
+        }
+
         auto stream = file.createInputStream();
         if (stream != nullptr)
         {
@@ -135,6 +144,24 @@ public:
     }
 
 private:
+    void Initialize()
+    {
+        // Load an empty MidiFile to start
+        midiFile = juce::MidiFile();
+        midiFile.setTicksPerQuarterNote(960);
+
+
+        // Enable drag and drop
+        //        setInterceptsMouseClicks(false, true);
+        setInterceptsMouseClicks(true, true);
+
+    }
+
     juce::MidiFile midiFile;
+    juce::Colour backgroundColour{juce::Colours::whitesmoke};
+    juce::Colour noteColour = juce::Colours::skyblue;
+    bool allow_drag_in{false};
+    bool allow_drag_out{false};
+
 };
 

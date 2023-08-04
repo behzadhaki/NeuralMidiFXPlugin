@@ -31,12 +31,20 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
 
     addAndMakeVisible(tabs);
 
-    addAndMakeVisible(&midiPianoRoll);
-    setInterceptsMouseClicks(false, true);
-    resized(); // Is this a terrible idea?
-    startTimer(50);
 
-    midiPianoRoll.generateRandomMidiFile(10);
+    addAndMakeVisible(&inputPianoRoll);
+    addAndMakeVisible(&outputPianoRoll);
+
+
+    inputPianoRoll.generateRandomMidiFile(10);
+    outputPianoRoll.generateRandomMidiFile(10);
+
+    setInterceptsMouseClicks(false, true);
+
+    startTimer(50);
+    resized(); // Is this a terrible idea?
+
+
 }
 
 NeuralMidiFXPluginEditor::~NeuralMidiFXPluginEditor()
@@ -50,12 +58,17 @@ void NeuralMidiFXPluginEditor::resized()
     auto area = getLocalBounds();
     setBounds(area);
 
-    midiPianoRoll.setBounds(area.removeFromTop(area.proportionOfHeight(0.1)));
+    auto proll_height = int(area.getHeight() * .1);
+    auto gap = int(area.getHeight() * .03);
+
+    outputPianoRoll.setBounds(area.removeFromBottom(proll_height));
+    area.removeFromBottom(gap);
+    inputPianoRoll.setBounds(area.removeFromBottom(proll_height));
 
     tabs.setBounds(area);
 
-    auto widthEdge = area.getWidth() * .05;
-    auto heightEdge = area.getHeight() * .03;
+//    auto widthEdge = area.getWidth() * .05;
+//    auto heightEdge = area.getHeight() * .03;
 
 //    area.removeFromTop(heightEdge);
 //    area.removeFromBottom(heightEdge);
@@ -100,7 +113,7 @@ void NeuralMidiFXPluginEditor::filesDropped (const juce::StringArray& files, int
         if (file.endsWith(".mid") || file.endsWith(".midi"))
         {
             juce::File midiFileToLoad(file);
-            if (midiPianoRoll.loadMidiFile(midiFileToLoad))
+            if (inputPianoRoll.loadMidiFile(midiFileToLoad))
             {
                 repaint();
                 break;

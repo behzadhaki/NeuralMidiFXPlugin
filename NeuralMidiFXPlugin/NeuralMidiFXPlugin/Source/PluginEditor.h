@@ -31,7 +31,9 @@ public:
     ParameterComponent* paramComponentPtr;
     std::vector<ParameterComponent*> paramComponentVector;
 
-    MidiPianoRollComponent midiPianoRoll;
+    MidiPianoRollComponent inputPianoRoll{false};
+    MidiPianoRollComponent outputPianoRoll{true};
+
 private:
 
     NeuralMidiFXPluginProcessor* NeuralMidiFXPluginProcessorPointer_;
