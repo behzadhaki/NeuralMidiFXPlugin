@@ -31,13 +31,18 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
 
     addAndMakeVisible(tabs);
 
+    inputPianoRoll = std::make_unique<MidiPianoRollComponent>(
+        false,
+        NeuralMidiFXPluginProcessorPointer.GUI2ITP_DroppedMidiFile_Que.get());
+    outputPianoRoll = std::make_unique<MidiPianoRollComponent>(
+        true,
+        NeuralMidiFXPluginProcessorPointer.PPP2GUI_GenerationMidiFile_Que.get());
+    addAndMakeVisible(inputPianoRoll.get());
+    addAndMakeVisible(outputPianoRoll.get());
 
-    addAndMakeVisible(&inputPianoRoll);
-    addAndMakeVisible(&outputPianoRoll);
 
-
-    inputPianoRoll.generateRandomMidiFile(10);
-    outputPianoRoll.generateRandomMidiFile(10);
+//    inputPianoRoll->generateRandomMidiFile(10);
+    outputPianoRoll->generateRandomMidiFile(10);
 
     setInterceptsMouseClicks(false, true);
 
@@ -61,9 +66,15 @@ void NeuralMidiFXPluginEditor::resized()
     auto proll_height = int(area.getHeight() * .1);
     auto gap = int(area.getHeight() * .03);
 
-    outputPianoRoll.setBounds(area.removeFromBottom(proll_height));
-    area.removeFromBottom(gap);
-    inputPianoRoll.setBounds(area.removeFromBottom(proll_height));
+    if (outputPianoRoll != nullptr){
+        outputPianoRoll->setBounds(area.removeFromBottom(proll_height));
+    }
+    if (inputPianoRoll != nullptr || outputPianoRoll != nullptr){
+        area.removeFromBottom(gap);
+    }
+    if (inputPianoRoll != nullptr){
+        inputPianoRoll->setBounds(area.removeFromBottom(proll_height));
+    }
 
     tabs.setBounds(area);
 
@@ -113,7 +124,7 @@ void NeuralMidiFXPluginEditor::filesDropped (const juce::StringArray& files, int
         if (file.endsWith(".mid") || file.endsWith(".midi"))
         {
             juce::File midiFileToLoad(file);
-            if (inputPianoRoll.loadMidiFile(midiFileToLoad))
+            if (inputPianoRoll->loadMidiFile(midiFileToLoad))
             {
                 repaint();
                 break;

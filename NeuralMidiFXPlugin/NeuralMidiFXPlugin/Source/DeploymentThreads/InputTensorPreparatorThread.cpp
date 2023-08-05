@@ -95,7 +95,6 @@ bool InputTensorPreparatorThread::deploy(
 
         } else if (new_event->isNewTimeShiftEvent()) {
 
-
         } else if (new_event->isNoteOnEvent()) {
 
         } else if (new_event->isNoteOffEvent()) {
@@ -142,15 +141,17 @@ bool InputTensorPreparatorThread::deploy(
 InputTensorPreparatorThread::InputTensorPreparatorThread() : juce::Thread("InputPreparatorThread") {}
 
 void InputTensorPreparatorThread::startThreadUsingProvidedResources(
-        LockFreeQueue<Event, queue_settings::NMP2ITP_que_size> *NMP2ITP_Event_Que_ptr_,
-        LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size> *ITP2MDL_ModelInput_Que_ptr_,
-        LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2ITP_Parameters_Queu_ptr_) {
+    LockFreeQueue<Event, queue_settings::NMP2ITP_que_size> *NMP2ITP_Event_Que_ptr_,
+    LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size> *ITP2MDL_ModelInput_Que_ptr_,
+    LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2ITP_Parameters_Queu_ptr_,
+    LockFreeQueue<juce::MidiFile, 4> *GUI2ITP_DroppedMidiFile_Que_ptr_) {
 
     // Provide access to resources needed to communicate with other threads
     // ---------------------------------------------------------------------------------------------
     NMP2ITP_Event_Que_ptr = NMP2ITP_Event_Que_ptr_;
     ITP2MDL_ModelInput_Que_ptr = ITP2MDL_ModelInput_Que_ptr_;
     APVM2ITP_Parameters_Queu_ptr = APVM2ITP_Parameters_Queu_ptr_;
+    GUI2ITP_DroppedMidiFile_Que_ptr = GUI2ITP_DroppedMidiFile_Que_ptr_;
 
     // Start the thread. This function internally calls run() method. DO NOT CALL run() DIRECTLY.
     // ---------------------------------------------------------------------------------------------

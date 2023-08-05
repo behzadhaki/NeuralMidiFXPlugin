@@ -21,6 +21,10 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
     APVM2MDL_GuiParams_Que = make_unique<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>>();
     APVM2PPP_GuiParams_Que = make_unique<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>>();
 
+    // Drag/Drop Midi Queues
+    GUI2ITP_DroppedMidiFile_Que = make_unique<LockFreeQueue<juce::MidiFile, 4>>();
+    PPP2GUI_GenerationMidiFile_Que = make_unique<LockFreeQueue<juce::MidiFile, 4>>();
+
     //       Create shared pointers for Threads (shared with APVTSMediator)
     // --------------------------------------------------------------------------------------
     inputTensorPreparatorThread = make_shared<InputTensorPreparatorThread>();
@@ -30,19 +34,25 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
 
     //       give access to resources && run threads
     // --------------------------------------------------------------------------------------
-    inputTensorPreparatorThread->startThreadUsingProvidedResources(NMP2ITP_Event_Que.get(),
-                                                                   ITP2MDL_ModelInput_Que.get(),
-                                                                   APVM2ITP_GuiParams_Que.get());
-    modelThread->startThreadUsingProvidedResources(ITP2MDL_ModelInput_Que.get(),
-                                                   MDL2PPP_ModelOutput_Que.get(),
-                                                   APVM2MDL_GuiParams_Que.get());
-    playbackPreparatorThread->startThreadUsingProvidedResources(MDL2PPP_ModelOutput_Que.get(),
-                                                                PPP2NMP_GenerationEvent_Que.get(),
-                                                                APVM2PPP_GuiParams_Que.get());
-    apvtsMediatorThread->startThreadUsingProvidedResources(&apvts,
-                                                           APVM2ITP_GuiParams_Que.get(),
-                                                           APVM2MDL_GuiParams_Que.get(),
-                                                           APVM2PPP_GuiParams_Que.get());
+    inputTensorPreparatorThread->startThreadUsingProvidedResources(
+        NMP2ITP_Event_Que.get(),
+        ITP2MDL_ModelInput_Que.get(),
+        APVM2ITP_GuiParams_Que.get(),
+        GUI2ITP_DroppedMidiFile_Que.get());
+    modelThread->startThreadUsingProvidedResources(
+        ITP2MDL_ModelInput_Que.get(),
+        MDL2PPP_ModelOutput_Que.get(),
+        APVM2MDL_GuiParams_Que.get());
+    playbackPreparatorThread->startThreadUsingProvidedResources(
+        MDL2PPP_ModelOutput_Que.get(),
+        PPP2NMP_GenerationEvent_Que.get(),
+        APVM2PPP_GuiParams_Que.get(),
+        PPP2GUI_GenerationMidiFile_Que.get());
+    apvtsMediatorThread->startThreadUsingProvidedResources(
+        &apvts,
+        APVM2ITP_GuiParams_Que.get(),
+        APVM2MDL_GuiParams_Que.get(),
+        APVM2PPP_GuiParams_Que.get());
 
     if (JUCEApplicationBase::isStandaloneApp()) {
         DBG("Running as standalone");

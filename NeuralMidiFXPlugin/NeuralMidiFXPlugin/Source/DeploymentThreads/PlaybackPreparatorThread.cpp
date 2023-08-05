@@ -148,15 +148,17 @@ PlaybackPreparatorThread::PlaybackPreparatorThread() : juce::Thread("PlaybackPre
 }
 
 void PlaybackPreparatorThread::startThreadUsingProvidedResources(
-        LockFreeQueue<ModelOutput, queue_settings::MDL2PPP_que_size> *MDL2PPP_ModelOutput_Que_ptr_,
-        LockFreeQueue<GenerationEvent, queue_settings::PPP2NMP_que_size> *PPP2NMP_GenerationEvent_Que_ptr_,
-        LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2PPP_Parameters_Queu_ptr_) {
+    LockFreeQueue<ModelOutput, queue_settings::MDL2PPP_que_size> *MDL2PPP_ModelOutput_Que_ptr_,
+    LockFreeQueue<GenerationEvent, queue_settings::PPP2NMP_que_size> *PPP2NMP_GenerationEvent_Que_ptr_,
+    LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2PPP_Parameters_Queu_ptr_,
+    LockFreeQueue<juce::MidiFile, 4> *PPP2GUI_GenerationMidiFile_Que_ptr_) {
 
     // Provide access to resources needed to communicate with other threads
     // ---------------------------------------------------------------------------------------------
     MDL2PPP_ModelOutput_Que_ptr = MDL2PPP_ModelOutput_Que_ptr_;
     PPP2NMP_GenerationEvent_Que_ptr = PPP2NMP_GenerationEvent_Que_ptr_;
     APVM2PPP_Parameters_Queu_ptr = APVM2PPP_Parameters_Queu_ptr_;
+    PPP2GUI_GenerationMidiFile_Que_ptr = PPP2GUI_GenerationMidiFile_Que_ptr_;
 
     // Start the thread. This function internally calls run() method. DO NOT CALL run() DIRECTLY.
     // ---------------------------------------------------------------------------------------------

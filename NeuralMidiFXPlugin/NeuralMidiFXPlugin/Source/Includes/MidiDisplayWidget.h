@@ -27,6 +27,28 @@ public:
         }
     }
 
+    explicit MidiPianoRollComponent(bool isForGenerations,
+                                    LockFreeQueue<juce::MidiFile, 4>* MidiQue_)
+    {
+        Initialize();
+
+        if (isForGenerations) {
+            backgroundColour = juce::Colours::black;
+            noteColour = juce::Colours::white;
+            allow_drag_out = true;
+        } else {
+            backgroundColour = juce::Colours::whitesmoke;
+            noteColour = juce::Colours::skyblue;
+            allow_drag_in = true;
+        }
+
+        MidiQue = MidiQue_;
+        if (MidiQue_->getNumberOfWrites() > 0) {
+            midiFile = MidiQue_->getLatestDataWithoutMovingFIFOHeads();
+        }
+
+    }
+
     // generates and displays a random midi file (for testing purposes only)
     // called from PluginEditor.cpp during initialization
     void generateRandomMidiFile(int numNotes)
@@ -193,6 +215,7 @@ public:
                     DBG("SMPTE Format midi files are not supported at this time.");
                 }
 
+                MidiQue->push(midiFile);
                 repaint();
                 return true;
             }
@@ -220,6 +243,7 @@ private:
     juce::Colour noteColour = juce::Colours::skyblue;
     bool allow_drag_in{false};
     bool allow_drag_out{false};
+    LockFreeQueue<juce::MidiFile, 4>* MidiQue{};
 
 };
 

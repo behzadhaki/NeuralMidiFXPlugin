@@ -12,6 +12,7 @@
 #include "Includes/GenerationEvent.h"
 #include "Includes/APVTSMediatorThread.h"
 #include <chrono>
+#include <mutex>
 
 // #include "gui/CustomGuiTextEditors.h"
 
@@ -40,6 +41,10 @@ public:
     unique_ptr<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>> APVM2ITP_GuiParams_Que;
     unique_ptr<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>> APVM2MDL_GuiParams_Que;
     unique_ptr<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>> APVM2PPP_GuiParams_Que;
+
+    // Drag/Drop Midi Queues
+    unique_ptr<LockFreeQueue<juce::MidiFile, 4>> GUI2ITP_DroppedMidiFile_Que;
+    unique_ptr<LockFreeQueue<juce::MidiFile, 4>> PPP2GUI_GenerationMidiFile_Que;
 
     // Threads used for generating patterns in the background
     shared_ptr<InputTensorPreparatorThread> inputTensorPreparatorThread;

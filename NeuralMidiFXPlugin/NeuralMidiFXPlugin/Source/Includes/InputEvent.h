@@ -249,6 +249,7 @@ struct BufferMetaData {
  * 3. time_in_seconds --> start time in seconds of the event
  * 4. time_in_ppq --> start time in ppq of the event
  * 5. type:
+ *
  *     -1: Playback Stopped Event
  *              the event holds information about the last frame
  *      1: First Buffer Event, Since Start
