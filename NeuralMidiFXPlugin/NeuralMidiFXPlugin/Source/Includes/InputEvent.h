@@ -296,6 +296,7 @@ struct BufferMetaData {
 
 using chrono_time = std::chrono::time_point<std::chrono::system_clock>;
 
+// any event from the host is wrapped in this class
 class Event {
 public:
 
@@ -560,31 +561,19 @@ public:
 
     }
 
-    // ==================================================
-    // Operators for sorting using time stamp
-    // ==================================================
-
-//    bool operator<(const Event &e) const { return time_in_samples < e.time_in_samples; }
-//
-//    bool operator<=(const Event &e) const { return time_in_samples <= e.time_in_samples; }
-//
-//    bool operator>(const Event &e) const { return time_in_samples > e.time_in_samples; }
-//
-//    bool operator>=(const Event &e) const { return time_in_samples >= e.time_in_samples; }
-//
-//    bool operator==(const Event &e) const { return time_in_samples == e.time_in_samples; }
-
     // getter methods
     double qpm() const { return bufferMetaData.qpm; }
     double numerator() const { return bufferMetaData.numerator; }
     double denominator() const { return bufferMetaData.denominator; }
     bool isPlaying() const { return bufferMetaData.isPlaying; }
     bool isRecording() const { return bufferMetaData.isRecording; }
+
     time_ BufferStartTime() const {
         return time_(bufferMetaData.time_in_samples,
                      bufferMetaData.time_in_seconds,
                      bufferMetaData.time_in_ppq);
     }
+
     time_ Time() const {
         return time_(time_in_samples,
                      time_in_seconds,
@@ -628,3 +617,132 @@ private:
     chrono_timer chrono_timed;
 };
 
+
+// Events received from an imported midi file (via drag drop)
+class MidiFileEvent {
+
+    MidiFileEvent() = default;
+
+    MidiFileEvent(juce::MidiMessage &message_, bool isFirstEvent_, bool isLastEvent_) {
+
+        chrono_timed.registerStartTime();
+
+        message = std::move(message_);
+        message.getDescription();
+        time_in_ppq = message.getTimeStamp();
+
+        _isFirstEvent = isFirstEvent_;
+        _isLastEvent = isLastEvent_;
+    }
+
+    bool isFirstMessage() const { return _isFirstEvent; }
+    bool isLastMessage() const { return _isLastEvent; }
+
+    bool isNoteOnEvent() const { return message.isNoteOn(); }
+
+    bool isNoteOffEvent() const { return message.isNoteOff(); }
+
+    bool isCCEvent() const { return message.isController(); }
+
+    int getNoteNumber() const {
+        assert ((isNoteOnEvent() || isNoteOffEvent()) && "Can only get note number for note on/off events");
+        return message.getNoteNumber();
+    }
+
+    float getVelocity() const {
+        assert ((isNoteOnEvent() || isNoteOffEvent()) && "Can only get velocity for note on/off events");
+        return message.getFloatVelocity();
+    }
+
+    int getCCNumber() const {
+        assert (isCCEvent() && "Can only get CC number for CC events");
+        return message.getControllerNumber();
+    }
+
+    static double n_samples_to_ppq(double audioSamplePos, double qpm, double sample_rate) {
+        auto tmp_ppq = audioSamplePos * qpm / (60 * sample_rate);
+        return tmp_ppq;
+    }
+
+    static double n_samples_to_sec(double audioSamplePos, double sample_rate) {
+        auto tmp_sec = audioSamplePos / sample_rate;
+        return tmp_sec;
+    }
+
+    std::stringstream getDescription(double sample_rate, double qpm) const {
+        auto time_in_samples = ppq_to_samples (sample_rate, qpm);
+        auto time_in_seconds = ppq_to_seconds (qpm);
+        std::stringstream ss;
+        ss << "++ ";
+        ss << " | message:    " << message.getDescription();
+
+        ss << " | time_in_samples: " << time_in_samples;
+        ss << " | time_in_seconds: " << time_in_seconds;
+        ss << " | time_in_ppq: " << time_in_ppq;
+
+        if (chrono_timed.isValid()) {
+            ss << *chrono_timed.getDescription(" | CreationToConsumption Delay: ");
+        }
+
+        if (ss.str().length() > 1) {
+            return ss;
+        } else {
+            return {};
+        }
+
+    }
+
+    time_ Time(double sample_rate, double qpm) const {
+        auto time_in_samples = ppq_to_samples (sample_rate, qpm);
+        auto time_in_seconds = ppq_to_seconds (qpm);
+        return time_(time_in_samples,
+                     time_in_seconds,
+                     time_in_ppq);
+    }
+
+
+    time_ time_from(const MidiFileEvent& e, double sample_rate, double qpm) {
+        auto time_in_samples = ppq_to_samples (sample_rate, qpm);
+        auto time_in_seconds = ppq_to_seconds (qpm);
+        auto other_time_in_samples = e.ppq_to_samples (sample_rate, qpm);
+        auto other_time_in_seconds = e.ppq_to_seconds (qpm);
+
+        return time_(time_in_samples - other_time_in_samples,
+                     time_in_seconds - other_time_in_seconds,
+                     time_in_ppq - e.time_in_ppq);
+    }
+
+    void registerAccess() { chrono_timed.registerEndTime(); }
+
+private:
+
+    juce::MidiMessage message{};
+
+    // The actual time of the event. If event is a midiMessage, this time stamp
+    // can be different from the starting time stam of the buffer found in bufferMetaData.time_in_* fields
+    double time_in_ppq{-1};
+
+    long ppq_to_samples (double sample_rate, double qpm) const {
+        if (time_in_ppq == -1) {
+            return -1;
+        } else {
+            return long(time_in_ppq * 60.0 * sample_rate / qpm);
+        }
+    }
+
+    double ppq_to_seconds (double qpm) const {
+        if (time_in_ppq == -1) {
+            return -1;
+        } else {
+            return time_in_ppq / qpm * 60.0;
+        }
+    }
+
+    bool _isFirstEvent{false};
+    bool _isLastEvent{false};
+
+    // uses chrono::system_clock to time events (for debugging only)
+    // don't use this for anything else than debugging.
+    // used to keep track of when the object was created && when it was accessed
+    chrono_timer chrono_timed;
+};

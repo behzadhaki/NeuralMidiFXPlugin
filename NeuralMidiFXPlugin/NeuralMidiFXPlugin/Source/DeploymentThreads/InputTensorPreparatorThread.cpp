@@ -226,7 +226,7 @@ void InputTensorPreparatorThread::run() {
     chrono_timer chrono_timed_deploy;
     chrono_timer chrono_timed_consecutive_pushes;
     chrono_timed_consecutive_pushes.registerStartTime();
-    std::optional<Event> new_event{};
+    std::optional<Event> new_event_from_DAW {};
     std::optional<ModelInput> ModelInput2send2MDL;
 
     using namespace debugging_settings::InputTensorPreparatorThread;
@@ -248,22 +248,23 @@ void InputTensorPreparatorThread::run() {
         }
 
         if (NMP2ITP_Event_Que_ptr->getNumReady() > 0) {
-            new_event = NMP2ITP_Event_Que_ptr->pop();      // get the next available event
-            new_event->registerAccess();                    // set the time when the event was accessed
+            new_event_from_DAW = NMP2ITP_Event_Que_ptr->pop();      // get the next available event
+            new_event_from_DAW
+                ->registerAccess();                    // set the time when the event was accessed
 
             events_received_count++;
 
             if (print_input_events) { // if set in Debugging.h
-                DisplayEvent(*new_event, false, events_received_count);   // display the event
+                DisplayEvent(*new_event_from_DAW, false, events_received_count);   // display the event
             }
 
         } else {
-            new_event = std::nullopt;
+            new_event_from_DAW = std::nullopt;
         }
 
-        if (new_event.has_value() || gui_params.changed()) {
+        if (new_event_from_DAW.has_value() || gui_params.changed()) {
             chrono_timed_deploy.registerStartTime();
-            auto ready2send2MDL = deploy(new_event, gui_params.changed());
+            auto ready2send2MDL = deploy(new_event_from_DAW, gui_params.changed());
             chrono_timed_deploy.registerEndTime();
 
             if (print_deploy_method_time && chrono_timed_deploy.isValid()) { // if set in Debugging.h
@@ -291,20 +292,20 @@ void InputTensorPreparatorThread::run() {
         }
 
         // update event trackers accordingly if applicable
-        if (new_event.has_value()) {
+        if (new_event_from_DAW.has_value()) {
 
-            if (new_event->isFirstBufferEvent()) { first_frame_metadata_event = *new_event; }
-            else if (new_event->isNewBufferEvent()) { frame_metadata_event = *new_event; }
-            else if (new_event->isNewBarEvent()) { last_bar_event = *new_event; }
-            else if (new_event->isNewTimeShiftEvent()) { last_complete_note_duration_event = *new_event; }
+            if (new_event_from_DAW->isFirstBufferEvent()) { first_frame_metadata_event = *new_event_from_DAW; }
+            else if (new_event_from_DAW->isNewBufferEvent()) { frame_metadata_event = *new_event_from_DAW; }
+            else if (new_event_from_DAW->isNewBarEvent()) { last_bar_event = *new_event_from_DAW; }
+            else if (new_event_from_DAW->isNewTimeShiftEvent()) { last_complete_note_duration_event = *new_event_from_DAW; }
 
-            last_event = *new_event;
+            last_event = *new_event_from_DAW;
         }
 
         // check if thread is still running
         bExit = threadShouldExit();
 
-        if (!new_event.has_value() && !gui_params.changed()) {
+        if (!new_event_from_DAW.has_value() && !gui_params.changed()) {
             // wait for a few ms to avoid burning the CPU if new data is not available
             sleep(thread_configurations::InputTensorPreparator::waitTimeBtnIters);
         }
