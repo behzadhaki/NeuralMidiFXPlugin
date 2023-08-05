@@ -51,6 +51,7 @@ public:
     shared_ptr<ModelThread> modelThread;
     shared_ptr<PlaybackPreparatorThread> playbackPreparatorThread;
 
+
     // APVTS
     juce::AudioProcessorValueTreeState apvts;
     unique_ptr<APVTSMediatorThread> apvtsMediatorThread;
@@ -60,6 +61,9 @@ public:
 
     // Getters
     float get_playhead_pos() const;
+
+    // realtime playback info
+    unique_ptr<RealTimePlaybackInfo> realtimePlaybackInfo{};
 
 private:
     // =========  Queues for communicating Between the main threads in processor  ===============

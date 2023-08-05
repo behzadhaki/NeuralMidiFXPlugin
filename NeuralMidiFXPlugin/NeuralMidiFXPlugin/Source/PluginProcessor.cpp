@@ -8,6 +8,9 @@ using namespace debugging_settings::ProcessorThread;
 
 NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
         *this, nullptr, "PARAMETERS", createParameterLayout()) {
+
+    realtimePlaybackInfo = make_unique<RealTimePlaybackInfo>();
+
     //       Make_unique pointers for Queues
     // --------------------------------------------------------------------------------------
     NMP2ITP_Event_Que = make_unique<LockFreeQueue<EventFromHost, queue_settings::NMP2ITP_que_size>>();
@@ -38,16 +41,19 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
         NMP2ITP_Event_Que.get(),
         ITP2MDL_ModelInput_Que.get(),
         APVM2ITP_GuiParams_Que.get(),
-        GUI2ITP_DroppedMidiFile_Que.get());
+        GUI2ITP_DroppedMidiFile_Que.get(),
+        realtimePlaybackInfo.get());
     modelThread->startThreadUsingProvidedResources(
         ITP2MDL_ModelInput_Que.get(),
         MDL2PPP_ModelOutput_Que.get(),
-        APVM2MDL_GuiParams_Que.get());
+        APVM2MDL_GuiParams_Que.get(),
+        realtimePlaybackInfo.get());
     playbackPreparatorThread->startThreadUsingProvidedResources(
         MDL2PPP_ModelOutput_Que.get(),
         PPP2NMP_GenerationEvent_Que.get(),
         APVM2PPP_GuiParams_Que.get(),
-        PPP2GUI_GenerationMidiFile_Que.get());
+        PPP2GUI_GenerationMidiFile_Que.get(),
+        realtimePlaybackInfo.get());
     apvtsMediatorThread->startThreadUsingProvidedResources(
         &apvts,
         APVM2ITP_GuiParams_Que.get(),
@@ -105,6 +111,11 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     auto fs = getSampleRate();
     auto buffSize = buffer.getNumSamples();
 
+    realtimePlaybackInfo->setValues(
+        BufferMetaData(
+            Pinfo,
+            fs,
+            buffSize));
 
     if (Pinfo.hasValue() && Pinfo->getPpqPosition().hasValue()) {
         // register current time for later use

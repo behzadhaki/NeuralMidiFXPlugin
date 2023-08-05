@@ -41,6 +41,28 @@ bool ModelThread::deploy(bool new_model_input_received,
     auto ButtonTrigger = gui_params.wasButtonClicked("TriggerButton 1");
 
     // =================================================================================
+    // ===         1.b. ACCESSING REALTIME PLAYBACK INFORMATION
+    // =================================================================================
+    auto realtime_playback_info = realtimePlaybackInfo->get();
+    auto sample_rate = realtime_playback_info.sample_rate;
+    auto buffer_size_in_samples = realtime_playback_info.buffer_size_in_samples;
+    auto qpm = realtime_playback_info.qpm;
+    auto numerator = realtime_playback_info.numerator;
+    auto denominator = realtime_playback_info.denominator;
+    auto isPlaying = realtime_playback_info.isPlaying;
+    auto isRecording = realtime_playback_info.isRecording;
+    auto current_time_in_samples = realtime_playback_info.time_in_samples;
+    auto current_time_in_seconds = realtime_playback_info.time_in_seconds;
+    auto current_time_in_quarterNotes = realtime_playback_info.time_in_ppq;
+    auto isLooping = realtime_playback_info.isLooping;
+    auto loopStart_in_quarterNotes = realtime_playback_info.loop_start_in_ppq;
+    auto loopEnd_in_quarterNotes = realtime_playback_info.loop_end_in_ppq;
+    auto last_bar_pos_in_quarterNotes = realtime_playback_info.ppq_position_of_last_bar_start;
+    PrintMessage("qpm: " + std::to_string(qpm));
+    std::cout << "qpm: " << qpm << std::endl;
+    // =================================================================================
+
+    // =================================================================================
     // ===         Inference
     // =================================================================================
     // ---       the input is available in model_input
@@ -79,15 +101,17 @@ bool ModelThread::deploy(bool new_model_input_received,
 ModelThread::ModelThread() : juce::Thread("ModelThread") {}
 
 void ModelThread::startThreadUsingProvidedResources(
-        LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size> *ITP2MDL_ModelInput_Que_ptr_,
-        LockFreeQueue<ModelOutput, queue_settings::MDL2PPP_que_size> *MDL2PPP_ModelOutput_Que_ptr_,
-        LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2MDL_Parameters_Queu_ptr_) {
+    LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size> *ITP2MDL_ModelInput_Que_ptr_,
+    LockFreeQueue<ModelOutput, queue_settings::MDL2PPP_que_size> *MDL2PPP_ModelOutput_Que_ptr_,
+    LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2MDL_Parameters_Queu_ptr_,
+    RealTimePlaybackInfo *realtimePlaybackInfo_ptr_){
 
     // Provide access to resources needed to communicate with other threads
     // ---------------------------------------------------------------------------------------------
     ITP2MDL_ModelInput_Que_ptr = ITP2MDL_ModelInput_Que_ptr_;
     MDL2PPP_ModelOutput_Que_ptr = MDL2PPP_ModelOutput_Que_ptr_;
     APVM2MDL_Parameters_Queu_ptr = APVM2MDL_Parameters_Queu_ptr_;
+    realtimePlaybackInfo = realtimePlaybackInfo_ptr_;
 
     // Start the thread. This function internally calls run() method. DO NOT CALL run() DIRECTLY.
     // ---------------------------------------------------------------------------------------------

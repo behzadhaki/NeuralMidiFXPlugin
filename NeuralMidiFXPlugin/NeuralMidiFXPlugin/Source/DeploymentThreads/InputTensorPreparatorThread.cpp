@@ -13,7 +13,6 @@ bool InputTensorPreparatorThread::deploy(
     std::optional<MidiFileEvent> & new_midi_event_dragdrop,
     std::optional<EventFromHost> & new_event_from_host,
     bool gui_params_changed_since_last_call) {
-
     /*              IF YOU NEED TO PRINT TO CONSOLE FOR DEBUGGING,
      *                  YOU CAN USE THE FOLLOWING METHOD:
      *                      PrintMessage("YOUR MESSAGE HERE");
@@ -24,7 +23,7 @@ bool InputTensorPreparatorThread::deploy(
     bool SHOULD_SEND_TO_MODEL_FOR_GENERATION_ = false;
 
     // =================================================================================
-    // ===         1. ACCESSING GUI PARAMETERS
+    // ===         1.a. ACCESSING GUI PARAMETERS
     // =================================================================================
 
      /* **NOTE**
@@ -43,7 +42,31 @@ bool InputTensorPreparatorThread::deploy(
     auto ButtonTrigger = gui_params.wasButtonClicked("TriggerButton 1");
 
     // =================================================================================
-    // ===         3. ACCESSING INFORMATION (EVENTS) RECEIVED FROM HOST
+
+    // =================================================================================
+    // ===         1.b. ACCESSING REALTIME PLAYBACK INFORMATION
+    // =================================================================================
+    auto realtime_playback_info = realtimePlaybackInfo->get();
+    auto sample_rate = realtime_playback_info.sample_rate;
+    auto buffer_size_in_samples = realtime_playback_info.buffer_size_in_samples;
+    auto qpm = realtime_playback_info.qpm;
+    auto numerator = realtime_playback_info.numerator;
+    auto denominator = realtime_playback_info.denominator;
+    auto isPlaying = realtime_playback_info.isPlaying;
+    auto isRecording = realtime_playback_info.isRecording;
+    auto current_time_in_samples = realtime_playback_info.time_in_samples;
+    auto current_time_in_seconds = realtime_playback_info.time_in_seconds;
+    auto current_time_in_quarterNotes = realtime_playback_info.time_in_ppq;
+    auto isLooping = realtime_playback_info.isLooping;
+    auto loopStart_in_quarterNotes = realtime_playback_info.loop_start_in_ppq;
+    auto loopEnd_in_quarterNotes = realtime_playback_info.loop_end_in_ppq;
+    auto last_bar_pos_in_quarterNotes = realtime_playback_info.ppq_position_of_last_bar_start;
+    PrintMessage("qpm: " + std::to_string(qpm));
+    std::cout << "qpm: " << qpm << std::endl;
+    // =================================================================================
+
+    // =================================================================================
+    // ===         2. ACCESSING INFORMATION (EVENTS) RECEIVED FROM HOST
     // =================================================================================
 
      /**NOTE**
@@ -80,6 +103,13 @@ bool InputTensorPreparatorThread::deploy(
            10. new_event_from_host.lastBarPos()                  --> Position of last bar passed (in quarter notes)
            */
 
+        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        /* Warning!
+         * DO NOT USE realtime_playback_info for input preparations here, because
+         * the notes are most registered prior to NOW and stored in the queue for access
+         * As Such, for this part, use only the information provided within the received
+         * new_event_from_host object. */
+        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     if (new_event_from_host.has_value()) {
 
@@ -109,8 +139,9 @@ bool InputTensorPreparatorThread::deploy(
     // =================================================================================
 
     // =================================================================================
-    // ===         2. ACCESSING INFORMATION (EVENTS) RECEIVED FROM
+    // ===         3. ACCESSING INFORMATION (EVENTS) RECEIVED FROM
     //                Mannually Drag-Dropped Midi Files
+    //  ALL INFORMATION HERE IS PROVIDED SEQUENTIALLY ONLY WHENEVER HOST IS PLAYING
     // =================================================================================
     /**NOTE**
          Information received from manually drag-dropped midi files are passed on to you
@@ -128,6 +159,8 @@ bool InputTensorPreparatorThread::deploy(
     */
     if (new_midi_event_dragdrop.has_value()) {
         auto time_quarterNotes = new_midi_event_dragdrop->Time();
+        auto time_in_seconds = new_midi_event_dragdrop->Time(sample_rate, qpm).inSeconds();
+        auto time_in_samples = new_midi_event_dragdrop->Time(sample_rate, qpm).inSamples();
         auto isFirst = new_midi_event_dragdrop->isFirstMessage();
         auto isLast = new_midi_event_dragdrop->isLastMessage();
         auto isNoteOn = new_midi_event_dragdrop->isNoteOnEvent();
@@ -142,7 +175,8 @@ bool InputTensorPreparatorThread::deploy(
         }
 
         PrintMessage(new_midi_event_dragdrop->getDescription().str());
-        PrintMessage(new_midi_event_dragdrop->getDescription(44100, 120).str());
+        PrintMessage(new_midi_event_dragdrop->getDescription(sample_rate,
+                                                             qpm).str());
 
         if (isLast) { // here I'm requesting forward pass only after entire midi file is received
             SHOULD_SEND_TO_MODEL_FOR_GENERATION_ = true;
@@ -190,7 +224,8 @@ void InputTensorPreparatorThread::startThreadUsingProvidedResources(
     LockFreeQueue<EventFromHost, queue_settings::NMP2ITP_que_size> *NMP2ITP_Event_Que_ptr_,
     LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size> *ITP2MDL_ModelInput_Que_ptr_,
     LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2ITP_Parameters_Queu_ptr_,
-    LockFreeQueue<juce::MidiFile, 4> *GUI2ITP_DroppedMidiFile_Que_ptr_) {
+    LockFreeQueue<juce::MidiFile, 4> *GUI2ITP_DroppedMidiFile_Que_ptr_,
+    RealTimePlaybackInfo *realtimePlaybackInfo_ptr_) {
 
     // Provide access to resources needed to communicate with other threads
     // ---------------------------------------------------------------------------------------------
@@ -198,6 +233,7 @@ void InputTensorPreparatorThread::startThreadUsingProvidedResources(
     ITP2MDL_ModelInput_Que_ptr = ITP2MDL_ModelInput_Que_ptr_;
     APVM2ITP_Parameters_Queu_ptr = APVM2ITP_Parameters_Queu_ptr_;
     GUI2ITP_DroppedMidiFile_Que_ptr = GUI2ITP_DroppedMidiFile_Que_ptr_;
+    realtimePlaybackInfo = realtimePlaybackInfo_ptr_;
 
     // Start the thread. This function internally calls run() method. DO NOT CALL run() DIRECTLY.
     // ---------------------------------------------------------------------------------------------

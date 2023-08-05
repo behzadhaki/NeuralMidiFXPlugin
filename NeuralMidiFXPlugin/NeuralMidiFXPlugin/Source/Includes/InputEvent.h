@@ -9,6 +9,7 @@
 #include "../Includes/chrono_timer.h"
 #include "../DeploymentSettings/ThreadsAndQueuesAndInputEvents.h"
 #include <utility>
+#include <mutex>
 
 
 using namespace juce;
@@ -218,25 +219,25 @@ struct BufferMetaData {
         return !(*this == e);
     }
 
-    void operator=(const BufferMetaData &e) {
-        this->qpm = e.qpm;
-        this->numerator = e.numerator;
-        this->denominator = e.denominator;
-        this->isPlaying = e.isPlaying;
-        this->isRecording = e.isRecording;
-        this->time_in_samples = e.time_in_samples;
-        this->time_in_seconds = e.time_in_seconds;
-        this->time_in_ppq = e.time_in_ppq;
-        this->playhead_force_moved_forward = e.playhead_force_moved_forward;
-        this->playhead_force_moved_backward = e.playhead_force_moved_backward;
-        this->isLooping = e.isLooping;
-        this->loop_start_in_ppq = e.loop_start_in_ppq;
-        this->loop_end_in_ppq = e.loop_end_in_ppq;
-        this->bar_count = e.bar_count;
-        this->ppq_position_of_last_bar_start = e.ppq_position_of_last_bar_start;
-        this->sample_rate = e.sample_rate;
-        this->buffer_size_in_samples = e.buffer_size_in_samples;
-    }
+//    void operator=(const BufferMetaData &e) {
+//        this->qpm = e.qpm;
+//        this->numerator = e.numerator;
+//        this->denominator = e.denominator;
+//        this->isPlaying = e.isPlaying;
+//        this->isRecording = e.isRecording;
+//        this->time_in_samples = e.time_in_samples;
+//        this->time_in_seconds = e.time_in_seconds;
+//        this->time_in_ppq = e.time_in_ppq;
+//        this->playhead_force_moved_forward = e.playhead_force_moved_forward;
+//        this->playhead_force_moved_backward = e.playhead_force_moved_backward;
+//        this->isLooping = e.isLooping;
+//        this->loop_start_in_ppq = e.loop_start_in_ppq;
+//        this->loop_end_in_ppq = e.loop_end_in_ppq;
+//        this->bar_count = e.bar_count;
+//        this->ppq_position_of_last_bar_start = e.ppq_position_of_last_bar_start;
+//        this->sample_rate = e.sample_rate;
+//        this->buffer_size_in_samples = e.buffer_size_in_samples;
+//    }
 };
 
 /*
@@ -795,4 +796,26 @@ private:
     // don't use this for anything else than debugging.
     // used to keep track of when the object was created && when it was accessed
     chrono_timer chrono_timed;
+};
+
+
+struct RealTimePlaybackInfo {
+private:
+    BufferMetaData bufferMetaData{};
+    std::mutex mutex;
+
+public:
+    void setValues(BufferMetaData bufferMetaData_) {
+        if (mutex.try_lock()) {
+            bufferMetaData = bufferMetaData_;
+            mutex.unlock(); // Don't forget to unlock after use
+        } else {
+            // Mutex was already locked; handle this case as needed
+        }
+    }
+
+    BufferMetaData get() {
+        std::lock_guard<std::mutex> lock(mutex);
+        return bufferMetaData;
+    }
 };

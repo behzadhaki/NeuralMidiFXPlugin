@@ -43,6 +43,28 @@ std::pair<bool, bool> PlaybackPreparatorThread::deploy(bool new_model_output_rec
     // ---------------------------------------------------------------------------------
 
     // =================================================================================
+    // ===         1.b. ACCESSING REALTIME PLAYBACK INFORMATION
+    // =================================================================================
+    auto realtime_playback_info = realtimePlaybackInfo->get();
+    auto sample_rate = realtime_playback_info.sample_rate;
+    auto buffer_size_in_samples = realtime_playback_info.buffer_size_in_samples;
+    auto qpm = realtime_playback_info.qpm;
+    auto numerator = realtime_playback_info.numerator;
+    auto denominator = realtime_playback_info.denominator;
+    auto isPlaying = realtime_playback_info.isPlaying;
+    auto isRecording = realtime_playback_info.isRecording;
+    auto current_time_in_samples = realtime_playback_info.time_in_samples;
+    auto current_time_in_seconds = realtime_playback_info.time_in_seconds;
+    auto current_time_in_quarterNotes = realtime_playback_info.time_in_ppq;
+    auto isLooping = realtime_playback_info.isLooping;
+    auto loopStart_in_quarterNotes = realtime_playback_info.loop_start_in_ppq;
+    auto loopEnd_in_quarterNotes = realtime_playback_info.loop_end_in_ppq;
+    auto last_bar_pos_in_quarterNotes = realtime_playback_info.ppq_position_of_last_bar_start;
+    PrintMessage("qpm: " + std::to_string(qpm));
+    std::cout << "qpm: " << qpm << std::endl;
+    // =================================================================================
+
+    // =================================================================================
     // ===         Step 2 . Extract NoteOn/Off/CC events from the generation data
     // =================================================================================
 
@@ -151,7 +173,8 @@ void PlaybackPreparatorThread::startThreadUsingProvidedResources(
     LockFreeQueue<ModelOutput, queue_settings::MDL2PPP_que_size> *MDL2PPP_ModelOutput_Que_ptr_,
     LockFreeQueue<GenerationEvent, queue_settings::PPP2NMP_que_size> *PPP2NMP_GenerationEvent_Que_ptr_,
     LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2PPP_Parameters_Queu_ptr_,
-    LockFreeQueue<juce::MidiFile, 4> *PPP2GUI_GenerationMidiFile_Que_ptr_) {
+    LockFreeQueue<juce::MidiFile, 4> *PPP2GUI_GenerationMidiFile_Que_ptr_,
+    RealTimePlaybackInfo *realtimePlaybackInfo_ptr_) {
 
     // Provide access to resources needed to communicate with other threads
     // ---------------------------------------------------------------------------------------------
@@ -159,6 +182,7 @@ void PlaybackPreparatorThread::startThreadUsingProvidedResources(
     PPP2NMP_GenerationEvent_Que_ptr = PPP2NMP_GenerationEvent_Que_ptr_;
     APVM2PPP_Parameters_Queu_ptr = APVM2PPP_Parameters_Queu_ptr_;
     PPP2GUI_GenerationMidiFile_Que_ptr = PPP2GUI_GenerationMidiFile_Que_ptr_;
+    realtimePlaybackInfo = realtimePlaybackInfo_ptr_;
 
     // Start the thread. This function internally calls run() method. DO NOT CALL run() DIRECTLY.
     // ---------------------------------------------------------------------------------------------
