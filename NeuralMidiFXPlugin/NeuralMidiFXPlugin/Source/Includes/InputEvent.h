@@ -144,7 +144,7 @@ private:
  *
  *      5. If you only need this information, whenever a new midi message
  *      (note on/off or cc) is received, you don't need to set any of the above,
- *      since the metadata is embedded in any midi Event. Just remember to not
+ *      since the metadata is embedded in any midi EventFromHost. Just remember to not
  *      filter out the midi events.
  *
  *      >>  constexpr bool FilterNoteOnEvents_FLAG{false};
@@ -250,25 +250,25 @@ struct BufferMetaData {
  * 4. time_in_ppq --> start time in ppq of the event
  * 5. type:
  *
- *     -1: Playback Stopped Event
+ *     -1: Playback Stopped EventFromHost
  *              the event holds information about the last frame
- *      1: First Buffer Event, Since Start
+ *      1: First Buffer EventFromHost, Since Start
  *              the event holds information about the first frame
- *      2: New Buffer Event
+ *      2: New Buffer EventFromHost
  *              the event specifies that a new buffer just started
- *      3: New Bar Event
+ *      3: New Bar EventFromHost
  *              specifies that a new bar just started
- *      4: New Time Shift Event
+ *      4: New Time Shift EventFromHost
  *              specifies that the playback has progressed by a specific
  *              time amount specified in settings.h (for example, every 8th note)
  *
- *      10: MidiMessage within Buffer Event
+ *      10: MidiMessage within Buffer EventFromHost
  *              specifies that a midi message was received within the buffer
  *
  * A few notes about the availability of information:
- * - Playback Stopped Event: Always available
- * - First Buffer Event, Since Start: Always available
- * - New Buffer Event: Can be available at arrival of every new buffer, or
+ * - Playback Stopped EventFromHost: Always available
+ * - First Buffer EventFromHost, Since Start: Always available
+ * - New Buffer EventFromHost: Can be available at arrival of every new buffer, or
  *                  whenever the essential fields of the buffer (qpm, numerator,...)
  *                  are changed, flags to set:
  *
@@ -277,16 +277,16 @@ struct BufferMetaData {
  *
  *                  If first flag is false, this event wont be available at all.
  *
- * - New Bar Event: Can be available at arrival of every new bar, if the flag is set:
+ * - New Bar EventFromHost: Can be available at arrival of every new bar, if the flag is set:
  *
  *      >> constexpr bool SendNewBarEvents_FLAG{true};
  *
- * - New Time Shift Event: Can be available at arrival of every new time shift, if the flag is set:
+ * - New Time Shift EventFromHost: Can be available at arrival of every new time shift, if the flag is set:
  *
  *      >> constexpr bool SendTimeShiftEvents_FLAG{true};
  *      >> constexpr double delta_TimeShiftEventRatioOfQuarterNote{0.5}; //8th note
  *
- * - MidiMessage within Buffer Event: always available as long as the filter flags are not set to true:
+ * - MidiMessage within Buffer EventFromHost: always available as long as the filter flags are not set to true:
  *
  *      >> constexpr bool FilterNoteOnEvents_FLAG{false};
  *      >> constexpr bool FilterNoteOffEvents_FLAG{false};
@@ -297,12 +297,12 @@ struct BufferMetaData {
 using chrono_time = std::chrono::time_point<std::chrono::system_clock>;
 
 // any event from the host is wrapped in this class
-class Event {
+class EventFromHost
+{
 public:
+    EventFromHost() = default;
 
-    Event() = default;
-
-    Event(juce::Optional<juce::AudioPlayHead::PositionInfo> Pinfo,
+    EventFromHost(juce::Optional<juce::AudioPlayHead::PositionInfo> Pinfo,
           double sample_rate_, int64_t buffer_size_in_samples_, bool isFirstFrame) {
 
         chrono_timed.registerStartTime();
@@ -316,7 +316,7 @@ public:
         time_in_ppq = bufferMetaData.time_in_ppq;
     }
 
-    Event(juce::Optional<juce::AudioPlayHead::PositionInfo> Pinfo, double sample_rate_,
+    EventFromHost(juce::Optional<juce::AudioPlayHead::PositionInfo> Pinfo, double sample_rate_,
           int64_t buffer_size_in_samples_, juce::MidiMessage &message_) {
 
         chrono_timed.registerStartTime();
@@ -344,7 +344,7 @@ public:
         }
     }
 
-    std::optional<Event> checkIfNewBarHappensWithinBuffer() {
+    std::optional<EventFromHost> checkIfNewBarHappensWithinBuffer() {
         auto ppq_start = bufferMetaData.time_in_ppq;
         auto ppq_end = bufferMetaData.time_in_ppq + n_samples_to_ppq(
                 static_cast<double>(
@@ -372,7 +372,7 @@ public:
         }
     }
 
-    std::optional<Event> checkIfTimeShiftEventHappensWithinBuffer(double time_shift_in_ratio_of_quarter_note) {
+    std::optional<EventFromHost> checkIfTimeShiftEventHappensWithinBuffer(double time_shift_in_ratio_of_quarter_note) {
         auto ppq_start = bufferMetaData.time_in_ppq;
         auto ppq_end = bufferMetaData.time_in_ppq + n_samples_to_ppq(
                 static_cast<double>(
@@ -439,6 +439,11 @@ public:
         return message.getControllerNumber();
     }
 
+    float getCCValue() const {
+        assert (isCCEvent() && "Can only get CC value for CC events");
+        return message.getControllerValue();
+    }
+
     int getChannel() const {
         assert (isMidiMessageEvent() && "Can only get channel for midi events");
         return message.getChannel();
@@ -455,7 +460,7 @@ public:
     }
 
     std::stringstream getDescriptionOfChangedFeatures(
-            const Event& other, bool ignore_time_changes_for_new_buffer_events) const {
+            const EventFromHost& other, bool ignore_time_changes_for_new_buffer_events) const {
         std::stringstream ss;
         ss << "++ ";
 
@@ -587,7 +592,7 @@ public:
     int64_t barCount() const { return bufferMetaData.bar_count; }
     double lastBarPos() const { return bufferMetaData.ppq_position_of_last_bar_start; }
 
-    time_ time_from(Event e) {
+    time_ time_from(EventFromHost e) {
         return time_(time_in_samples - e.time_in_samples,
                      time_in_seconds - e.time_in_seconds,
                      time_in_ppq - e.time_in_ppq);
@@ -621,6 +626,7 @@ private:
 // Events received from an imported midi file (via drag drop)
 class MidiFileEvent {
 
+public:
     MidiFileEvent() = default;
 
     MidiFileEvent(juce::MidiMessage &message_, bool isFirstEvent_, bool isLastEvent_) {
@@ -659,6 +665,11 @@ class MidiFileEvent {
         return message.getControllerNumber();
     }
 
+    float getCCValue() const {
+        assert (isCCEvent() && "Can only get CC value for CC events");
+        return message.getControllerValue();
+    }
+
     static double n_samples_to_ppq(double audioSamplePos, double qpm, double sample_rate) {
         auto tmp_ppq = audioSamplePos * qpm / (60 * sample_rate);
         return tmp_ppq;
@@ -669,6 +680,10 @@ class MidiFileEvent {
         return tmp_sec;
     }
 
+    // if no sample rate is provided, use Time() method instead
+    // it's your responsibility to keep track of the sample rate and qpm
+    // (provided as EventFromHost in the **deploy** method of the InputTensorPreparator -ITP-
+    // thread)
     std::stringstream getDescription(double sample_rate, double qpm) const {
         auto time_in_samples = ppq_to_samples (sample_rate, qpm);
         auto time_in_seconds = ppq_to_seconds (qpm);
@@ -676,10 +691,11 @@ class MidiFileEvent {
         ss << "++ ";
         ss << " | message:    " << message.getDescription();
 
+        ss << " | time_in_ppq: " << time_in_ppq;
         ss << " | time_in_samples: " << time_in_samples;
         ss << " | time_in_seconds: " << time_in_seconds;
-        ss << " | time_in_ppq: " << time_in_ppq;
-
+        if (isFirstMessage()) { ss << " | First Message"; }
+        if (isLastMessage()) { ss << " | Last Message"; }
         if (chrono_timed.isValid()) {
             ss << *chrono_timed.getDescription(" | CreationToConsumption Delay: ");
         }
@@ -689,9 +705,32 @@ class MidiFileEvent {
         } else {
             return {};
         }
-
     }
 
+    std::stringstream getDescription(){
+        std::stringstream ss;
+        ss << "++ ";
+        ss << " | message:    " << message.getDescription();
+
+        ss << " | time_in_ppq: " << time_in_ppq;
+
+        if (isFirstMessage()) { ss << " | First Message"; }
+        if (isLastMessage()) { ss << " | Last Message"; }
+        if (chrono_timed.isValid()) {
+            ss << *chrono_timed.getDescription(" | CreationToConsumption Delay: ");
+        }
+
+        if (ss.str().length() > 1) {
+            return ss;
+        } else {
+            return {};
+        }
+    }
+
+    // if no sample rate is provided, use Time() method instead
+    // it's your responsibility to keep track of the sample rate and qpm
+    // (provided as EventFromHost in the **deploy** method of the InputTensorPreparator -ITP-
+    // thread)
     time_ Time(double sample_rate, double qpm) const {
         auto time_in_samples = ppq_to_samples (sample_rate, qpm);
         auto time_in_seconds = ppq_to_seconds (qpm);
@@ -700,6 +739,11 @@ class MidiFileEvent {
                      time_in_ppq);
     }
 
+
+    double Time() const {
+
+        return time_in_ppq;
+    }
 
     time_ time_from(const MidiFileEvent& e, double sample_rate, double qpm) {
         auto time_in_samples = ppq_to_samples (sample_rate, qpm);
@@ -710,6 +754,12 @@ class MidiFileEvent {
         return time_(time_in_samples - other_time_in_samples,
                      time_in_seconds - other_time_in_seconds,
                      time_in_ppq - e.time_in_ppq);
+    }
+
+    double time_from(const MidiFileEvent& e) {
+
+
+        return time_in_ppq - e.time_in_ppq;
     }
 
     void registerAccess() { chrono_timed.registerEndTime(); }

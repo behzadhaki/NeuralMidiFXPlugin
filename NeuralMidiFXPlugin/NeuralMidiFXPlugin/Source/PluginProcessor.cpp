@@ -10,7 +10,7 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
         *this, nullptr, "PARAMETERS", createParameterLayout()) {
     //       Make_unique pointers for Queues
     // --------------------------------------------------------------------------------------
-    NMP2ITP_Event_Que = make_unique<LockFreeQueue<Event, queue_settings::NMP2ITP_que_size>>();
+    NMP2ITP_Event_Que = make_unique<LockFreeQueue<EventFromHost, queue_settings::NMP2ITP_que_size>>();
     ITP2MDL_ModelInput_Que = make_unique<LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size>>();
     MDL2PPP_ModelOutput_Que = make_unique<LockFreeQueue<ModelOutput, queue_settings::MDL2PPP_que_size>>();
     PPP2NMP_GenerationEvent_Que = make_unique<LockFreeQueue<GenerationEvent, queue_settings::PPP2NMP_que_size>>();
@@ -251,12 +251,12 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
                                                  *Pinfo->getTimeInSeconds(),
                                                  *Pinfo->getPpqPosition()};
 
-                auto frame_meta_data = Event{Pinfo, fs, buffSize, true};
+                auto frame_meta_data = EventFromHost {Pinfo, fs, buffSize, true};
                 NMP2ITP_Event_Que->push(frame_meta_data);
                 last_frame_meta_data = frame_meta_data;
             } else {
                 // if just stopped, register the playhead stopping position
-                auto frame_meta_data = Event{Pinfo, fs, buffSize, false};
+                auto frame_meta_data = EventFromHost {Pinfo, fs, buffSize, false};
                 if (print_start_stop_times) { PrintMessage("Stopped playing"); }
                 frame_meta_data.setPlaybackStoppedEvent();
                 NMP2ITP_Event_Que->push(frame_meta_data);
@@ -266,7 +266,7 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
             // if still playing, register the playhead position
             if (Pinfo->getIsPlaying()) {
                 if (print_new_buffer_started) { PrintMessage("New Buffer Arrived"); }
-                auto frame_meta_data = Event{Pinfo, fs, buffSize, false};
+                auto frame_meta_data = EventFromHost {Pinfo, fs, buffSize, false};
                 if (SendEventAtBeginningOfNewBuffers_FLAG) {
                     if (SendEventForNewBufferIfMetadataChanged_FLAG) {
                         if (frame_meta_data.getBufferMetaData() != last_frame_meta_data.getBufferMetaData()) {
@@ -297,7 +297,7 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
             // if there are new notes, send them to the groove thread
             for (const auto midiMessage: midiMessages) {
                 auto msg = midiMessage.getMessage();
-                auto midiEvent = Event{Pinfo, fs, buffSize, msg};
+                auto midiEvent = EventFromHost {Pinfo, fs, buffSize, msg};
 
                 // check if new bar event exists && it is before the current midi event
                 if (NewBarEvent.has_value() && SendNewBarEvents_FLAG) {

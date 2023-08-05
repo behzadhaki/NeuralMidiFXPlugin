@@ -120,7 +120,6 @@ void ModelThread::DisplayTensor(const torch::Tensor &tensor, const string Label)
     ss << "TENSOR:" << Label ;
     if (!disable_printing_tensor_info) {
         ss << " | Tensor metadata: " ;
-        ss << " | Type: " << tensor.type().toString();
         ss << " | Device: " << tensor.device();
         ss << " | Size: " << tensor.sizes();
         ss << " |  - Storage data pointer: " << tensor.storage().data_ptr();

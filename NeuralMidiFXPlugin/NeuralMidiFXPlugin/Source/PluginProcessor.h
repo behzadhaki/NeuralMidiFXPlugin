@@ -32,7 +32,7 @@ public:
     juce::AudioProcessorEditor* createEditor() override;
 
     // Queues
-    unique_ptr<LockFreeQueue<Event, queue_settings::NMP2ITP_que_size>> NMP2ITP_Event_Que;
+    unique_ptr<LockFreeQueue<EventFromHost, queue_settings::NMP2ITP_que_size>> NMP2ITP_Event_Que;
     unique_ptr<LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size>> ITP2MDL_ModelInput_Que;
     unique_ptr<LockFreeQueue<ModelOutput, queue_settings::MDL2PPP_que_size>> MDL2PPP_ModelOutput_Que;
     unique_ptr<LockFreeQueue<GenerationEvent, queue_settings::PPP2NMP_que_size>> PPP2NMP_GenerationEvent_Que;
@@ -77,10 +77,10 @@ private:
     // Parameter Layout for apvts
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
-    // Event Place Holders for cross buffer events
-    Event last_frame_meta_data{};
-    std::optional<Event> NewBarEvent;
-    std::optional<Event> NewTimeShiftEvent;
+    // EventFromHost Place Holders for cross buffer events
+    EventFromHost last_frame_meta_data{};
+    std::optional<EventFromHost> NewBarEvent;
+    std::optional<EventFromHost> NewTimeShiftEvent;
 
     // Gets DAW info and midi messages,
     // Wraps messages as Events

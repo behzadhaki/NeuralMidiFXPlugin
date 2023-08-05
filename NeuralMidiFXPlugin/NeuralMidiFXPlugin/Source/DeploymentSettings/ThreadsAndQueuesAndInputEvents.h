@@ -5,7 +5,7 @@
 #pragma once
 
 // ======================================================================================
-// ==================        Event Communication Settings                ================
+// ==================        EventFromHost Communication Settings                ================
 // ======================================================================================
 /*
  * You can send Events to ITP at different frequencies with different
@@ -37,7 +37,7 @@
  *
  *      5. If you only need this information, whenever a new midi message
  *      (note on/off or cc) is received, you don't need to set any of the above,
- *      since the metadata is embedded in any midi Event. Just remember to not
+ *      since the metadata is embedded in any midi EventFromHost. Just remember to not
  *      filter out the midi events.
  *
  *      >>  constexpr bool FilterNoteOnEvents_FLAG{false};
@@ -55,7 +55,7 @@ namespace event_communication_settings {
     // set to true if you need to notify the beginning of a new bar
     constexpr bool SendNewBarEvents_FLAG{true};
 
-    // set to true Event for every time_shift_event ratio of quarter notes
+    // set to true EventFromHost for every time_shift_event ratio of quarter notes
     constexpr bool SendTimeShiftEvents_FLAG{false};
     constexpr double delta_TimeShiftEventRatioOfQuarterNote{0.5}; // sends a time shift event every 8th note
 

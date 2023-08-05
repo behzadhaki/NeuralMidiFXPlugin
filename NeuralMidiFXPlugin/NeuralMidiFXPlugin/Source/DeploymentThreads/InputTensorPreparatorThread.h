@@ -30,7 +30,7 @@ public:
     // ---         Step 2 . give access to resources needed to communicate with other threads
     // ------------------------------------------------------------------------------------------------------------
     void startThreadUsingProvidedResources(
-        LockFreeQueue<Event, queue_settings::NMP2ITP_que_size> *NMP2ITP_Event_Que_ptr_,
+        LockFreeQueue<EventFromHost, queue_settings::NMP2ITP_que_size> *NMP2ITP_Event_Que_ptr_,
         LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size> *ITP2MDL_ModelInput_Que_ptr_,
         LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2ITP_Parameters_Queu_ptr_,
         LockFreeQueue<juce::MidiFile, 4> *GUI2ITP_DroppedMidiFile_Que_ptr_);
@@ -44,7 +44,8 @@ public:
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 4 . Implement Deploy Method -----> DO NOT MODIFY ANY PART EXCEPT THE BODY OF THE METHOD
     // ------------------------------------------------------------------------------------------------------------
-    bool deploy(std::optional<Event> &new_event, bool did_any_gui_params_change);
+    bool deploy(std::optional<MidiFileEvent> & new_midi_event_dragdrop,
+                std::optional<EventFromHost> & new_event_from_host, bool did_any_gui_params_change);
     // ============================================================================================================
 
     // ============================================================================================================
@@ -64,16 +65,17 @@ private:
     ModelInput model_input{};
 
     /* Some data are pre-implemented for easier access */
-    Event last_event{};
-    Event first_frame_metadata_event{};                      // keeps metadata of the first frame
-    Event frame_metadata_event{};                            // keeps metadata of the next frame
-    Event last_bar_event{};                                  // keeps metadata of the last bar passed
-    Event last_complete_note_duration_event{};               // keeps metadata of the last beat passed
+    EventFromHost last_event{};
+    EventFromHost first_frame_metadata_event{};                      // keeps metadata of the first frame
+    EventFromHost frame_metadata_event{};                            // keeps metadata of the next frame
+    EventFromHost last_bar_event{};                                  // keeps metadata of the last bar passed
+    EventFromHost
+        last_complete_note_duration_event{};               // keeps metadata of the last beat passed
 
     // ============================================================================================================
     // ===          I/O Queues for Receiving/Sending Data
     // ============================================================================================================
-    LockFreeQueue<Event, queue_settings::NMP2ITP_que_size> *NMP2ITP_Event_Que_ptr{};
+    LockFreeQueue<EventFromHost, queue_settings::NMP2ITP_que_size> *NMP2ITP_Event_Que_ptr{};
     LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size> *ITP2MDL_ModelInput_Que_ptr{};
     LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2ITP_Parameters_Queu_ptr{};
     LockFreeQueue<juce::MidiFile, 4>* GUI2ITP_DroppedMidiFile_Que_ptr{};
@@ -88,7 +90,7 @@ private:
     // ============================================================================================================
     // ===          Debugging Methods
     // ============================================================================================================
-    static void DisplayEvent(const Event &event, bool compact_mode, double event_count);
+    static void DisplayEvent(const EventFromHost&event, bool compact_mode, double event_count);
     static void PrintMessage(const std::string &input);
 };
 

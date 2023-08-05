@@ -10,8 +10,9 @@
 // $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 // ===================================================================================
 bool InputTensorPreparatorThread::deploy(
-        std::optional<Event> &new_event,
-        bool gui_params_changed_since_last_call) {
+    std::optional<MidiFileEvent> & new_midi_event_dragdrop,
+    std::optional<EventFromHost> & new_event_from_host,
+    bool gui_params_changed_since_last_call) {
 
     /*              IF YOU NEED TO PRINT TO CONSOLE FOR DEBUGGING,
      *                  YOU CAN USE THE FOLLOWING METHOD:
@@ -41,13 +42,12 @@ bool InputTensorPreparatorThread::deploy(
     auto ToggleButton1 = gui_params.isToggleButtonOn("ToggleButton 1");
     auto ButtonTrigger = gui_params.wasButtonClicked("TriggerButton 1");
 
-
     // =================================================================================
-    // ===         2. ACCESSING INFORMATION (EVENTS) RECEIVED FROM HOST
+    // ===         3. ACCESSING INFORMATION (EVENTS) RECEIVED FROM HOST
     // =================================================================================
 
      /**NOTE**
-         Information received from host are passed on to you via the new_event object.
+         Information received from host are passed on to you via the new_event_from_host object.
 
         Multiple Types of Events can be received from the host:
 
@@ -59,56 +59,103 @@ bool InputTensorPreparatorThread::deploy(
            5. NewTimeShiftEvent --> sent every N QuarterNotes (if specified in settings.h)
            6. NoteOn/NoteOff/CC Events --> sent when a note is played (if not filtered in settings.h)
                          Access the note number, velocity, channel, etc. using the following methods:
-                              new_event->getNoteNumber(); new_event->getVelocity(); new_event->getChannel();
-                              new_event->getCCNumber();
+                              new_event_from_host->getNoteNumber(); new_event_from_host->getVelocity(); new_event_from_host->getChannel();
+                              new_event_from_host->getCCNumber();
      Regardless of the event type, you can access the following information at the time of the event:
-           1. new_event.qpm()
-           2. new_event.numerator(), new_event.denominator()
-           4. new_event.isPlaying(), new_event.isRecording()
-           5. new_event.BufferStartTime().inSeconds(),    --> time of the beginning of the buffer to which
+           1. new_event_from_host.qpm()
+           2. new_event_from_host.numerator(), new_event_from_host.denominator()
+           4. new_event_from_host.isPlaying(), new_event_from_host.isRecording()
+           5. new_event_from_host.BufferStartTime().inSeconds(),    --> time of the beginning of the buffer to which
                                                              the event belongs. (in seconds)
-              new_event.BufferEndTime().inSamples(),      --> time of the end of the buffer to which
+              new_event_from_host.BufferEndTime().inSamples(),      --> time of the end of the buffer to which
                                                              the event belongs. (in samples)
-              new_event.BufferEndTime().inQuarterNotes()  --> time of the end of the buffer to which
+              new_event_from_host.BufferEndTime().inQuarterNotes()  --> time of the end of the buffer to which
                                                              the event belongs. (in quarter notes)
-           6. new_event.Time().inSeconds(),               --> time of the event (in seconds,
-              new_event.Time().inSamples(),                                       samples,
-              new_event.Time().inQuarterNotes()                                  || quarter notes)
-           7. new_event.isLooping()                    --> whether || not the host is looping
-           8. new_event.loopStart(), new_event.loopEnd() --> loop start && end times (in quarter notes)
-           9. new_event.barCount()                     --> number of bars elapsed since beginning
-           10. new_event.lastBarPos()                  --> Position of last bar passed (in quarter notes)*/
+           6. new_event_from_host.Time().inSeconds(),               --> time of the event (in seconds,
+              new_event_from_host.Time().inSamples(),                                       samples,
+              new_event_from_host.Time().inQuarterNotes()                                  || quarter notes)
+           7. new_event_from_host.isLooping()                    --> whether || not the host is looping
+           8. new_event_from_host.loopStart(), new_event_from_host.loopEnd() --> loop start && end times (in quarter notes)
+           9. new_event_from_host.barCount()                     --> number of bars elapsed since beginning
+           10. new_event_from_host.lastBarPos()                  --> Position of last bar passed (in quarter notes)
+           */
 
-    if (new_event.has_value()) {
-        if (new_event->isFirstBufferEvent()) {
 
-        } else if (new_event->isPlaybackStoppedEvent()) {
+    if (new_event_from_host.has_value()) {
 
-        } else if (new_event->isNewBufferEvent()) {
+        if (new_event_from_host->isFirstBufferEvent()) {
 
-        } else if (new_event->isNewBarEvent()) {
+        } else if (new_event_from_host->isPlaybackStoppedEvent()) {
+
+        } else if (new_event_from_host->isNewBufferEvent()) {
+
+        } else if (new_event_from_host->isNewBarEvent()) {
 
             // the following line should be placed in the correct place in your code
             // in this example we want to send the compiled data to the model
             // on every bar, hence I'll set the flag to true here
             SHOULD_SEND_TO_MODEL_FOR_GENERATION_ = true;
 
-        } else if (new_event->isNewTimeShiftEvent()) {
+        } else if (new_event_from_host->isNewTimeShiftEvent()) {
 
-        } else if (new_event->isNoteOnEvent()) {
+        } else if (new_event_from_host->isNoteOnEvent()) {
 
-        } else if (new_event->isNoteOffEvent()) {
+        } else if (new_event_from_host->isNoteOffEvent()) {
 
-        } else if (new_event->isCCEvent()) {
+        } else if (new_event_from_host->isCCEvent()) {
 
         }
-        // =================================================================================
+    }
+    // =================================================================================
 
-        // =================================================================================
-        // ===         3. Sending data to the model thread (MDL)
-        // =================================================================================
+    // =================================================================================
+    // ===         2. ACCESSING INFORMATION (EVENTS) RECEIVED FROM
+    //                Mannually Drag-Dropped Midi Files
+    // =================================================================================
+    /**NOTE**
+         Information received from manually drag-dropped midi files are passed on to you
+            via the new_midi_event_dragdrop object.
 
-        /* All data to be sent to the model thread (MDL) should be stored in the model_input
+        Multiple Information are available here:
+                1. isFirstMessage() --> true if this is the first message in the midi file
+                2. isLastMessage() --> true if this is the last message in the midi file
+                3. isNoteOnEvent() --> true if this is a note on event
+                4. isNoteOffEvent() --> true if this is a note off event
+                5. isCCEvent() --> true if this is a CC event
+
+     If you need to process the midi notes only after the last one, keep them in
+     a vector<MidiFileEvent> and process them when the last one is received.
+    */
+    if (new_midi_event_dragdrop.has_value()) {
+        auto time_quarterNotes = new_midi_event_dragdrop->Time();
+        auto isFirst = new_midi_event_dragdrop->isFirstMessage();
+        auto isLast = new_midi_event_dragdrop->isLastMessage();
+        auto isNoteOn = new_midi_event_dragdrop->isNoteOnEvent();
+        auto isNoteOff = new_midi_event_dragdrop->isNoteOffEvent();
+        if (isNoteOn || isNoteOff) {
+            auto noteNumber = new_midi_event_dragdrop->getNoteNumber();
+            auto velocity = new_midi_event_dragdrop->getVelocity();
+        }
+        auto isCC = new_midi_event_dragdrop->isCCEvent();
+        if (isCC) {
+            auto ccNumber = new_midi_event_dragdrop->getCCValue();
+        }
+
+        PrintMessage(new_midi_event_dragdrop->getDescription().str());
+        PrintMessage(new_midi_event_dragdrop->getDescription(44100, 120).str());
+
+        if (isLast) { // here I'm requesting forward pass only after entire midi file is received
+            SHOULD_SEND_TO_MODEL_FOR_GENERATION_ = true;
+        }
+    }
+    // =================================================================================
+
+
+    // =================================================================================
+    // ===         4. Sending data to the model thread (MDL) if necessary
+    // =================================================================================
+
+    /* All data to be sent to the model thread (MDL) should be stored in the model_input
             object. This object is defined in the header file of this class.
             The class ModelInput is defined in the file model_input.h && should be modified
             to include all the data you want to send to the model thread.
@@ -117,20 +164,19 @@ bool InputTensorPreparatorThread::deploy(
          return false. --> NOTE: This is necessary so that the wrapper can know when to
          send the data to the model thread. */
 
-        if (SHOULD_SEND_TO_MODEL_FOR_GENERATION_) {
-            // Example:
-            //      If should send to model, update model_input && return true
-            model_input.tensor1 = torch::rand({1, 32, 27}, torch::kFloat32);
-            model_input.someDouble = 0.5f;
-            /*  ... set other model_input fields */
+    if (SHOULD_SEND_TO_MODEL_FOR_GENERATION_) {
+        // Example:
+        //      If should send to model, update model_input && return true
+        model_input.tensor1 = torch::rand({1, 32, 27}, torch::kFloat32);
+        model_input.someDouble = 0.5f;
+        /*  ... set other model_input fields */
 
-            // Notify ITP thread to send the updated data by returning true
-            return true;
-        } else {
-            return false;
-        }
-        // =================================================================================
+        // Notify ITP thread to send the updated data by returning true
+        return true;
+    } else {
+        return false;
     }
+    // =================================================================================
 }
 
 
@@ -141,7 +187,7 @@ bool InputTensorPreparatorThread::deploy(
 InputTensorPreparatorThread::InputTensorPreparatorThread() : juce::Thread("InputPreparatorThread") {}
 
 void InputTensorPreparatorThread::startThreadUsingProvidedResources(
-    LockFreeQueue<Event, queue_settings::NMP2ITP_que_size> *NMP2ITP_Event_Que_ptr_,
+    LockFreeQueue<EventFromHost, queue_settings::NMP2ITP_que_size> *NMP2ITP_Event_Que_ptr_,
     LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size> *ITP2MDL_ModelInput_Que_ptr_,
     LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2ITP_Parameters_Queu_ptr_,
     LockFreeQueue<juce::MidiFile, 4> *GUI2ITP_DroppedMidiFile_Que_ptr_) {
@@ -168,7 +214,7 @@ void InputTensorPreparatorThread::startThreadUsingProvidedResources(
  * @param event_count: the number of events that have been received so far
  */
 void InputTensorPreparatorThread::DisplayEvent(
-        const Event &event, bool compact_mode, double event_count) {
+        const EventFromHost&event, bool compact_mode, double event_count) {
 
     auto showMessage = [](const std::string& input) {
         // if input is multiline, split it into lines && print each line separately
@@ -226,7 +272,8 @@ void InputTensorPreparatorThread::run() {
     chrono_timer chrono_timed_deploy;
     chrono_timer chrono_timed_consecutive_pushes;
     chrono_timed_consecutive_pushes.registerStartTime();
-    std::optional<Event> new_event_from_DAW {};
+    std::optional<EventFromHost> new_event_from_DAW {};
+    std::optional<MidiFileEvent> new_midi_event_dropped_manually {};
     std::optional<ModelInput> ModelInput2send2MDL;
 
     using namespace debugging_settings::InputTensorPreparatorThread;
@@ -261,34 +308,61 @@ void InputTensorPreparatorThread::run() {
         } else {
             new_event_from_DAW = std::nullopt;
         }
+        bool ready2send2MDL = false;
 
         if (new_event_from_DAW.has_value() || gui_params.changed()) {
+            new_midi_event_dropped_manually = std::nullopt;
             chrono_timed_deploy.registerStartTime();
-            auto ready2send2MDL = deploy(new_event_from_DAW, gui_params.changed());
+            ready2send2MDL = deploy(new_midi_event_dropped_manually, new_event_from_DAW, gui_params.changed());
             chrono_timed_deploy.registerEndTime();
 
             if (print_deploy_method_time && chrono_timed_deploy.isValid()) { // if set in Debugging.h
                 showMessage(*chrono_timed_deploy.getDescription(" deploy() execution time: "));
             }
+        }
 
-            // push to next thread if a new input is provided
-            if (ready2send2MDL) {
-                model_input.timer.registerStartTime();
-                ITP2MDL_ModelInput_Que_ptr->push(model_input);
-                inputs_sent_count++;
-                chrono_timed_consecutive_pushes.registerEndTime();
-                if (print_timed_consecutive_ModelInputs_pushed && chrono_timed_consecutive_pushes.isValid()) {
-                    if (inputs_sent_count > 1) {
-                        auto text = "Time Duration Between ModelInput #" + std::to_string(inputs_sent_count);
-                        text += " && #" + std::to_string(inputs_sent_count - 1) + ": ";
-                        showMessage(*chrono_timed_consecutive_pushes.getDescription(text));
-                    } else {
-                        auto text = "Time Duration Between Start && First Pushed ModelInput: ";
-                        showMessage(*chrono_timed_consecutive_pushes.getDescription(text));
+        // check if notes received from a manually dropped midi file
+        if (GUI2ITP_DroppedMidiFile_Que_ptr->getNumReady() > 0){
+            auto midifile = GUI2ITP_DroppedMidiFile_Que_ptr->getLatestOnly();
+
+            if (midifile.getNumTracks() > 0) {
+                auto track = midifile.getTrack(0);
+                for (int i = 0; i < track->getNumEvents(); ++i)
+                {
+                    auto msg_ = track->getEventPointer(i)->message;
+
+                    if (print_manually_dropped_midi_messages) { // if set in Debugging.h
+                        showMessage("Midi Message Received from Dropped Midi File: ");
+                        showMessage(msg_.getDescription().toStdString());
                     }
+
+                    auto isFirst = (i == 0);
+                    auto isLast = (i == track->getNumEvents() - 1);
+                    new_midi_event_dropped_manually = MidiFileEvent(msg_, isFirst, isLast);
+                    new_event_from_DAW = std::nullopt;
+                    ready2send2MDL = deploy(new_midi_event_dropped_manually, new_event_from_DAW, false);
                 }
-                chrono_timed_consecutive_pushes.registerStartTime();
             }
+        }
+
+        // push to next thread if a new input is provided
+        if (ready2send2MDL) {
+            model_input.timer.registerStartTime();
+            ITP2MDL_ModelInput_Que_ptr->push(model_input);
+            inputs_sent_count++;
+            chrono_timed_consecutive_pushes.registerEndTime();
+
+            if (print_timed_consecutive_ModelInputs_pushed && chrono_timed_consecutive_pushes.isValid()) {
+                if (inputs_sent_count > 1) {
+                    auto text = "Time Duration Between ModelInput #" + std::to_string(inputs_sent_count);
+                    text += " && #" + std::to_string(inputs_sent_count - 1) + ": ";
+                    showMessage(*chrono_timed_consecutive_pushes.getDescription(text));
+                } else {
+                    auto text = "Time Duration Between Start && First Pushed ModelInput: ";
+                    showMessage(*chrono_timed_consecutive_pushes.getDescription(text));
+                }
+            }
+            chrono_timed_consecutive_pushes.registerStartTime();
         }
 
         // update event trackers accordingly if applicable
