@@ -8,11 +8,11 @@
 // ==================       Debugging  Settings                  ================================
 // ==============================================================================================
 namespace debugging_settings::InputTensorPreparatorThread {
-    constexpr bool print_received_gui_params{false};                // print the received gui parameters
-    constexpr bool print_input_events{false};                       // print the input tensor
-    constexpr bool print_deploy_method_time{false};                 // print the time taken to deploy the model
-    constexpr bool print_timed_consecutive_ModelInputs_pushed{false};   // print the output tensor
-    constexpr bool disable_user_print_requests{false};              // disable all user requested prints
+    constexpr bool print_received_gui_params{true};                // print the received gui parameters
+    constexpr bool print_input_events{true};                       // print the input tensor
+    constexpr bool print_deploy_method_time{true};                 // print the time taken to deploy the model
+    constexpr bool print_timed_consecutive_ModelInputs_pushed{true};   // print the output tensor
+    constexpr bool disable_user_print_requests{true};              // disable all user requested prints
 }
 
 namespace debugging_settings::ModelThread {

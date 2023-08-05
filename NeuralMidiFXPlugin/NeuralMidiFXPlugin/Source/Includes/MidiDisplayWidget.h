@@ -8,7 +8,6 @@
 
 using namespace std;
 
-
 class MidiPianoRollComponent : public juce::Component
 {
 public:
@@ -28,8 +27,8 @@ public:
         }
     }
 
-    ~MidiPianoRollComponent() {}
-
+    // generates and displays a random midi file (for testing purposes only)
+    // called from PluginEditor.cpp during initialization
     void generateRandomMidiFile(int numNotes)
     {
         midiFile = juce::MidiFile();
@@ -40,13 +39,21 @@ public:
 
         for (int i = 0; i < numNotes; ++i)
         {
-            int noteNumber = juce::Random::getSystemRandom().nextInt({21, 108});
-            int velocity = juce::Random::getSystemRandom().nextInt({20, 127});
+            int noteNumber = juce::Random::getSystemRandom().nextInt(
+                {21, 108});
+            int velocity = juce::Random::getSystemRandom().nextInt(
+                {20, 127});
             double startTime = juce::Random::getSystemRandom().nextDouble() * 10.0;
-            double noteDuration = juce::Random::getSystemRandom().nextDouble() * 2.0 + 0.5f; // duration in quarter notes
+            double noteDuration = juce::Random::getSystemRandom().nextDouble() *
+                                      2.0 + 0.5f; // duration in quarter notes
 
-            sequence.addEvent(juce::MidiMessage::noteOn(1, noteNumber, juce::uint8(velocity)), startTime * ticksPerQuarterNote);
-            sequence.addEvent(juce::MidiMessage::noteOff(1, noteNumber), (startTime + noteDuration) * ticksPerQuarterNote);
+            sequence.addEvent(juce::MidiMessage::noteOn(
+                                  1, noteNumber, juce::uint8(velocity)),
+                              startTime * ticksPerQuarterNote);
+            sequence.addEvent(juce::MidiMessage::noteOff(
+                                  1, noteNumber),
+                              (startTime + noteDuration) *
+                                  ticksPerQuarterNote);
         }
 
         midiFile.addTrack(sequence);
@@ -54,6 +61,11 @@ public:
         repaint();
     }
 
+    // draws midi notes on the component (piano roll)
+    // maps the midi notes to the component's width and height
+    // pitch values are mapped to the y axis, and time values are mapped to the x axis
+    // all pitch values are shifted into a 24 note range (C1 to C3)
+    // velocity values are mapped to the alpha value of the note color
     void paint(juce::Graphics& g) override
     {
         g.fillAll (backgroundColour);
@@ -65,7 +77,7 @@ public:
             {
                 double midiFileLength = track->getEndTime();
                 int numRows = 24;  // number of pitch values
-                float rowHeight = getHeight() / numRows;
+                float rowHeight =  (float) getHeight() / (float) numRows;
 
                 for (int i = 0; i < track->getNumEvents(); ++i)
                 {
@@ -74,18 +86,22 @@ public:
                     {
                         int noteNumber = event->message.getNoteNumber() % 24;
 
-                        float y = (23 - noteNumber) * rowHeight;  // flip the y axis
-                        float x = (event->message.getTimeStamp() / midiFileLength) * getWidth();
+                        float y = float(23 - noteNumber) * rowHeight;  // flip the y axis
+                        float x = float(event->message.getTimeStamp() / midiFileLength) *
+                                  (float) getWidth();
 
                         // find the corresponding "note off" event
                         float length = 0;
                         for (int j = i + 1; j < track->getNumEvents(); ++j)
                         {
                             auto offEvent = track->getEventPointer(j);
-                            if (offEvent != nullptr && offEvent->message.isNoteOff() && offEvent->message.getNoteNumber() % 24 == noteNumber)
+                            if (offEvent != nullptr && offEvent->message.isNoteOff() &&
+                                offEvent->message.getNoteNumber() % 24 == noteNumber)
                             {
-                                double noteLength = offEvent->message.getTimeStamp() - event->message.getTimeStamp();
-                                length = (noteLength / midiFileLength) * getWidth();
+                                double noteLength = offEvent->message.getTimeStamp() -
+                                                    event->message.getTimeStamp();
+                                length = float(noteLength / midiFileLength) *
+                                         (float) getWidth();
                                 break;
                             }
                         }
@@ -95,22 +111,29 @@ public:
 
                         auto color = noteColour.withAlpha(velocity);
                         g.setColour(color);
-                        g.fillRect(juce::Rectangle<float>(x, y, length, rowHeight));
+                        g.fillRect(juce::Rectangle<float>(
+                            x, y, length, rowHeight));
                     }
                 }
             }
         }
     }
 
+
+    // call back function for drag and drop out of the component
+    // should drag from component to file explorer or DAW if allowed
     void mouseDrag(const juce::MouseEvent& event) override
     {
         if (allow_drag_out) {
             juce::String fileName = juce::Uuid().toString() + ".mid";  // Random filename
 
-            juce::File outf = juce::File::getSpecialLocation(juce::File::SpecialLocationType::tempDirectory).getChildFile(fileName);
+            juce::File outf = juce::File::getSpecialLocation(
+                                  juce::File::SpecialLocationType::tempDirectory
+                                  ).getChildFile(fileName);
             juce::TemporaryFile tempf(outf);
             {
-                auto p_os = std::make_unique<juce::FileOutputStream>(tempf.getFile());
+                auto p_os = std::make_unique<juce::FileOutputStream>(
+                    tempf.getFile());
                 if (p_os->openedOk()) {
                     midiFile.writeTo(*p_os, 0);
                 }
@@ -118,11 +141,18 @@ public:
 
             bool succeeded = tempf.overwriteTargetFileWithTemporary();
             if (succeeded) {
-                juce::DragAndDropContainer::performExternalDragDropOfFiles({outf.getFullPathName()}, false);
+                juce::DragAndDropContainer::performExternalDragDropOfFiles(
+                    {outf.getFullPathName()}, false);
             }
         }
     }
 
+    // call back function for drag and drop into the component
+    // returns true if the file was successfully loaded
+    // called from filesDropped() in PluginEditor.cpp
+    // keep in mind that a file can be dropped anywhere in the parent component
+    // (i.e. PluginEditor.cpp) and not just on this component
+    // *NOTE* As soon as loaded, all timings are converted to quarter notes instead of ticks
     bool loadMidiFile(const juce::File& file)
     {
         if (!allow_drag_in) {
@@ -135,6 +165,34 @@ public:
             if (midiFile.readFrom(*stream))
             {
                 // Successfully read the MIDI file, so repaint the component
+
+                // get the start time of the first note
+                int TPQN = midiFile.getTimeFormat();
+                if (TPQN > 0)
+                {
+
+                    // iterate through all notes in track 0
+                    auto track = midiFile.getTrack(0);
+                    if (track != nullptr)
+                    {
+                        for (int i = 0; i < track->getNumEvents(); ++i)
+                        {
+                            auto event = track->getEventPointer(i);
+                            event->message.setTimeStamp(
+                                event->message.getTimeStamp() / TPQN);
+                        }
+                    }
+
+                    cout << "Midi file loaded successfully " << endl;
+                    cout << "Start time of first note: " << track->getEventPointer(0)->message.getTimeStamp() << endl;
+                    cout << "End time of last note: " << track->getEventPointer(track->getNumEvents() - 1)->message.getTimeStamp() << endl;
+                }
+                else
+                {
+                    // Negative value indicates frames per second (SMPTE)
+                    DBG("SMPTE Format midi files are not supported at this time.");
+                }
+
                 repaint();
                 return true;
             }
@@ -153,8 +211,8 @@ private:
 
         // Enable drag and drop
         //        setInterceptsMouseClicks(false, true);
-        setInterceptsMouseClicks(true, true);
-
+        setInterceptsMouseClicks(
+            true, true);
     }
 
     juce::MidiFile midiFile;

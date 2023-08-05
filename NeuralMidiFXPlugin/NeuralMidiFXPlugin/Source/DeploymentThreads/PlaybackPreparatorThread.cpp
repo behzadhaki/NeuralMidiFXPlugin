@@ -49,6 +49,7 @@ std::pair<bool, bool> PlaybackPreparatorThread::deploy(bool new_model_output_rec
     // ---------------------------------------------------------------------------------
     // --- ExampleStarts ------ ExampleStarts ------ ExampleStarts ---- ExampleStarts --
     auto onsets = model_output.tensor1; // I'm not using this tensor below, just an e.g.
+
     // ...
     // --- ExampleEnds -------- ExampleEnds -------- ExampleEnds ------ ExampleEnds ----
     // ---------------------------------------------------------------------------------
@@ -126,6 +127,8 @@ std::pair<bool, bool> PlaybackPreparatorThread::deploy(bool new_model_output_rec
 
         newPlaybackSequenceGeneratedAndShouldBeSent = true;
     }
+    // --- ExampleEnds -------- ExampleEnds -------- ExampleEnds ------ ExampleEnds ----
+    // ---------------------------------------------------------------------------------
 
     // MUST Notify What Data Ready to be Sent
     // If you don't want to send anything, just set both flags to false
