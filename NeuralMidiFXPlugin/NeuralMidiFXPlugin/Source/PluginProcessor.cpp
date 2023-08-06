@@ -81,8 +81,8 @@ NeuralMidiFXPluginProcessor::~NeuralMidiFXPluginProcessor() {
 }
 
 void NeuralMidiFXPluginProcessor::PrintMessage(const std::string& input) {
-    using namespace debugging_settings::ModelThread;
-    if (disable_user_print_requests) { return; }
+    using namespace debugging_settings::ProcessorThread;
+    if (disableAllPrints) { return; }
 
     // if input is multiline, split it into lines && print each line separately
     std::stringstream ss(input);
@@ -126,6 +126,7 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         // Send received events from host to ITP thread
         sendReceivedInputsAsEvents(midiMessages, Pinfo, fs, buffSize);
 
+
         // see if any generations are ready
         if (PPP2NMP_GenerationEvent_Que->getNumReady() > 0) {
             auto event = PPP2NMP_GenerationEvent_Que->pop();
@@ -154,8 +155,10 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                         }
                     }
 
-                } else if (playbackPolicies.IsOverwritePolicy_KeepAllPreviousEvents()) { /* do nothing */ } else {
-                    assert ("PlaybackPolicies Overwrite Action !Specified!");
+                } else if (playbackPolicies.IsOverwritePolicy_KeepAllPreviousEvents()) {
+                    /* do nothing */
+                } else {
+                    assert (false && "PlaybackPolicies Overwrite Action Not Specified!");
                 }
             }
 
@@ -272,6 +275,12 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
                 frame_meta_data.setPlaybackStoppedEvent();
                 NMP2ITP_Event_Que->push(frame_meta_data);
                 last_frame_meta_data = frame_meta_data;     // reset last frame meta data
+
+                // clear playback sequence if playbackpolicy specifies so
+                if (playbackPolicies.shouldClearGenerationsAfterPauseStop()) {
+                    PrintMessage("Clearing Generations");
+                    playbackMessageSequence.clear();
+                }
             }
         } else {
             // if still playing, register the playhead position

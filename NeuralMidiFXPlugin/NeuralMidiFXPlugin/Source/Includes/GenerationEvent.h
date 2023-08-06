@@ -28,6 +28,10 @@ using namespace juce;
    1. delete all events in previous stream and use new stream
    2. delete all events after now
    3. Keep all previous events (that is generations can be played on top of each other)
+
+   Additional Policies:
+   1. Clear generations after pause/stop
+   2. Repeat N times Assuming Generartions are T Time Units Long
 */
 
 
@@ -47,16 +51,50 @@ struct PlaybackPolicies {
 
     void SetTimeUnitIsPPQ() { TimeUnit = 3; }
 
-
     void SetOverwritePolicy_DeleteAllEventsInPreviousStreamAndUseNewStream() { OverwritePolicy = 1; }
     void SetOverwritePolicy_DeleteAllEventsAfterNow() { OverwritePolicy = 2; }
     void SetOverwritePolicy_KeepAllPreviousEvents() { OverwritePolicy = 3; }
+
+    void SetClearGenerationsAfterPauseStop(bool enable) {
+        ClearGenerationsAfterPauseStop = enable ? true : false;
+    }
+
+    // sets the number of times the generations should be repeated  (if enabled)
+    // N is the number of times the generations should be repeated
+    // Time unit for T is the same as the playback policy
+    void SetRepeatNTimesAssumingDuration(bool enable, int N_, double T_) {
+        if (enable) {
+            assert(N_ > 0 && "N must be greater than 0");
+            assert(T_ > 0 && "T must be greater than 0");
+            RepeatNTimesAssumingGenerationsAreTTimeUnitsLong = true;
+            N = N_;
+            T = T_;
+        } else {
+            RepeatNTimesAssumingGenerationsAreTTimeUnitsLong = false;
+            N = -1;
+            T = -1;
+        }
+    }
+
+    // sets the number of times the generations should be repeated (if enabled)
+    // T is the duration of the generations
+    void SetIndefiniteRepetitionAssumingDuration(bool enable, double T_) {
+        if (enable) {
+            assert(T_ > 0 && "T must be greater than 0");
+            indefiniteRepetition = true;
+            T = T_;
+        } else {
+            indefiniteRepetition = false;
+            T = -1;
+        }
+    }
 
     // Checks if data is ready for transmission
     bool IsReadyForTransmission() const {
         assert (PlaybackPolicy != -1 && "PlaybackPolicy Not Set");
         assert (TimeUnit != -1 && "TimeUnit Not Set");
         assert (OverwritePolicy != -1 && "OverwritePolicy Not Set");
+
         return PlaybackPolicy != -1 && TimeUnit != -1 && OverwritePolicy != -1;
     }
 
@@ -75,6 +113,7 @@ struct PlaybackPolicies {
     bool IsOverwritePolicy_DeleteAllEventsAfterNow() const { return OverwritePolicy == 2; }
     bool IsOverwritePolicy_KeepAllPreviousEvents() const { return OverwritePolicy == 3; }
 
+    bool shouldClearGenerationsAfterPauseStop() const { return ClearGenerationsAfterPauseStop; }
     // ============================================================================================================
     int getPlaybackPolicyType () const { return PlaybackPolicy; }
     int getTimeUnitType () const { return TimeUnit; }
@@ -84,6 +123,11 @@ private:
     int PlaybackPolicy{-1};
     int TimeUnit{-1};
     int OverwritePolicy{-1};
+    bool ClearGenerationsAfterPauseStop{false};
+    bool RepeatNTimesAssumingGenerationsAreTTimeUnitsLong{false};
+    bool indefiniteRepetition{false};
+    int N{-1};
+    double T{-1};
 };
 
 struct noteOn_ge {

@@ -90,19 +90,25 @@ std::pair<bool, bool> PlaybackPreparatorThread::deploy(bool new_model_output_rec
 
      *
      * PlaybackPolicy:
+     *   - Timing Specification:
      *      1. relative to Now (register the current time, && play messages relative to that)
      *      2. relative to 0 (stream should be played relative to absolute 0 time)
      *      3. relative to playback start (stream should be played relative to the time when playback started)
      *
-     * Time_unit:
-     *   1. seconds
-     *   2. ppq
-     *   3. audio samples
+     *   - Time_unit:
+     *      1. seconds
+     *      2. ppq
+     *      3. audio samples
      *
-     * Overwrite Policy:
-     *  1. delete all events in previous stream && use new stream
-     *  2. delete all events after now
-     *  3. Keep all previous events (that is generations can be played on top of each other)
+     *   - Overwrite Policy:
+     *      1. delete all events in previous stream && use new stream
+     *      2. delete all events after now
+     *      3. Keep all previous events (that is generations can be played on top of each other)
+     *
+     *    - Additional Info:
+     *      1. Clear generations after pause/stop
+     *      2. Repeat N times Assuming Generartions are T Time Units Long
+     *
      */
 
     // -----------------------------------------------------------------------------------------
@@ -113,8 +119,8 @@ std::pair<bool, bool> PlaybackPreparatorThread::deploy(bool new_model_output_rec
     if (testFlag) {
         // 1. ---- Update Playback Policy -----
         // Can be sent just once, || every time the policy changes
-        // playbackPolicy.SetPaybackPolicy_RelativeToNow();  // or
-        playbackPolicy.SetPlaybackPolicy_RelativeToAbsoluteZero(); // or
+        playbackPolicy.SetPaybackPolicy_RelativeToNow();  // or
+        // playbackPolicy.SetPlaybackPolicy_RelativeToAbsoluteZero(); // or
         // playbackPolicy.SetPplaybackPolicy_RelativeToPlaybackStart(); // or
 
         // playbackPolicy.SetTimeUnitIsSeconds(); // or
@@ -125,6 +131,8 @@ std::pair<bool, bool> PlaybackPreparatorThread::deploy(bool new_model_output_rec
         // playbackPolicy.SetOverwritePolicy_DeleteAllEventsAfterNow(); // or
         // playbackPolicy.SetOverwritePolicy_KeepAllPreviousEvents(); // or
 
+        playbackPolicy.SetClearGenerationsAfterPauseStop(false); // or false
+
         newPlaybackPolicyShouldBeSent = true;
 
         // 2. ---- Update Playback Sequence -----
@@ -133,7 +141,7 @@ std::pair<bool, bool> PlaybackPreparatorThread::deploy(bool new_model_output_rec
 
         // I'm generating a single note to be played at timestamp 4 && delayed by the slider value
         int channel{1};
-        int note{24};
+        int note = rand() % 64;
         float velocity{0.3f};
         double timestamp{4};
         double duration{3};
@@ -144,7 +152,7 @@ std::pair<bool, bool> PlaybackPreparatorThread::deploy(bool new_model_output_rec
         playbackSequence.addNoteOff(channel, note, velocity,
                                     timestamp + newPlaybackDelaySlider + duration);
         // || add a note with duration (an octave higher)
-        playbackSequence.addNoteWithDuration(channel, note + 12, velocity,
+        playbackSequence.addNoteWithDuration(channel, note+12, velocity,
                                              timestamp + newPlaybackDelaySlider, duration);
 
         newPlaybackSequenceGeneratedAndShouldBeSent = true;
