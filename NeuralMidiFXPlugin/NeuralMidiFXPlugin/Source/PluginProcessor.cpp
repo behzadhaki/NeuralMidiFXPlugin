@@ -156,10 +156,15 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             fs,
             buffSize));
 
+    generationsToDisplay.setFs(fs);
+    generationsToDisplay.setQpm(   *Pinfo->getBpm());
+    generationsToDisplay.playhead_pos = *Pinfo->getPpqPosition();
+
     // check if any events are received from the PPP thread
     if (PPP2NMP_GenerationEvent_Que->getNumReady() > 0)
     {
         event = PPP2NMP_GenerationEvent_Que->pop();
+        generationsToDisplay.policy = playbackPolicies;
         // update midi message sequence if new one arrived
         if (event->IsNewPlaybackSequence())
         {
@@ -180,6 +185,7 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                 event->getNewPlaybackSequence().getAsJuceMidMessageSequence(),
                 time_adjustment);
             playbackMessageSequence.updateMatchedPairs();
+            generationsToDisplay.setSequence(playbackMessageSequence);
         }
     } else {
         event = std::nullopt;
@@ -200,6 +206,8 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             if (event->IsNewPlaybackPolicyEvent()) {
                 // set anchor time relative to which timing information of generations should be interpreted
                 playbackPolicies = event->getNewPlaybackPolicyEvent();
+                generationsToDisplay.policy = playbackPolicies;
+
                 if (playbackPolicies.shouldForceSendNoteOffs()) {
                     for (int i = 0; i < 128; i++) {
                         tempBuffer.addEvent(juce::MidiMessage::noteOff(1, i), 0);
@@ -264,6 +272,7 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                     // swap temp sequence with playback sequence
                     playbackMessageSequence.clear();
                     playbackMessageSequence.swapWith(tempSequence);
+
 
                     // print all notes in sequence after deletion
                     std::stringstream ss2;

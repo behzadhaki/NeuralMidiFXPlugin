@@ -27,7 +27,6 @@ public:
 
     const int numTabs = UIObjects::Tabs::tabList.size();
 
-
     ParameterComponent* paramComponentPtr;
     std::vector<ParameterComponent*> paramComponentVector;
 
@@ -39,5 +38,10 @@ private:
     NeuralMidiFXPluginProcessor* NeuralMidiFXPluginProcessorPointer_;
     UIObjects::tab_tuple currentTab;
     std::string tabName;
+    double fs;
+    double qpm;
+    double playhead_pos;
+    PlaybackPolicies play_policy;
+    juce::MidiMessageSequence sequence_to_display;
 };
 

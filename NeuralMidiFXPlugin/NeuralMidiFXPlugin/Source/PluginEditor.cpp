@@ -23,10 +23,12 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
 
         paramComponentVector.push_back(paramComponentPtr);
         addAndMakeVisible(*paramComponentPtr);
-        paramComponentPtr->generateGuiElements(getLocalBounds(), &NeuralMidiFXPluginProcessorPointer_->apvts);
+        paramComponentPtr->generateGuiElements(
+            getLocalBounds(), &NeuralMidiFXPluginProcessorPointer_->apvts);
         paramComponentPtr->resizeGuiElements(getLocalBounds());
 
-        tabs.addTab(tabName, juce::Colours::lightgrey, paramComponentPtr, true);
+        tabs.addTab(tabName, juce::Colours::lightgrey,
+                    paramComponentPtr, true);
     }
 
     addAndMakeVisible(tabs);
@@ -42,7 +44,8 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
 
 
 //    inputPianoRoll->generateRandomMidiFile(10);
-    outputPianoRoll->generateRandomMidiFile(10);
+//    outputPianoRoll->generateRandomMidiFile(10);
+    NeuralMidiFXPluginProcessorPointer_->generationsToDisplay.set_to_Last(); // this is to restore the last sequence to display after reconstructing the editor
 
     setInterceptsMouseClicks(false, true);
 
@@ -105,6 +108,63 @@ void NeuralMidiFXPluginEditor::paint(juce::Graphics& g)
 
 void NeuralMidiFXPluginEditor::timerCallback()
 {
+    bool newContent = false;
+    auto fs_ = NeuralMidiFXPluginProcessorPointer_->generationsToDisplay.getFs();
+    if (fs_.has_value())
+    {
+        if (fs_.value() != fs)
+        {
+            fs = fs_.value();
+            newContent = true;
+        }
+    }
+
+    auto qpm_ = NeuralMidiFXPluginProcessorPointer_->generationsToDisplay.getQpm();
+    if (qpm_.has_value())
+    {
+        if (qpm_.value() != qpm)
+        {
+            qpm = qpm_.value();
+            newContent = true;
+        }
+    }
+
+    auto playhead_pos_ = NeuralMidiFXPluginProcessorPointer_->generationsToDisplay.getPlayheadPos();
+    if (playhead_pos_.has_value())
+    {
+        if (playhead_pos_.value() != playhead_pos)
+        {
+            playhead_pos = playhead_pos_.value();
+            newContent = true;
+        }
+    }
+
+    auto policy_ = NeuralMidiFXPluginProcessorPointer_->generationsToDisplay.getPolicy();
+    if (policy_.has_value())
+    {
+        play_policy = policy_.value();
+        newContent = true;
+    }
+
+    auto sequence_to_display_ = NeuralMidiFXPluginProcessorPointer_->generationsToDisplay.getSequence();
+    if (sequence_to_display_.has_value())
+    {
+        sequence_to_display = sequence_to_display_.value();
+        newContent = true;
+    }
+
+    if (newContent)
+    {
+        outputPianoRoll->displayMidiMessageSequence(
+            sequence_to_display,
+            play_policy,
+            fs,
+            qpm,
+            playhead_pos
+            );
+
+        repaint();
+    }
 
 }
 

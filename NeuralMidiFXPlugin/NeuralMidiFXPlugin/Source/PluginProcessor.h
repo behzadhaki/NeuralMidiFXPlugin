@@ -18,6 +18,116 @@
 
 using namespace std;
 
+struct GenerationsToDisplay {
+public:
+    std::optional<juce::MidiMessageSequence> sequence_to_display;
+    juce::MidiMessageSequence last_sequence_to_display{};
+    std::optional<double> fs;
+    double last_fs = -1.0;
+    std::optional<double> qpm;
+    double last_qpm = -1.0;
+    std::optional<double> playhead_pos;
+    double last_playhead_pos = -1.0;
+    std::optional<PlaybackPolicies> policy;
+    PlaybackPolicies last_policy{};
+    std::mutex mutex;
+
+    void clearAll() {
+        std::lock_guard<std::mutex> lock(mutex);
+        sequence_to_display = std::nullopt;
+        fs = std::nullopt;
+        qpm = std::nullopt;
+        playhead_pos = std::nullopt;
+        policy = std::nullopt;
+    }
+
+    void setSequence(const juce::MidiMessageSequence& sequence) {
+        std::lock_guard<std::mutex> lock(mutex);
+        sequence_to_display = sequence;
+        last_sequence_to_display = sequence;
+    }
+
+    void setFs(double fs_) {
+        if (fs_ == last_fs) {
+            return;
+        } else {
+            std::lock_guard<std::mutex> lock(mutex);
+            last_fs = fs_;
+            fs = fs_;
+        }
+    }
+
+    void setQpm(double qpm_) {
+        if (qpm_ == last_qpm) {
+            return;
+        } else {
+            std::lock_guard<std::mutex> lock(mutex);
+            last_qpm = qpm_;
+            qpm = qpm_;
+        }
+    }
+
+    void setPlayheadPos(double playhead_pos_) {
+        if (playhead_pos_ == last_playhead_pos) {
+            return;
+        } else {
+            std::lock_guard<std::mutex> lock(mutex);
+            last_playhead_pos = playhead_pos_;
+            playhead_pos = playhead_pos_;
+        }
+    }
+
+    void setPolicy(PlaybackPolicies policy_) {
+        std::lock_guard<std::mutex> lock(mutex);
+        policy = policy_;
+        last_policy = policy_;
+    }
+
+    std::optional<juce::MidiMessageSequence> getSequence() {
+        std::lock_guard<std::mutex> lock(mutex);
+        auto val = std::move(sequence_to_display);
+        sequence_to_display = std::nullopt;
+        return val;
+    }
+
+    std::optional<double> getFs() {
+        std::lock_guard<std::mutex> lock(mutex);
+        auto val = fs;
+        fs = std::nullopt;
+        return val;
+    }
+
+    std::optional<double> getQpm() {
+        std::lock_guard<std::mutex> lock(mutex);
+        auto val = qpm;
+        qpm = std::nullopt;
+        return val;
+    }
+
+    std::optional<double> getPlayheadPos() {
+        std::lock_guard<std::mutex> lock(mutex);
+        auto val = playhead_pos;
+        playhead_pos = std::nullopt;
+        return val;
+    }
+
+    std::optional<PlaybackPolicies> getPolicy() {
+        std::lock_guard<std::mutex> lock(mutex);
+        auto val = policy;
+        policy = std::nullopt;
+        return val;
+    }
+
+    void set_to_Last() {
+        std::lock_guard<std::mutex> lock(mutex);
+        GenerationsToDisplay last{};
+        last.sequence_to_display = last_sequence_to_display;
+        last.fs = fs;
+        last.qpm = qpm;
+        last.playhead_pos = playhead_pos;
+        last.policy = policy;
+    }
+};
 
 class NeuralMidiFXPluginProcessor : public PluginHelpers::ProcessorBase {
 
@@ -65,6 +175,14 @@ public:
     // realtime playback info
     unique_ptr<RealTimePlaybackInfo> realtimePlaybackInfo{};
 
+    // Playback Data
+    PlaybackPolicies playbackPolicies{};
+    juce::MidiMessageSequence playbackMessageSequence{};
+    BufferMetaData phead_at_start_of_new_stream{};
+    time_ time_anchor_for_playback{};
+
+    // mutex protected structures for interacting with the GUI
+    GenerationsToDisplay generationsToDisplay{};
 private:
     // =========  Queues for communicating Between the main threads in processor  ===============
 
@@ -94,11 +212,7 @@ private:
             double fs,
             int buffSize);
 
-    // Playback Data
-    PlaybackPolicies playbackPolicies{};
-    juce::MidiMessageSequence playbackMessageSequence{};
-    BufferMetaData phead_at_start_of_new_stream{};
-    time_ time_anchor_for_playback{};
+
 
     // utility methods
     void PrintMessage(const std::string& input);

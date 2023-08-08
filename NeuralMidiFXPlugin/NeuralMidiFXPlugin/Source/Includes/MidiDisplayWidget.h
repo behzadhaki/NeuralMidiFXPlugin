@@ -55,7 +55,7 @@ public:
     {
         midiFile = juce::MidiFile();
         int ticksPerQuarterNote = 960;
-        midiFile.setTicksPerQuarterNote(ticksPerQuarterNote);  // This line was missing
+        midiFile.setTicksPerQuarterNote(ticksPerQuarterNote);
 
         juce::MidiMessageSequence sequence;
 
@@ -83,6 +83,38 @@ public:
         repaint();
     }
 
+    void displayMidiMessageSequence(const juce::MidiMessageSequence& sequence_,
+                                    PlaybackPolicies playbackPolicy_,
+                                    double fs, double qpm,
+                                    double playhead_pos_quarter_notes) {
+        midiFile = juce::MidiFile();
+        int ticksPerQuarterNote = 960;
+        midiFile.setTicksPerQuarterNote(ticksPerQuarterNote);  \
+        juce::MidiMessageSequence sequence;
+
+        // all timings need to be converted to ticks
+        for (auto m: sequence_) {
+            auto msg = m->message;
+            if (playbackPolicy_.IsTimeUnitIsAudioSamples()) {
+                auto time_in_quartern = msg.getTimeStamp() / fs / 60.0 * qpm;
+                // convert to ticks
+                msg.setTimeStamp(time_in_quartern * ticksPerQuarterNote);
+            } else if (playbackPolicy_.IsTimeUnitIsPPQ()) {
+                // convert to ticks
+                msg.setTimeStamp(msg.getTimeStamp() * ticksPerQuarterNote);
+            } else if (playbackPolicy_.IsTimeUnitIsSeconds()) {
+                auto time_in_quartern = msg.getTimeStamp() / 60.0 * qpm;
+                // convert to ticks
+                msg.setTimeStamp(time_in_quartern * ticksPerQuarterNote);
+            }
+            sequence.addEvent(msg);
+        }
+        playhead_pos = playhead_pos_quarter_notes * ticksPerQuarterNote;
+        midiFile.addTrack(sequence);
+
+        repaint();
+    }
+
     // draws midi notes on the component (piano roll)
     // maps the midi notes to the component's width and height
     // pitch values are mapped to the y axis, and time values are mapped to the x axis
@@ -92,12 +124,16 @@ public:
     {
         g.fillAll (backgroundColour);
 
+        double midiFileLength =  8;
+        int ticksPerQuarterNote = 960;
+
         if (midiFile.getNumTracks() > 0)
         {
             auto track = midiFile.getTrack(0);
             if (track != nullptr)
             {
-                double midiFileLength = track->getEndTime();
+                midiFileLength = std::max(track->getEndTime()+4*ticksPerQuarterNote,
+                                          playhead_pos+4*ticksPerQuarterNote);
                 int numRows = 24;  // number of pitch values
                 float rowHeight =  (float) getHeight() / (float) numRows;
 
@@ -139,6 +175,15 @@ public:
                 }
             }
         }
+
+        // draw playhead
+        if (playhead_pos >= 0) {
+            g.setColour(juce::Colours::red);
+            auto x = playhead_pos / midiFileLength *
+                     (float) getWidth();
+            g.drawLine(x, 0, x, getHeight(), 2);
+        }
+
     }
 
 
@@ -204,10 +249,6 @@ public:
                                 event->message.getTimeStamp() / TPQN);
                         }
                     }
-
-                    cout << "Midi file loaded successfully " << endl;
-                    cout << "Start time of first note: " << track->getEventPointer(0)->message.getTimeStamp() << endl;
-                    cout << "End time of last note: " << track->getEventPointer(track->getNumEvents() - 1)->message.getTimeStamp() << endl;
                 }
                 else
                 {
@@ -244,6 +285,7 @@ private:
     bool allow_drag_in{false};
     bool allow_drag_out{false};
     LockFreeQueue<juce::MidiFile, 4>* MidiQue{};
+    double playhead_pos{-1};
 
 };
 

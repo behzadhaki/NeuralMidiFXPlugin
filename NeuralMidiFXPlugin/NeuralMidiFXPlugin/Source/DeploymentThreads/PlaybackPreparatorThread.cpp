@@ -119,8 +119,8 @@ std::pair<bool, bool> PlaybackPreparatorThread::deploy(bool new_model_output_rec
     if (testFlag) {
         // 1. ---- Update Playback Policy -----
         // Can be sent just once, || every time the policy changes
-        playbackPolicy.SetPaybackPolicy_RelativeToNow();  // or
-        // playbackPolicy.SetPlaybackPolicy_RelativeToAbsoluteZero(); // or
+        // playbackPolicy.SetPaybackPolicy_RelativeToNow();  // or
+        playbackPolicy.SetPlaybackPolicy_RelativeToAbsoluteZero(); // or
         // playbackPolicy.SetPlaybackPolicy_RelativeToPlaybackStart(); // or
 
         // playbackPolicy.SetTimeUnitIsSeconds(); // or
@@ -128,9 +128,9 @@ std::pair<bool, bool> PlaybackPreparatorThread::deploy(bool new_model_output_rec
         // playbackPolicy.SetTimeUnitIsAudioSamples(); // or
 
         bool forceSendNoteOffsFirst{true};
-        // playbackPolicy.SetOverwritePolicy_DeleteAllEventsInPreviousStreamAndUseNewStream(forceSendNoteOffsFirst); // or
+        playbackPolicy.SetOverwritePolicy_DeleteAllEventsInPreviousStreamAndUseNewStream(forceSendNoteOffsFirst); // or
         // playbackPolicy.SetOverwritePolicy_DeleteAllEventsAfterNow(forceSendNoteOffsFirst); // or
-        playbackPolicy.SetOverwritePolicy_KeepAllPreviousEvents(forceSendNoteOffsFirst); // or
+        // playbackPolicy.SetOverwritePolicy_KeepAllPreviousEvents(forceSendNoteOffsFirst); // or
 
         playbackPolicy.SetClearGenerationsAfterPauseStop(false); //
         playbackPolicy.LoopAssumingDuration(false, 4); // Requires further implementation (debugging)
@@ -153,7 +153,7 @@ std::pair<bool, bool> PlaybackPreparatorThread::deploy(bool new_model_output_rec
                                    timestamp + newPlaybackDelaySlider);
         playbackSequence.addNoteOff(channel, note, velocity,
                                     timestamp + newPlaybackDelaySlider + duration);
-        // || add a note with duration (an octave higher)
+        // or add a note with duration (an octave higher)
         playbackSequence.addNoteWithDuration(channel, note+12, velocity,
                                              timestamp + newPlaybackDelaySlider, duration);
 
