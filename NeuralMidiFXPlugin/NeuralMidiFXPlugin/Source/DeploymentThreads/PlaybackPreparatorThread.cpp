@@ -121,17 +121,19 @@ std::pair<bool, bool> PlaybackPreparatorThread::deploy(bool new_model_output_rec
         // Can be sent just once, || every time the policy changes
         playbackPolicy.SetPaybackPolicy_RelativeToNow();  // or
         // playbackPolicy.SetPlaybackPolicy_RelativeToAbsoluteZero(); // or
-        // playbackPolicy.SetPplaybackPolicy_RelativeToPlaybackStart(); // or
+        // playbackPolicy.SetPlaybackPolicy_RelativeToPlaybackStart(); // or
 
         // playbackPolicy.SetTimeUnitIsSeconds(); // or
         playbackPolicy.SetTimeUnitIsPPQ(); // or
         // playbackPolicy.SetTimeUnitIsAudioSamples(); // or
 
-        playbackPolicy.SetOverwritePolicy_DeleteAllEventsInPreviousStreamAndUseNewStream(); // or
-        // playbackPolicy.SetOverwritePolicy_DeleteAllEventsAfterNow(); // or
-        // playbackPolicy.SetOverwritePolicy_KeepAllPreviousEvents(); // or
+        bool forceSendNoteOffsFirst{true};
+        // playbackPolicy.SetOverwritePolicy_DeleteAllEventsInPreviousStreamAndUseNewStream(forceSendNoteOffsFirst); // or
+        // playbackPolicy.SetOverwritePolicy_DeleteAllEventsAfterNow(forceSendNoteOffsFirst); // or
+        playbackPolicy.SetOverwritePolicy_KeepAllPreviousEvents(forceSendNoteOffsFirst); // or
 
-        playbackPolicy.SetClearGenerationsAfterPauseStop(false); // or false
+        playbackPolicy.SetClearGenerationsAfterPauseStop(false); //
+        playbackPolicy.LoopAssumingDuration(false, 4); // Requires further implementation (debugging)
 
         newPlaybackPolicyShouldBeSent = true;
 
@@ -143,8 +145,8 @@ std::pair<bool, bool> PlaybackPreparatorThread::deploy(bool new_model_output_rec
         int channel{1};
         int note = rand() % 64;
         float velocity{0.3f};
-        double timestamp{4};
-        double duration{3};
+        double timestamp{0};
+        double duration{1};
 
         // add noteOn Offs (time stamp shifted by the slider value)
         playbackSequence.addNoteOn(channel, note, velocity,

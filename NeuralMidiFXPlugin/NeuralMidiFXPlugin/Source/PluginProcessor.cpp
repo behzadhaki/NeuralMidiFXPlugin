@@ -6,6 +6,44 @@
 using namespace std;
 using namespace debugging_settings::ProcessorThread;
 
+inline bool messageExistsInSequence(const MidiMessageSequence& sequence, const MidiMessage& targetMessage)
+{
+    for (int i = 0; i < sequence.getNumEvents(); ++i)
+    {
+        const MidiMessage& message = sequence.getEventPointer(i)->message;
+
+        // check if messages are equal
+        if (message.isNoteOn() && targetMessage.isNoteOn())
+        {
+            if (message.getNoteNumber() == targetMessage.getNoteNumber() &&
+                message.getVelocity() == targetMessage.getVelocity() &&
+                message.getTimeStamp() == targetMessage.getTimeStamp())
+            {
+                return true;
+            }
+        }
+        else if (message.isNoteOff() && targetMessage.isNoteOff())
+        {
+            if (message.getNoteNumber() == targetMessage.getNoteNumber() &&
+                message.getVelocity() == targetMessage.getVelocity() &&
+                message.getTimeStamp() == targetMessage.getTimeStamp())
+            {
+                return true;
+            }
+        }
+        else if (message.isController() && targetMessage.isController())
+        {
+            if (message.getControllerNumber() == targetMessage.getControllerNumber() &&
+                message.getControllerValue() == targetMessage.getControllerValue() &&
+                message.getTimeStamp() == targetMessage.getTimeStamp())
+            {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
         *this, nullptr, "PARAMETERS", createParameterLayout()) {
 
@@ -111,11 +149,41 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     auto fs = getSampleRate();
     auto buffSize = buffer.getNumSamples();
 
+    std::optional<GenerationEvent> event;
     realtimePlaybackInfo->setValues(
         BufferMetaData(
             Pinfo,
             fs,
             buffSize));
+
+    // check if any events are received from the PPP thread
+    if (PPP2NMP_GenerationEvent_Que->getNumReady() > 0)
+    {
+        event = PPP2NMP_GenerationEvent_Que->pop();
+        // update midi message sequence if new one arrived
+        if (event->IsNewPlaybackSequence())
+        {
+            if (print_generation_stream_reception)
+            {
+                PrintMessage(" New Sequence of Generations Received");
+            }
+            double time_adjustment = 0.0;
+            if (playbackPolicies.IsPlaybackPolicy_RelativeToAbsoluteZero()) {
+                time_adjustment = 0.0;
+            } else if (playbackPolicies.IsPlaybackPolicy_RelativeToNow()) {
+                time_adjustment = time_anchor_for_playback.getTimeWithUnitType(playbackPolicies.getTimeUnitIndex());
+            } else if (playbackPolicies.IsPlaybackPolicy_RelativeToPlaybackStart()) {
+                time_adjustment = playhead_start_time.getTimeWithUnitType(playbackPolicies.getTimeUnitIndex());
+            }
+            // update according to policy (clearing already taken care of above)
+            playbackMessageSequence.addSequence(
+                event->getNewPlaybackSequence().getAsJuceMidMessageSequence(),
+                time_adjustment);
+            playbackMessageSequence.updateMatchedPairs();
+        }
+    } else {
+        event = std::nullopt;
+    }
 
     if (Pinfo.hasValue() && Pinfo->getPpqPosition().hasValue()) {
         // register current time for later use
@@ -128,46 +196,90 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
 
 
         // see if any generations are ready
-        if (PPP2NMP_GenerationEvent_Que->getNumReady() > 0) {
-            auto event = PPP2NMP_GenerationEvent_Que->pop();
-            if (event.IsNewPlaybackPolicyEvent() && print_generation_policy_reception) {
-
+        if (event.has_value()) {
+            if (event->IsNewPlaybackPolicyEvent()) {
                 // set anchor time relative to which timing information of generations should be interpreted
-                playbackPolicies = event.getNewPlaybackPolicyEvent();
+                playbackPolicies = event->getNewPlaybackPolicyEvent();
+                if (playbackPolicies.shouldForceSendNoteOffs()) {
+                    for (int i = 0; i < 128; i++) {
+                        tempBuffer.addEvent(juce::MidiMessage::noteOff(1, i), 0);
+                    }
+                }
                 if (playbackPolicies.IsPlaybackPolicy_RelativeToNow()) {
                     time_anchor_for_playback = frame_now;
                 } else if (playbackPolicies.IsPlaybackPolicy_RelativeToAbsoluteZero()) {
                     time_anchor_for_playback = time_{0, 0.0f, 0.0f};
-                } else {
+                } else if (playbackPolicies.IsPlaybackPolicy_RelativeToPlaybackStart()) {
                     time_anchor_for_playback = playhead_start_time;
                 }
-                PrintMessage(" New Generation Policy Received" );
+                if (print_generation_policy_reception) { PrintMessage(" New Generation Policy Received" ); }
 
-                // check overwrite policy
+                // check overwrite policy. if
                 if (playbackPolicies.IsOverwritePolicy_DeleteAllEventsInPreviousStreamAndUseNewStream()) {
                     playbackMessageSequence.clear();
                 } else if (playbackPolicies.IsOverwritePolicy_DeleteAllEventsAfterNow()) {
-                    auto delete_start_time = frame_now.getTimeWithUnitType(playbackPolicies.getTimeUnitIndex());
+                    // print all notes in sequence before deletion
+                    std::stringstream ss;
                     for (int i = 0; i < playbackMessageSequence.getNumEvents(); i++) {
                         auto msg = playbackMessageSequence.getEventPointer(i);
-                        if (msg->message.getTimeStamp() >= delete_start_time) {
-                            playbackMessageSequence.deleteEvent(i, false);
-                        }
+                        ss << ", " << std::to_string(i) << " -> " << msg->message.getTimeStamp() << " " << msg->message.getDescription();
                     }
+                    PrintMessage("Num messages in sequence: before Delete " + std::to_string(playbackMessageSequence.getNumEvents()) );
+                    //                    PrintMessage(ss2.str());
+                    // temp sequence to hold messages to be kept
+
+                    juce::MidiMessageSequence tempSequence;
+
+                    auto delete_start_time = frame_now.getTimeWithUnitType(playbackPolicies.getTimeUnitIndex());
+                    PrintMessage("Delete Start Time: " + std::to_string(delete_start_time));
+                    for (int i = 0; i < playbackMessageSequence.getNumEvents(); i++) {
+                        PrintMessage("Checking To Delete: " + std::to_string(playbackMessageSequence.getEventPointer(i)->message.getTimeStamp()));
+                        auto msg = playbackMessageSequence.getEventPointer(i);
+                        if (msg->message.getTimeStamp() < delete_start_time) {
+                            // print contents in sequence before deletion
+                            tempSequence.addEvent(msg->message, 0);
+                        }
+                        // check if any of the note ons in the tempSequence don't have a corresponding note off
+                        // if so, add a note off at now
+                        for (int j = 0; j < tempSequence.getNumEvents(); j++) {
+                            auto msg2 = tempSequence.getEventPointer(j);
+                            if (msg2->message.isNoteOn()) {
+                                bool hasCorrespondingNoteOff = false;
+                                for (int k = 0; k < playbackMessageSequence.getNumEvents(); k++) {
+                                    auto msg3 = playbackMessageSequence.getEventPointer(k);
+                                    if (msg3->message.isNoteOff() && msg3->message.getNoteNumber() == msg2->message.getNoteNumber()) {
+                                        hasCorrespondingNoteOff = true;
+                                        break;
+                                    }
+                                }
+                                if (!hasCorrespondingNoteOff) {
+                                    tempSequence.addEvent(juce::MidiMessage::noteOff(1, msg2->message.getNoteNumber()),
+                                                          frame_now.getTimeWithUnitType(playbackPolicies.getTimeUnitIndex()) - msg2->message.getTimeStamp());
+                                }
+                            }
+                        }
+                        // tempSequence.updateMatchedPairs();
+                    }
+
+                    // swap temp sequence with playback sequence
+                    playbackMessageSequence.clear();
+                    playbackMessageSequence.swapWith(tempSequence);
+
+                    // print all notes in sequence after deletion
+                    std::stringstream ss2;
+                    for (int i = 0; i < playbackMessageSequence.getNumEvents(); i++) {
+                        auto msg = playbackMessageSequence.getEventPointer(i);
+                        ss2 << ", " << std::to_string(i) << " -> " << msg->message.getTimeStamp() << " " << msg->message.getDescription();
+                    }
+                    PrintMessage("Num messages in sequence: after Delete " + std::to_string(playbackMessageSequence.getNumEvents()) );
+                    // PrintMessage(ss2.str());
+
 
                 } else if (playbackPolicies.IsOverwritePolicy_KeepAllPreviousEvents()) {
                     /* do nothing */
                 } else {
                     assert (false && "PlaybackPolicies Overwrite Action Not Specified!");
                 }
-            }
-
-            // update midi message sequence if new one arrived
-            if (event.IsNewPlaybackSequence()) {
-                if (print_generation_stream_reception) { PrintMessage(" New Sequence of Generations Received"); }
-                // update according to policy (clearing already taken care of above)
-                playbackMessageSequence.addSequence(event.getNewPlaybackSequence().getAsJuceMidMessageSequence(), 0);
-                playbackMessageSequence.updateMatchedPairs();
             }
         }
 
@@ -177,10 +289,11 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                 // PrintMessage(std::to_string(msg->message.getTimeStamp()));
                 // PrintMessage(std::to_string(playbackPolicies.getTimeUnitIndex()));
                 auto msg_to_play = getMessageIfToBePlayed(
-                    frame_now, msg->message, buffSize, fs, *Pinfo->getBpm());
+                    frame_now, msg->message,
+                    buffSize, fs, *Pinfo->getBpm());
                 if (msg_to_play.has_value()) {
                     std::stringstream ss;
-                    ss << "Playing: " << msg_to_play->getDescription() << " at time: " << msg_to_play->getTimeStamp();
+                    ss << "Playing: " << msg->message.getDescription() << " at time: " << msg->message.getTimeStamp();
                     PrintMessage(ss.str());
                     tempBuffer.addEvent(*msg_to_play, 0);
                 }
@@ -190,53 +303,83 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
 
         midiMessages.swapWith(tempBuffer);
 
-        buffer.clear(); //
-
+        buffer.clear(); // clear buffer
     }
-
 }
 
 // checks whether the note timing (adjusted by the time anchor) is within the current buffer
 // if so, returns the number of samples from the start of the buffer to the note
 // if not, returns -1
 std::optional<juce::MidiMessage> NeuralMidiFXPluginProcessor::getMessageIfToBePlayed(
-        time_ now_, const juce::MidiMessage &msg, int buffSize, double fs,
+        time_ now_, const juce::MidiMessage &msg_, int buffSize, double fs,
         double qpm) {
-
+    auto msg = juce::MidiMessage(msg_);
+    if (msg_.getTimeStamp() <= 0) {
+        msg = msg.withTimeStamp(0.01);
+    }
+//    auto time_anchor_for_playback_in_user_unit = time_anchor_for_playback.getTimeWithUnitType(
+//        playbackPolicies.getTimeUnitIndex());
     auto now_in_user_unit = now_.getTimeWithUnitType(playbackPolicies.getTimeUnitIndex());
-    auto time_anchor_for_playback_in_user_unit = time_anchor_for_playback.getTimeWithUnitType(
-            playbackPolicies.getTimeUnitIndex());
-    auto adjusted_time = msg.getTimeStamp() + time_anchor_for_playback_in_user_unit;
 
+    double loop_len = playbackPolicies.shouldLoop();
+
+    auto msg_time = msg.getTimeStamp();
     switch (playbackPolicies.getTimeUnitIndex()) {
         case 1: {       // samples
-            auto end = now_.inSamples() + buffSize;
-            if (now_in_user_unit <= adjusted_time && adjusted_time < end) {
-                auto msg_copy = msg;
-                msg_copy.setTimeStamp(adjusted_time - now_in_user_unit);
+            auto end = now_in_user_unit + buffSize;
+            if (now_in_user_unit <= msg_time && msg_time < end) {
+                auto msg_copy = juce::MidiMessage(msg);
+                msg_copy.setTimeStamp(std::max(0.0, msg_time - now_in_user_unit));
+                if (loop_len > 0) {
+                    // add if already not in the sequence
+                    auto temp_msg = juce::MidiMessage(msg);
+                    temp_msg.addToTimeStamp(loop_len);
+                    if (!messageExistsInSequence(playbackMessageSequence, temp_msg)) {
+                        PrintMessage("Adding to sequence");
+                        playbackMessageSequence.addEvent(temp_msg, 0);
+                    }
+                }
                 return msg_copy;
             } else {
                 return {};
             }
         }
         case 2: {      // seconds
-            auto end = now_.inSeconds() + buffSize / fs;
+            auto end = now_in_user_unit + buffSize / fs;
 
-            if (now_in_user_unit <= adjusted_time && adjusted_time < end) {
-                auto msg_copy = msg;
-                auto time_diff = adjusted_time - now_in_user_unit;
-                msg_copy.setTimeStamp(std::floor(time_diff * fs));
+            if (now_in_user_unit <= msg_time && msg_time < end) {
+                auto msg_copy = juce::MidiMessage(msg);
+                auto time_diff = msg_time - now_in_user_unit;
+                msg_copy.setTimeStamp(std::max(0.0, std::floor(time_diff * fs)));
+                if (loop_len > 0) {
+                    // add if already not in the sequence
+                    auto temp_msg = juce::MidiMessage(msg);
+                    temp_msg.addToTimeStamp(loop_len);
+                    if (!messageExistsInSequence(playbackMessageSequence, temp_msg)) {
+                        PrintMessage("Adding to sequence");
+                        playbackMessageSequence.addEvent(temp_msg, 0);
+                    }
+                }
                 return msg_copy;
             } else {
                 return {};
             }
         }
         case 3: {      // QuarterNotes
-            auto end = now_.inQuarterNotes() + buffSize / fs * qpm / 60.0f;
-            if (now_in_user_unit <= adjusted_time && adjusted_time < end) {
-                auto msg_copy = msg;
-                auto time_diff = adjusted_time - now_in_user_unit;
-                msg_copy.setTimeStamp(std::floor(time_diff * fs * 60.0f / qpm));
+            auto end = now_in_user_unit + buffSize / fs * qpm / 60.0f;
+            if (now_in_user_unit <= msg_time && msg_time < end) {
+                auto msg_copy = juce::MidiMessage(msg);
+                auto time_diff = msg_time - now_in_user_unit;
+                msg_copy.setTimeStamp(std::max(0.0, std::floor(time_diff * fs * 60.0f / qpm)));
+                if (loop_len > 0) {
+                    // add if already not in the sequence
+                    auto temp_msg = juce::MidiMessage(msg);
+                    temp_msg.addToTimeStamp(loop_len);
+                    if (!messageExistsInSequence(playbackMessageSequence, temp_msg)) {
+                        PrintMessage("Before" + std::to_string(playbackMessageSequence.getNumEvents()) +" Adding to sequence after: " + std::to_string(temp_msg.getTimeStamp()));
+                        playbackMessageSequence.addEvent(temp_msg, 0);
+                    }
+                }
                 return msg_copy;
             } else {
                 return {};

@@ -51,41 +51,44 @@ struct PlaybackPolicies {
 
     void SetTimeUnitIsPPQ() { TimeUnit = 3; }
 
-    void SetOverwritePolicy_DeleteAllEventsInPreviousStreamAndUseNewStream() { OverwritePolicy = 1; }
-    void SetOverwritePolicy_DeleteAllEventsAfterNow() { OverwritePolicy = 2; }
-    void SetOverwritePolicy_KeepAllPreviousEvents() { OverwritePolicy = 3; }
+    // Deletes all previous events and uses the new stream
+    // **ForceSendNoteOffsFirst** is used to kill all notes before starting the new stream
+    // This is useful when the new stream is not a continuation of the previous stream
+    // and there is a possibility of handing note ons from the previous stream
+    void SetOverwritePolicy_DeleteAllEventsInPreviousStreamAndUseNewStream(bool ForceSendNoteOffsFirst_)
+    {
+        OverwritePolicy = 1;
+        ForceSendNoteOffsFirst = ForceSendNoteOffsFirst_;
+    }
 
+    // Deletes all events after now (i.e. all previously received generations are kept,
+    // (unless the timings of the events are after the timing at which this policy is set)
+    void SetOverwritePolicy_DeleteAllEventsAfterNow(bool ForceSendNoteOffsFirst_)
+    {
+        OverwritePolicy = 2;
+        ForceSendNoteOffsFirst = ForceSendNoteOffsFirst_;
+    }
+
+    // Keeps all previous events (i.e. generations can be played on top of each other)
+    // **ForceSendNoteOffsFirst** is used to kill all notes before appending the new stream
+    void SetOverwritePolicy_KeepAllPreviousEvents(bool ForceSendNoteOffsFirst_) {
+        OverwritePolicy = 3;
+        ForceSendNoteOffsFirst = ForceSendNoteOffsFirst_;
+    }
+
+    // previous generations are cleared after pause/stop so they can't be played again
     void SetClearGenerationsAfterPauseStop(bool enable) {
         ClearGenerationsAfterPauseStop = enable ? true : false;
     }
 
-    // sets the number of times the generations should be repeated  (if enabled)
-    // N is the number of times the generations should be repeated
-    // Time unit for T is the same as the playback policy
-    void SetRepeatNTimesAssumingDuration(bool enable, int N_, double T_) {
-        if (enable) {
-            assert(N_ > 0 && "N must be greater than 0");
-            assert(T_ > 0 && "T must be greater than 0");
-            RepeatNTimesAssumingGenerationsAreTTimeUnitsLong = true;
-            N = N_;
-            T = T_;
-        } else {
-            RepeatNTimesAssumingGenerationsAreTTimeUnitsLong = false;
-            N = -1;
-            T = -1;
-        }
-    }
-
     // sets the number of times the generations should be repeated (if enabled)
-    // T is the duration of the generations
-    void SetIndefiniteRepetitionAssumingDuration(bool enable, double T_) {
+    // LoopDuration_ is the duration of the generations
+    void LoopAssumingDuration(bool enable, double LoopDuration_) {
         if (enable) {
-            assert(T_ > 0 && "T must be greater than 0");
-            indefiniteRepetition = true;
-            T = T_;
+            assert(LoopDuration_ > 0 && "LoopDuration_ must be greater than 0");
+            LoopDuration = LoopDuration_;
         } else {
-            indefiniteRepetition = false;
-            T = -1;
+            LoopDuration = -1;
         }
     }
 
@@ -99,7 +102,6 @@ struct PlaybackPolicies {
     }
 
     // ============================================================================================================
-
     bool IsPlaybackPolicy_RelativeToNow() const { return PlaybackPolicy == 1; }
     bool IsPlaybackPolicy_RelativeToAbsoluteZero() const { return PlaybackPolicy == 2; }
     bool IsPlaybackPolicy_RelativeToPlaybackStart() const { return PlaybackPolicy == 3; }
@@ -112,8 +114,14 @@ struct PlaybackPolicies {
     bool IsOverwritePolicy_DeleteAllEventsInPreviousStreamAndUseNewStream() const { return OverwritePolicy == 1; }
     bool IsOverwritePolicy_DeleteAllEventsAfterNow() const { return OverwritePolicy == 2; }
     bool IsOverwritePolicy_KeepAllPreviousEvents() const { return OverwritePolicy == 3; }
+    bool shouldForceSendNoteOffs() const { return ForceSendNoteOffsFirst; }
 
     bool shouldClearGenerationsAfterPauseStop() const { return ClearGenerationsAfterPauseStop; }
+
+    // returns -1 if should not loop else returns the duration of the loop
+    // in the time unit specified by TimeUnit
+    double shouldLoop() const { return LoopDuration; }
+
     // ============================================================================================================
     int getPlaybackPolicyType () const { return PlaybackPolicy; }
     int getTimeUnitType () const { return TimeUnit; }
@@ -124,10 +132,8 @@ private:
     int TimeUnit{-1};
     int OverwritePolicy{-1};
     bool ClearGenerationsAfterPauseStop{false};
-    bool RepeatNTimesAssumingGenerationsAreTTimeUnitsLong{false};
-    bool indefiniteRepetition{false};
-    int N{-1};
-    double T{-1};
+    double LoopDuration{-1};
+    bool ForceSendNoteOffsFirst{false};
 };
 
 struct noteOn_ge {
