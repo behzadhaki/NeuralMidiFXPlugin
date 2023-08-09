@@ -45,7 +45,6 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
 
 //    inputPianoRoll->generateRandomMidiFile(10);
 //    outputPianoRoll->generateRandomMidiFile(10);
-    NeuralMidiFXPluginProcessorPointer_->generationsToDisplay.set_to_Last(); // this is to restore the last sequence to display after reconstructing the editor
 
     setInterceptsMouseClicks(false, true);
 
@@ -110,33 +109,24 @@ void NeuralMidiFXPluginEditor::timerCallback()
 {
     bool newContent = false;
     auto fs_ = NeuralMidiFXPluginProcessorPointer_->generationsToDisplay.getFs();
-    if (fs_.has_value())
+    if (fs_.value() != fs)
     {
-        if (fs_.value() != fs)
-        {
-            fs = fs_.value();
-            newContent = true;
-        }
+        fs = fs_.value();
+        newContent = true;
     }
 
     auto qpm_ = NeuralMidiFXPluginProcessorPointer_->generationsToDisplay.getQpm();
-    if (qpm_.has_value())
+    if (qpm_.value() != qpm)
     {
-        if (qpm_.value() != qpm)
-        {
-            qpm = qpm_.value();
-            newContent = true;
-        }
+        qpm = qpm_.value();
+        newContent = true;
     }
 
     auto playhead_pos_ = NeuralMidiFXPluginProcessorPointer_->generationsToDisplay.getPlayheadPos();
-    if (playhead_pos_.has_value())
+    if (playhead_pos_.value() != playhead_pos)
     {
-        if (playhead_pos_.value() != playhead_pos)
-        {
-            playhead_pos = playhead_pos_.value();
-            newContent = true;
-        }
+        playhead_pos = playhead_pos_.value();
+        newContent = true;
     }
 
     auto policy_ = NeuralMidiFXPluginProcessorPointer_->generationsToDisplay.getPolicy();
