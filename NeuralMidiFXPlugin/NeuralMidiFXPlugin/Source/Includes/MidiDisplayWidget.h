@@ -321,7 +321,29 @@ public:
                         }
                     }
                 }
+                cout << "Full Len: " << getLength() << endl;
                 full_repaint = true;
+            }
+        }
+
+        int ticksPerQuarterNote = 960;
+        diplayMidi.clear();
+        diplayMidi.setTicksPerQuarterNote(ticksPerQuarterNote);
+        // add content of DraggedMidi and IncomingMidi to diplayMidi
+        if (DraggedMidi.getNumTracks() > 0)
+        {
+            auto track = DraggedMidi.getTrack(0);
+            if (track != nullptr)
+            {
+                diplayMidi.addTrack(*track);
+            }
+        }
+        if (IncomingMidi.getNumTracks() > 0)
+        {
+            auto track = IncomingMidi.getTrack(0);
+            if (track != nullptr)
+            {
+                diplayMidi.addTrack(*track);
             }
         }
     }
@@ -362,16 +384,19 @@ public:
 
     double getLength() {
         int ticksPerQuarterNote = 960;
+        double len = 0;
+
         if (diplayMidi.getNumTracks() > 0)
         {
             auto track = diplayMidi.getTrack(0);
             if (track != nullptr)
             {
-                return std::max(track->getEndTime() + 4 * ticksPerQuarterNote,
-                                playhead_pos + 4 * ticksPerQuarterNote);
+                len = len + std::max(track->getEndTime() + 4 * ticksPerQuarterNote,
+                                     playhead_pos + 4 * ticksPerQuarterNote);
             }
         }
-        return 0;
+
+        return len;
     }
 
     void setLength(double length) {
@@ -602,14 +627,15 @@ public:
                             diplayMidi.addTrack(*track);
                         }
                     }
-                    if (IncomingMidi.getNumTracks() > 0)
+                    diplayMidi.clear();
+                    /*if (IncomingMidi.getNumTracks() > 0)
                     {
                         auto track = IncomingMidi.getTrack(0);
                         if (track != nullptr)
                         {
                             diplayMidi.addTrack(*track);
                         }
-                    }
+                    }*/
 
                     repaint();
 

@@ -47,6 +47,13 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
     len = std::max(double(8.0f * 960), len);
     inputPianoRoll->setLength(len);
     outputPianoRoll->setLength(len);
+
+    std::cout << "NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor() : "
+              << "inputPianoRoll->getLength() = " << inputPianoRoll->getLength()
+              << "outputPianoRoll->getLength() = " << outputPianoRoll->getLength()
+              << std::endl;
+
+
     addAndMakeVisible(inputPianoRoll.get());
     addAndMakeVisible(outputPianoRoll.get());
 
