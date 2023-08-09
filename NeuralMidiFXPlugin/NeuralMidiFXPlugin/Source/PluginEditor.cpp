@@ -38,20 +38,10 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
     outputPianoRoll = std::make_unique<OutputMidiPianoRollComponent>(
         NeuralMidiFXPluginProcessorPointer.PPP2GUI_GenerationMidiFile_Que.get());
 
-    std::cout << "NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor() : "
-              << "inputPianoRoll->getLength() = " << inputPianoRoll->getLength()
-              << "outputPianoRoll->getLength() = " << outputPianoRoll->getLength()
-              << std::endl;
-
     auto len = std::max(inputPianoRoll->getLength(), outputPianoRoll->getLength());
     len = std::max(double(8.0f * 960), len);
     inputPianoRoll->setLength(len);
     outputPianoRoll->setLength(len);
-
-    std::cout << "NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor() : "
-              << "inputPianoRoll->getLength() = " << inputPianoRoll->getLength()
-              << "outputPianoRoll->getLength() = " << outputPianoRoll->getLength()
-              << std::endl;
 
 
     addAndMakeVisible(inputPianoRoll.get());

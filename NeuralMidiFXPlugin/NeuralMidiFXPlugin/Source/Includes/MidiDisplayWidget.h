@@ -321,7 +321,6 @@ public:
                         }
                     }
                 }
-                cout << "Full Len: " << getLength() << endl;
                 full_repaint = true;
             }
         }
@@ -627,7 +626,7 @@ public:
                             diplayMidi.addTrack(*track);
                         }
                     }
-                    diplayMidi.clear();
+                    IncomingMidi.clear();
                     /*if (IncomingMidi.getNumTracks() > 0)
                     {
                         auto track = IncomingMidi.getTrack(0);
