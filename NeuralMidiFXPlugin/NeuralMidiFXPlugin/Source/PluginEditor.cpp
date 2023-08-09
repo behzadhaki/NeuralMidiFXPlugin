@@ -33,12 +33,20 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
 
     addAndMakeVisible(tabs);
 
-    inputPianoRoll = std::make_unique<MidiPianoRollComponent>(
-        false,
+    inputPianoRoll = std::make_unique<InputMidiPianoRollComponent>(
         NeuralMidiFXPluginProcessorPointer.GUI2ITP_DroppedMidiFile_Que.get());
-    outputPianoRoll = std::make_unique<MidiPianoRollComponent>(
-        true,
+    outputPianoRoll = std::make_unique<OutputMidiPianoRollComponent>(
         NeuralMidiFXPluginProcessorPointer.PPP2GUI_GenerationMidiFile_Que.get());
+
+    std::cout << "NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor() : "
+              << "inputPianoRoll->getLength() = " << inputPianoRoll->getLength()
+              << "outputPianoRoll->getLength() = " << outputPianoRoll->getLength()
+              << std::endl;
+
+    auto len = std::max(inputPianoRoll->getLength(), outputPianoRoll->getLength());
+    len = std::max(double(8.0f * 960), len);
+    inputPianoRoll->setLength(len);
+    outputPianoRoll->setLength(len);
     addAndMakeVisible(inputPianoRoll.get());
     addAndMakeVisible(outputPianoRoll.get());
 
@@ -153,9 +161,20 @@ void NeuralMidiFXPluginEditor::timerCallback()
             playhead_pos
             );
 
+
+        inputPianoRoll->displayMidiMessageSequence(
+            play_policy,
+            fs,
+            qpm,
+            playhead_pos
+            );
+
+        auto len = std::max(inputPianoRoll->getLength(), outputPianoRoll->getLength());
+        inputPianoRoll->setLength(len);
+        outputPianoRoll->setLength(len);
+
         repaint();
     }
-
 }
 
 bool NeuralMidiFXPluginEditor::isInterestedInFileDrag (const juce::StringArray& files)

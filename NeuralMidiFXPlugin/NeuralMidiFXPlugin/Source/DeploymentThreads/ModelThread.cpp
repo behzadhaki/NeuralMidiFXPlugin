@@ -58,8 +58,6 @@ bool ModelThread::deploy(bool new_model_input_received,
     auto loopStart_in_quarterNotes = realtime_playback_info.loop_start_in_ppq;
     auto loopEnd_in_quarterNotes = realtime_playback_info.loop_end_in_ppq;
     auto last_bar_pos_in_quarterNotes = realtime_playback_info.ppq_position_of_last_bar_start;
-    PrintMessage("qpm: " + std::to_string(qpm));
-    std::cout << "qpm: " << qpm << std::endl;
     // =================================================================================
 
     // =================================================================================

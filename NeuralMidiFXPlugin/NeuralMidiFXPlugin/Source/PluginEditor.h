@@ -30,8 +30,8 @@ public:
     ParameterComponent* paramComponentPtr;
     std::vector<ParameterComponent*> paramComponentVector;
 
-    unique_ptr<MidiPianoRollComponent> inputPianoRoll{nullptr};
-    unique_ptr<MidiPianoRollComponent> outputPianoRoll{nullptr};
+    unique_ptr<InputMidiPianoRollComponent> inputPianoRoll{nullptr};
+    unique_ptr<OutputMidiPianoRollComponent> outputPianoRoll{nullptr};
 
 private:
 
