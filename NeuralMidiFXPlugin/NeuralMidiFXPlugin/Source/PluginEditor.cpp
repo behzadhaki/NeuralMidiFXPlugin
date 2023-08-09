@@ -50,7 +50,6 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
     addAndMakeVisible(inputPianoRoll.get());
     addAndMakeVisible(outputPianoRoll.get());
 
-
 //    inputPianoRoll->generateRandomMidiFile(10);
 //    outputPianoRoll->generateRandomMidiFile(10);
 
@@ -116,6 +115,7 @@ void NeuralMidiFXPluginEditor::paint(juce::Graphics& g)
 void NeuralMidiFXPluginEditor::timerCallback()
 {
     bool newContent = false;
+    bool newPlayheadPos = false;
     auto fs_ = NeuralMidiFXPluginProcessorPointer_->generationsToDisplay.getFs();
     if (fs_.value() != fs)
     {
@@ -130,12 +130,6 @@ void NeuralMidiFXPluginEditor::timerCallback()
         newContent = true;
     }
 
-    auto playhead_pos_ = NeuralMidiFXPluginProcessorPointer_->generationsToDisplay.getPlayheadPos();
-    if (playhead_pos_.value() != playhead_pos)
-    {
-        playhead_pos = playhead_pos_.value();
-        newContent = true;
-    }
 
     auto policy_ = NeuralMidiFXPluginProcessorPointer_->generationsToDisplay.getPolicy();
     if (policy_.has_value())
@@ -151,30 +145,53 @@ void NeuralMidiFXPluginEditor::timerCallback()
         newContent = true;
     }
 
+    auto playhead_pos_ = NeuralMidiFXPluginProcessorPointer_->generationsToDisplay.getPlayheadPos();
+    if (playhead_pos_.value() != playhead_pos)
+    {
+        playhead_pos = playhead_pos_.value();
+        newPlayheadPos = true;
+    }
+
     if (newContent)
     {
         outputPianoRoll->displayMidiMessageSequence(
             sequence_to_display,
             play_policy,
             fs,
-            qpm,
-            playhead_pos
+            qpm
             );
 
 
-        inputPianoRoll->displayMidiMessageSequence(
-            play_policy,
-            fs,
-            qpm,
-            playhead_pos
-            );
+//        inputPianoRoll->displayMidiMessageSequence(
+//            play_policy,
+//            fs,
+//            qpm,
+//            playhead_pos
+//            );
 
+//        auto len = std::max(inputPianoRoll->getLength(), outputPianoRoll->getLength());
+//        inputPianoRoll->setLength(len);
+//        outputPianoRoll->setLength(len);
+//
+//        repaint();
+    }
+
+    if (newPlayheadPos)
+    {
+        inputPianoRoll->displayMidiMessageSequence(playhead_pos);
+        outputPianoRoll->displayMidiMessageSequence(playhead_pos);
+    }
+
+    if (newContent || newPlayheadPos)
+    {
         auto len = std::max(inputPianoRoll->getLength(), outputPianoRoll->getLength());
         inputPianoRoll->setLength(len);
         outputPianoRoll->setLength(len);
-
+//        inputPianoRoll->repaint();
+//        outputPianoRoll->repaint();
         repaint();
     }
+
 }
 
 bool NeuralMidiFXPluginEditor::isInterestedInFileDrag (const juce::StringArray& files)
