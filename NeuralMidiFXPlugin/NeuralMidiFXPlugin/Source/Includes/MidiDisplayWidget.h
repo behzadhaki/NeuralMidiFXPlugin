@@ -212,7 +212,7 @@ private:
     double disp_length{8};
 
     std::set<int> uniquePitches;
-    std::map<int, std::vector<std::pair<float, float>>> notePositions; // Maps note numbers to positions
+    std::map<int, std::vector<std::tuple<float, float, float>>> notePositions; // Maps note numbers to positions and velocity
     bool midiDataChanged{false};
 
     void calculateNotePositions()
@@ -251,7 +251,8 @@ private:
                             }
                         }
 
-                        notePositions[noteNumber].push_back(std::make_pair(x, length));
+                        float velocity = event->message.getFloatVelocity(); // Add velocity
+                        notePositions[noteNumber].push_back(std::make_tuple(x, length, velocity));
                     }
                 }
             }
@@ -270,11 +271,13 @@ private:
 
             for (const auto& pos : notePositions[pitch])
             {
-                float x = pos.first;
-                float length = pos.second;
+                float x = std::get<0>(pos);
+                float length = std::get<1>(pos);
+                float velocity = std::get<2>(pos); // Get velocity
 
                 // Set color according to the velocity
-                g.setColour(noteColour);
+                auto color = noteColour.withAlpha(velocity); // Set alpha to velocity
+                g.setColour(color);
                 g.fillRect(juce::Rectangle<float>(x, y, length, rowHeight));
 
                 // Draw border around the note
@@ -427,85 +430,6 @@ public:
     {
         IncomingMidi = juce::MidiFile();
         repaint();
-    }
-
-    void calculateNotePositions()
-    {
-        uniquePitches.clear();
-        notePositions.clear();
-
-        auto processTrack = [&](const juce::MidiMessageSequence& track) {
-            for (int i = 0; i < track.getNumEvents(); ++i)
-            {
-                auto event = track.getEventPointer(i);
-                if (event != nullptr && event->message.isNoteOn())
-                {
-                    int noteNumber = event->message.getNoteNumber();
-                    uniquePitches.insert(noteNumber);
-
-                    float x = float(event->message.getTimeStamp() / disp_length) *
-                              (float)getWidth();
-
-                    float length = 0;
-                    for (int j = i + 1; j < track.getNumEvents(); ++j)
-                    {
-                        auto offEvent = track.getEventPointer(j);
-                        if (offEvent != nullptr && offEvent->message.isNoteOff() &&
-                            offEvent->message.getNoteNumber() == noteNumber)
-                        {
-                            double noteLength = offEvent->message.getTimeStamp() -
-                                                event->message.getTimeStamp();
-                            length = float(noteLength / disp_length) *
-                                     (float)getWidth();
-                            break;
-                        }
-                    }
-
-                    notePositions[noteNumber].push_back(std::make_pair(x, length));
-                }
-            }
-        };
-
-        if (DraggedMidi.getNumTracks() > 0)
-        {
-            processTrack(*DraggedMidi.getTrack(0));
-        }
-
-        if (IncomingMidi.getNumTracks() > 0)
-        {
-            processTrack(*IncomingMidi.getTrack(0));
-        }
-    }
-
-    void drawNotes(juce::Graphics& g, const juce::Colour& noteColour, const juce::MidiMessageSequence& midi)
-    {
-        int numRows = uniquePitches.size();
-        float rowHeight = (float)getHeight() / (float)numRows;
-        g.setFont(juce::Font(10.0f));
-
-        for (const auto& pitch : uniquePitches)
-        {
-            float y = float(numRows - 1 - std::distance(uniquePitches.begin(), uniquePitches.find(pitch))) * rowHeight;
-
-            for (const auto& pos : notePositions[pitch])
-            {
-                float x = pos.first;
-                float length = pos.second;
-
-                // Set color according to the velocity
-                g.setColour(noteColour);
-                g.fillRect(juce::Rectangle<float>(x, y, length, rowHeight));
-
-                // Draw border around the note
-                g.setColour(juce::Colours::black);
-                g.drawRect(juce::Rectangle<float>(x, y, length, rowHeight), 1);
-
-                // Draw label for the pitch class and octave
-//                juce::String noteLabel = juce::MidiMessage::getMidiNoteName(pitch, true, true, 3);
-//                g.setColour(juce::Colours::black);
-//                g.drawText(noteLabel, x, y, length, rowHeight, juce::Justification::centred, true);
-            }
-        }
     }
 
     // draws midi notes on the component (piano roll)
@@ -681,7 +605,85 @@ private:
     double disp_length{8};
 
     std::set<int> uniquePitches;
-    std::map<int, std::vector<std::pair<float, float>>> notePositions; // Maps note numbers to positions
+    std::map<int, std::vector<std::tuple<float, float, float>>> notePositions; // Maps note numbers to positions and velocity
     bool full_repaint {false};
 
+    void calculateNotePositions()
+    {
+        uniquePitches.clear();
+        notePositions.clear();
+
+        auto processTrack = [&](const juce::MidiMessageSequence& track) {
+            for (int i = 0; i < track.getNumEvents(); ++i)
+            {
+                auto event = track.getEventPointer(i);
+                if (event != nullptr && event->message.isNoteOn())
+                {
+                    int noteNumber = event->message.getNoteNumber();
+                    uniquePitches.insert(noteNumber);
+
+                    float x = float(event->message.getTimeStamp() / disp_length) *
+                              (float)getWidth();
+
+                    float length = 0;
+                    for (int j = i + 1; j < track.getNumEvents(); ++j)
+                    {
+                        auto offEvent = track.getEventPointer(j);
+                        if (offEvent != nullptr && offEvent->message.isNoteOff() &&
+                            offEvent->message.getNoteNumber() == noteNumber)
+                        {
+                            double noteLength = offEvent->message.getTimeStamp() -
+                                                event->message.getTimeStamp();
+                            length = float(noteLength / disp_length) *
+                                     (float)getWidth();
+                            break;
+                        }
+                    }
+
+                    float velocity = event->message.getFloatVelocity();
+
+                    notePositions[noteNumber].emplace_back(x, length, velocity);
+                }
+            }
+        };
+
+        if (DraggedMidi.getNumTracks() > 0)
+        {
+            processTrack(*DraggedMidi.getTrack(0));
+        }
+
+        if (IncomingMidi.getNumTracks() > 0)
+        {
+            processTrack(*IncomingMidi.getTrack(0));
+        }
+    }
+
+    void drawNotes(juce::Graphics& g, const juce::Colour& noteColour, const juce::MidiMessageSequence& midi)
+    {
+        int numRows = uniquePitches.size();
+        float rowHeight = (float)getHeight() / (float)numRows;
+        g.setFont(juce::Font(10.0f));
+
+        for (const auto& pitch : uniquePitches)
+        {
+            float y = float(numRows - 1 - std::distance(uniquePitches.begin(), uniquePitches.find(pitch))) * rowHeight;
+
+            for (const auto& [x, length, velocity] : notePositions[pitch])
+            {
+                // Set color according to the velocity
+                auto color = noteColour.withAlpha(velocity);
+                g.setColour(color);
+                g.fillRect(juce::Rectangle<float>(x, y, length, rowHeight));
+
+                // Draw border around the note
+                g.setColour(juce::Colours::black);
+                g.drawRect(juce::Rectangle<float>(x, y, length, rowHeight), 1);
+
+                // Draw label for the pitch class and octave
+                juce::String noteLabel = juce::MidiMessage::getMidiNoteName(pitch, true, true, 3);
+                g.setColour(juce::Colours::black);
+                g.drawText(noteLabel, x, y, length, rowHeight, juce::Justification::centred, true);
+            }
+        }
+    }
 };
