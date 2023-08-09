@@ -196,12 +196,12 @@ public:
                                 ), 1);
 
                         // Draw label for the pitch class and octave
-                        juce::String noteLabel = MidiMessage::getMidiNoteName(
-                            noteNumber, true,
-                            true, 3); // 3 is the default middle C octave
-                        g.setColour(juce::Colours::black);
-                        g.drawText(noteLabel, x, y, length, rowHeight,
-                                   juce::Justification::centred, true);
+//                        juce::String noteLabel = MidiMessage::getMidiNoteName(
+//                            noteNumber, true,
+//                            true, 3); // 3 is the default middle C octave
+//                        g.setColour(juce::Colours::black);
+//                        g.drawText(noteLabel, x, y, length, rowHeight,
+//                                   juce::Justification::centred, true);
                     }
                 }
             }
@@ -343,6 +343,7 @@ public:
 
     void setLength(double length) {
         disp_length = length;
+        full_repaint = true;
         repaint();
     }
 
@@ -373,7 +374,7 @@ public:
 //        }
         playhead_pos = playhead_pos_quarter_notes * ticksPerQuarterNote;
 //        DraggedMidi.addTrack(sequence);
-
+        full_repaint = false;
         repaint();
     }
 
@@ -381,6 +382,85 @@ public:
     {
         IncomingMidi = juce::MidiFile();
         repaint();
+    }
+
+    void calculateNotePositions()
+    {
+        uniquePitches.clear();
+        notePositions.clear();
+
+        auto processTrack = [&](const juce::MidiMessageSequence& track) {
+            for (int i = 0; i < track.getNumEvents(); ++i)
+            {
+                auto event = track.getEventPointer(i);
+                if (event != nullptr && event->message.isNoteOn())
+                {
+                    int noteNumber = event->message.getNoteNumber();
+                    uniquePitches.insert(noteNumber);
+
+                    float x = float(event->message.getTimeStamp() / disp_length) *
+                              (float)getWidth();
+
+                    float length = 0;
+                    for (int j = i + 1; j < track.getNumEvents(); ++j)
+                    {
+                        auto offEvent = track.getEventPointer(j);
+                        if (offEvent != nullptr && offEvent->message.isNoteOff() &&
+                            offEvent->message.getNoteNumber() == noteNumber)
+                        {
+                            double noteLength = offEvent->message.getTimeStamp() -
+                                                event->message.getTimeStamp();
+                            length = float(noteLength / disp_length) *
+                                     (float)getWidth();
+                            break;
+                        }
+                    }
+
+                    notePositions[noteNumber].push_back(std::make_pair(x, length));
+                }
+            }
+        };
+
+        if (DraggedMidi.getNumTracks() > 0)
+        {
+            processTrack(*DraggedMidi.getTrack(0));
+        }
+
+        if (IncomingMidi.getNumTracks() > 0)
+        {
+            processTrack(*IncomingMidi.getTrack(0));
+        }
+    }
+
+    void drawNotes(juce::Graphics& g, const juce::Colour& noteColour, const juce::MidiMessageSequence& midi)
+    {
+        int numRows = uniquePitches.size();
+        float rowHeight = (float)getHeight() / (float)numRows;
+        g.setFont(juce::Font(10.0f));
+
+        for (const auto& pitch : uniquePitches)
+        {
+            float y = float(numRows - 1 - std::distance(uniquePitches.begin(), uniquePitches.find(pitch))) * rowHeight;
+
+            for (const auto& pos : notePositions[pitch])
+            {
+                float x = pos.first;
+                float length = pos.second;
+
+                // Set color according to the velocity
+                g.setColour(noteColour);
+                g.fillRect(juce::Rectangle<float>(x, y, length, rowHeight));
+
+                // Draw border around the note
+                g.setColour(juce::Colours::black);
+                g.drawRect(juce::Rectangle<float>(x, y, length, rowHeight), 1);
+
+                // Draw label for the pitch class and octave
+//                juce::String noteLabel = juce::MidiMessage::getMidiNoteName(pitch, true, true, 3);
+//                g.setColour(juce::Colours::black);
+//                g.drawText(noteLabel, x, y, length, rowHeight, juce::Justification::centred, true);
+            }
+        }
     }
 
     // draws midi notes on the component (piano roll)
@@ -397,171 +477,24 @@ public:
         g.setFont(14.0f); // Font size
         g.drawText(incomingLabel, getWidth() - 120, 0, 120, 20, juce::Justification::right);
 
-        int ticksPerQuarterNote = 960;
-
-        std::set<int> uniquePitches;
-
-
-        if (DraggedMidi.getNumTracks() > 0)
+        if (full_repaint) // You need to define and update this flag
         {
-            auto track = DraggedMidi.getTrack(0);
-            if (track != nullptr)
-            {
-                // Find unique pitches in the track
-                for (int i = 0; i < track->getNumEvents(); ++i)
-                {
-                    auto event = track->getEventPointer(i);
-                    if (event != nullptr && event->message.isNoteOn())
-                    {
-                        uniquePitches.insert(event->message.getNoteNumber());
-                    }
-                }
-
-                int numRows = uniquePitches.size(); // Number of unique pitch values
-                float rowHeight = (float)getHeight() / (float)numRows;
-
-
-                // Set font size for the labels
-                g.setFont(juce::Font(10.0f)); // 10.0f is the font size, you can adjust as needed
-
-                for (int i = 0; i < track->getNumEvents(); ++i)
-                {
-                    auto event = track->getEventPointer(i);
-                    if (event != nullptr && event->message.isNoteOn())
-                    {
-                        int noteNumber = event->message.getNoteNumber();
-
-                        float y = float(numRows - 1 - std::distance(uniquePitches.begin(), uniquePitches.find(noteNumber))) * rowHeight;
-                        float x = float(event->message.getTimeStamp() / disp_length) *
-                                  (float)getWidth();
-
-                        // Add the corresponding "note off" event
-                        float length = 0;
-                        for (int j = i + 1; j < track->getNumEvents(); ++j)
-                        {
-                            auto offEvent = track->getEventPointer(j);
-                            if (offEvent != nullptr && offEvent->message.isNoteOff() &&
-                                offEvent->message.getNoteNumber() == noteNumber)
-                            {
-                                double noteLength = offEvent->message.getTimeStamp() -
-                                                    event->message.getTimeStamp();
-                                length = float(noteLength / disp_length) *
-                                         (float)getWidth();
-                                break;
-                            }
-                        }
-
-                        // Set color according to the velocity
-                        float velocity = event->message.getFloatVelocity();
-
-                        auto color = DraggedNoteColour.withAlpha(velocity);
-                        g.setColour(color);
-                        g.fillRect(juce::Rectangle<float>(
-                            x, y, length, rowHeight));
-
-                        // Draw border around the note
-                        g.setColour(juce::Colours::black);
-                        g.drawRect(
-                            juce::Rectangle<float>(
-                                x, y, length, rowHeight
-                                ), 1);
-
-                        // Draw label for the pitch class and octave
-                        juce::String noteLabel = MidiMessage::getMidiNoteName(
-                            noteNumber, true,
-                            true, 3); // 3 is the default middle C octave
-                        g.setColour(juce::Colours::black);
-                        g.drawText(noteLabel, x, y, length, rowHeight,
-                                   juce::Justification::centred, true);
-                    }
-                }
-            }
+            cout << "full_repaint = true" << endl;
+            calculateNotePositions();
         }
 
-        if (IncomingMidi.getNumTracks() > 0)
-        {
-            auto track = IncomingMidi.getTrack(0);
-            if (track != nullptr)
-            {
-                // Find unique pitches in the track
-                for (int i = 0; i < track->getNumEvents(); ++i)
-                {
-                    auto event = track->getEventPointer(i);
-                    if (event != nullptr && event->message.isNoteOn())
-                    {
-                        uniquePitches.insert(event->message.getNoteNumber());
-                    }
-                }
-
-                int numRows = uniquePitches.size(); // Number of unique pitch values
-                float rowHeight = (float)getHeight() / (float)numRows;
-
-
-                // Set font size for the labels
-                g.setFont(juce::Font(10.0f)); // 10.0f is the font size, you can adjust as needed
-
-                for (int i = 0; i < track->getNumEvents(); ++i)
-                {
-                    auto event = track->getEventPointer(i);
-                    if (event != nullptr && event->message.isNoteOn())
-                    {
-                        int noteNumber = event->message.getNoteNumber();
-
-                        float y = float(numRows - 1 - std::distance(uniquePitches.begin(), uniquePitches.find(noteNumber))) * rowHeight;
-                        float x = float(event->message.getTimeStamp() / disp_length) *
-                                  (float)getWidth();
-
-                        // Add the corresponding "note off" event
-                        float length = 0;
-                        for (int j = i + 1; j < track->getNumEvents(); ++j)
-                        {
-                            auto offEvent = track->getEventPointer(j);
-                            if (offEvent != nullptr && offEvent->message.isNoteOff() &&
-                                offEvent->message.getNoteNumber() == noteNumber)
-                            {
-                                double noteLength = offEvent->message.getTimeStamp() -
-                                                    event->message.getTimeStamp();
-                                length = float(noteLength / disp_length) *
-                                         (float)getWidth();
-                                break;
-                            }
-                        }
-
-                        // Set color according to the velocity
-                        float velocity = event->message.getFloatVelocity();
-
-                        auto color = IncomingNoteColour.withAlpha(velocity);
-                        g.setColour(color);
-                        g.fillRect(juce::Rectangle<float>(
-                            x, y, length, rowHeight));
-
-                        // Draw border around the note
-                        g.setColour(juce::Colours::black);
-                        g.drawRect(
-                            juce::Rectangle<float>(
-                                x, y, length, rowHeight
-                                ), 1);
-
-                        // Draw label for the pitch class and octave
-                        juce::String noteLabel = MidiMessage::getMidiNoteName(
-                            noteNumber, true,
-                            true, 3); // 3 is the default middle C octave
-                        g.setColour(juce::Colours::black);
-                        g.drawText(noteLabel, x, y, length, rowHeight,
-                                   juce::Justification::centred, true);
-                    }
-                }
-            }
-        }
+        drawNotes(g, DraggedNoteColour, *DraggedMidi.getTrack(0));
+        drawNotes(g, IncomingNoteColour, *IncomingMidi.getTrack(0));
 
         // Draw playhead
         if (playhead_pos >= 0)
         {
             g.setColour(juce::Colours::red);
-            auto x = playhead_pos / disp_length *
-                     (float)getWidth();
+            auto x = playhead_pos / disp_length * (float)getWidth();
             g.drawLine(x, 0, x, getHeight(), 2);
         }
+
+        full_repaint = false;
     }
 
     // call back function for drag and drop out of the component
@@ -607,6 +540,7 @@ public:
         {
             if (DraggedMidi.readFrom(*stream))
             {
+                full_repaint = true;
                 // Successfully read the MIDI file, so repaint the component
 
                 // get the start time of the first note
@@ -700,5 +634,9 @@ private:
     LockFreeQueue<juce::MidiFile, 4>* MidiQue{};
     double playhead_pos{-1};
     double disp_length{8};
+
+    std::set<int> uniquePitches;
+    std::map<int, std::vector<std::pair<float, float>>> notePositions; // Maps note numbers to positions
+    bool full_repaint {false};
 
 };
