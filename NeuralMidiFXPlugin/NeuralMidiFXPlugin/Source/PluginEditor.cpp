@@ -3,6 +3,22 @@
 #include "DeploymentSettings/GuiAndParams.h"
 
 
+inline double mapToLoopRange(double value, double loopStart, double loopEnd) {
+
+    double loopDuration = loopEnd - loopStart;
+
+    // Compute the offset relative to the loop start
+    double offset = fmod(value - loopStart, loopDuration);
+
+    // Handle negative values if 'value' is less than 'loopStart'
+    if (offset < 0) offset += loopDuration;
+
+    // Add the offset to the loop start to get the mapped value
+    double mappedValue = loopStart + offset;
+
+    return mappedValue;
+}
+
 NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& NeuralMidiFXPluginProcessorPointer)
     : AudioProcessorEditor(&NeuralMidiFXPluginProcessorPointer),
     tabs (juce::TabbedButtonBar::Orientation::TabsAtTop)
@@ -122,6 +138,7 @@ void NeuralMidiFXPluginEditor::paint(juce::Graphics& g)
 
 void NeuralMidiFXPluginEditor::timerCallback()
 {
+
     bool newContent = false;
     bool newPlayheadPos = false;
     auto fs_ = NeuralMidiFXPluginProcessorPointer_->generationsToDisplay.getFs();
@@ -144,6 +161,18 @@ void NeuralMidiFXPluginEditor::timerCallback()
     {
         play_policy = policy_.value();
         newContent = true;
+
+        if (policy_->getLoopDuration() > 0) {
+            NeuralMidiFXPluginProcessorPointer_->playbckAnchorMutex.lock();
+            LoopStart = NeuralMidiFXPluginProcessorPointer_->TimeAnchor.inQuarterNotes();
+            NeuralMidiFXPluginProcessorPointer_->playbckAnchorMutex.unlock();
+            LoopEnd = LoopStart + policy_->getLoopDuration();
+            LoopingEnabled = true;
+        } else {
+            LoopingEnabled = false;
+            LoopStart = 0;
+            LoopEnd = 0;
+        }
     }
 
     auto sequence_to_display_ = NeuralMidiFXPluginProcessorPointer_->generationsToDisplay.getSequence();
@@ -162,9 +191,7 @@ void NeuralMidiFXPluginEditor::timerCallback()
 
     if (NMP2GUI_IncomingMessageSequence->getNumReady() > 0)
     {
-        cout << "NMP2GUI_IncomingMessageSequence->getNumReady() = " << NMP2GUI_IncomingMessageSequence->getNumReady() << endl;
         incoming_sequence = NMP2GUI_IncomingMessageSequence->pop();
-        cout << "incoming_sequence.getNumEvents() = " << incoming_sequence.getNumEvents() << endl;
         if (incoming_sequence.getNumEvents() > 0)
         {
             cout << incoming_sequence.getEventPointer(0)->message.getDescription() << endl;
@@ -175,26 +202,46 @@ void NeuralMidiFXPluginEditor::timerCallback()
 
     if (newContent)
     {
-        outputPianoRoll->displayMidiMessageSequence(
-            sequence_to_display,
-            play_policy,
-            fs,
-            qpm
+        if (LoopingEnabled) {
+            outputPianoRoll->displayLoopedMidiMessageSequence(
+                sequence_to_display,
+                play_policy,
+                fs,
+                qpm,
+                LoopStart,
+                LoopEnd
             );
+        } else {
+            outputPianoRoll->displayMidiMessageSequence(
+                sequence_to_display,
+                play_policy,
+                fs,
+                qpm
+            );
+        }
     }
 
     if (newPlayheadPos)
     {
         inputPianoRoll->displayMidiMessageSequence(playhead_pos);
-        outputPianoRoll->displayMidiMessageSequence(playhead_pos);
+        if (LoopingEnabled) {
+            auto adjusted_playhead_pos = mapToLoopRange(playhead_pos, LoopStart, LoopEnd);
+            outputPianoRoll->displayMidiMessageSequence(adjusted_playhead_pos);
+        } else {
+            outputPianoRoll->displayMidiMessageSequence(playhead_pos);
+        }
     }
 
     if (newContent || newPlayheadPos)
     {
+
         auto len = std::max(inputPianoRoll->getLength(), outputPianoRoll->getLength());
         inputPianoRoll->setLength(len);
+        if (LoopingEnabled) {
+           len = std::max(outputPianoRoll->getMidiLength(), LoopEnd * 960);
+        }
         outputPianoRoll->setLength(len);
-      inputPianoRoll->repaint();
+        inputPianoRoll->repaint();
       outputPianoRoll->repaint();
         repaint();
     }

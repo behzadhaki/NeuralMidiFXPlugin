@@ -71,24 +71,31 @@ namespace UIObjects {
         // set following to true
         // If active, the content of the midi file will be visualized in the
         // MidiInVisualizer and also be provided to you in the InputTensorPreparatorThread
-        const bool allowToDragInMidi = true;
+        const bool allowToDragInMidi = false;
 
         // if you want to visualize notes received in real-time from host
         // set following to true
         const bool visualizeIncomingMidiFromHost = true;
         // if playhead is manually moved backward, do you want to delete all the
         // previously visualized notes received from host?
-        const bool deletePreviousIncomingMidiMessagesOnBackwardPlayhead = true;
+        const bool deletePreviousIncomingMidiMessagesOnBackwardPlayhead = false;
         // if playback is stopped, do you want to delete all the previously
         // visualized notes received from host?
-        const bool deletePreviousIncomingMidiMessagesOnRestart = true;
+        const bool deletePreviousIncomingMidiMessagesOnRestart = false;
     }
 
-    namespace GenerationVisualizer {
+    namespace PlaybackSequenceVisualizer {
         // if you need the widget used for visualizing generated midi notes
         // set following to true
-        // The content here visualizes the playbackSequence in the PlaybackPreparatorThread
+        // The content here visualizes the playbackSequence as it is at any given time
+        // (remember that playbackSequence can be changed by the user within the
+        // PlaybackPreparatorThread)
         const bool enable = true;
+
+        // if you want to allow the user to drag out the visualized content,
+        // set following to true
+        const bool allowToDragOutAsMidi = false;
     }
+
 
 }

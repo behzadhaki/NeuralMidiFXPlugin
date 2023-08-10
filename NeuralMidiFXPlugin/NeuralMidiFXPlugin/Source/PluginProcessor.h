@@ -134,6 +134,10 @@ public:
 
     // mutex protected structures for interacting with the GUI
     GenerationsToDisplay generationsToDisplay{};
+    mutex playbckAnchorMutex;
+    time_ TimeAnchor;
+    bool shouldSendTimeAnchorToGUI{false};
+
 private:
     // =========  Queues for communicating Between the main threads in processor  ===============
 

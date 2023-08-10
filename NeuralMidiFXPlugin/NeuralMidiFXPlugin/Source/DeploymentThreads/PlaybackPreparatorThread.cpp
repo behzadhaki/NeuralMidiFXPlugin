@@ -106,7 +106,7 @@ std::pair<bool, bool> PlaybackPreparatorThread::deploy(bool new_model_output_rec
      *
      *    - Additional Info:
      *      1. Clear generations after pause/stop
-     *      2. Repeat N times Assuming Generartions are T Time Units Long
+     *      2. Loop Generations indefinitely until new one received (loop start at Now, 0, or playback start)
      *
      */
 
@@ -127,14 +127,13 @@ std::pair<bool, bool> PlaybackPreparatorThread::deploy(bool new_model_output_rec
         // playbackPolicy.SetTimeUnitIsAudioSamples(); // or
 
         bool forceSendNoteOffsFirst{true};
-        playbackPolicy.SetOverwritePolicy_DeleteAllEventsInPreviousStreamAndUseNewStream(forceSendNoteOffsFirst); // or
-        // playbackPolicy.SetOverwritePolicy_DeleteAllEventsAfterNow(forceSendNoteOffsFirst); // or
+        // playbackPolicy.SetOverwritePolicy_DeleteAllEventsInPreviousStreamAndUseNewStream(forceSendNoteOffsFirst); // or
+        playbackPolicy.SetOverwritePolicy_DeleteAllEventsAfterNow(forceSendNoteOffsFirst); // or
         // playbackPolicy.SetOverwritePolicy_KeepAllPreviousEvents(forceSendNoteOffsFirst); // or
 
-        playbackPolicy.SetClearGenerationsAfterPauseStop(false); //
-        /*playbackPolicy.enableLooping(false,
-                                     4); // Requires further implementation (debugging)*/
-
+//        playbackPolicy.SetClearGenerationsAfterPauseStop(false); //
+//        playbackPolicy.ActivateLooping(4);
+        playbackPolicy.DisableLooping();
         newPlaybackPolicyShouldBeSent = true;
 
         // 2. ---- Update Playback Sequence -----
@@ -146,7 +145,7 @@ std::pair<bool, bool> PlaybackPreparatorThread::deploy(bool new_model_output_rec
         int note = rand() % 64;
         float velocity{0.3f};
         double timestamp{0};
-        double duration{1};
+        double duration{44100};
 
         // add noteOn Offs (time stamp shifted by the slider value)
         playbackSequence.addNoteOn(channel, note, velocity,

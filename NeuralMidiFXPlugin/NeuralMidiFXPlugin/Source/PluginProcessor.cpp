@@ -44,6 +44,22 @@ inline bool messageExistsInSequence(const MidiMessageSequence& sequence, const M
     return false;
 }
 
+inline double mapToLoopRange(double value, double loopStart, double loopEnd) {
+
+    double loopDuration = loopEnd - loopStart;
+
+    // Compute the offset relative to the loop start
+    double offset = fmod(value - loopStart, loopDuration);
+
+    // Handle negative values if 'value' is less than 'loopStart'
+    if (offset < 0) offset += loopDuration;
+
+    // Add the offset to the loop start to get the mapped value
+    double mappedValue = loopStart + offset;
+
+    return mappedValue;
+}
+
 NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
         *this, nullptr, "PARAMETERS", createParameterLayout()) {
 
@@ -201,6 +217,15 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         // Send received events from host to ITP thread
         sendReceivedInputsAsEvents(midiMessages, Pinfo, fs, buffSize);
 
+        // retry sending time anchor to GUI if mutex was locked last time
+        if (shouldSendTimeAnchorToGUI) {
+            if (playbckAnchorMutex.try_lock())
+            {
+                TimeAnchor = time_anchor_for_playback;
+                playbckAnchorMutex.unlock();
+                shouldSendTimeAnchorToGUI = false;
+            }
+        }
 
         // see if any generations are ready
         if (event.has_value()) {
@@ -221,6 +246,11 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                 } else if (playbackPolicies.IsPlaybackPolicy_RelativeToPlaybackStart()) {
                     time_anchor_for_playback = playhead_start_time;
                 }
+
+                // update for editor use for looping mode visualization
+                shouldSendTimeAnchorToGUI = true;
+
+
                 if (print_generation_policy_reception) { PrintMessage(" New Generation Policy Received" ); }
 
                 // check overwrite policy. if
@@ -321,56 +351,54 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
 // if so, returns the number of samples from the start of the buffer to the note
 // if not, returns -1
 std::optional<juce::MidiMessage> NeuralMidiFXPluginProcessor::getMessageIfToBePlayed(
-        time_ now_, const juce::MidiMessage &msg_, int buffSize, double fs,
-        double qpm) {
+    time_ now_, const juce::MidiMessage &msg_, int buffSize, double fs,
+    double qpm) {
+
     auto msg = juce::MidiMessage(msg_);
     if (msg_.getTimeStamp() <= 0) {
         msg = msg.withTimeStamp(0.01);
     }
-//    auto time_anchor_for_playback_in_user_unit = time_anchor_for_playback.getTimeWithUnitType(
-//        playbackPolicies.getTimeUnitIndex());
     auto now_in_user_unit = now_.getTimeWithUnitType(playbackPolicies.getTimeUnitIndex());
-
-    // double loop_len = playbackPolicies.shouldLoop();
-
     auto msg_time = msg.getTimeStamp();
-    switch (playbackPolicies.getTimeUnitIndex()) {
-        case 1: {       // samples
-            auto end = now_in_user_unit + buffSize;
-            if (now_in_user_unit <= msg_time && msg_time < end) {
-                auto msg_copy = juce::MidiMessage(msg);
-                msg_copy.setTimeStamp(std::max(0.0, msg_time - now_in_user_unit));
-                return msg_copy;
-            } else {
-                return {};
-            }
-        }
-        case 2: {      // seconds
-            auto end = now_in_user_unit + buffSize / fs;
 
-            if (now_in_user_unit <= msg_time && msg_time < end) {
-                auto msg_copy = juce::MidiMessage(msg);
-                auto time_diff = msg_time - now_in_user_unit;
-                msg_copy.setTimeStamp(std::max(0.0, std::floor(time_diff * fs)));
-                return msg_copy;
-            } else {
-                return {};
-            }
-        }
-        case 3: {      // QuarterNotes
-            auto end = now_in_user_unit + buffSize / fs * qpm / 60.0f;
-            if (now_in_user_unit <= msg_time && msg_time < end) {
-                auto msg_copy = juce::MidiMessage(msg);
-                auto time_diff = msg_time - now_in_user_unit;
-                msg_copy.setTimeStamp(std::max(0.0, std::floor(time_diff * fs * 60.0f / qpm)));
-                return msg_copy;
-            } else {
-                return {};
-            }
-        }
+    double end = 0;
+    double adjustment_factor = 1;
 
+    if (playbackPolicies.getLoopDuration() > 0) {
+        auto loop_start = time_anchor_for_playback.getTimeWithUnitType(
+            playbackPolicies.getTimeUnitIndex());
+        auto loop_end = loop_start + playbackPolicies.getLoopDuration();
+        auto now_ppq_mapped = now_.inQuarterNotes();
+        now_ppq_mapped = mapToLoopRange(now_ppq_mapped, loop_start, loop_end);
+        now_in_user_unit = now_ppq_mapped / adjustment_factor;
     }
+
+    switch (playbackPolicies.getTimeUnitIndex()) {
+        case 1: // samples
+            end = now_in_user_unit + buffSize;
+            break;
+        case 2: // seconds
+            end = now_in_user_unit + buffSize / fs;
+            adjustment_factor = fs;
+            break;
+        case 3: // QuarterNotes
+            end = now_in_user_unit + buffSize / fs * qpm / 60.0f;
+            adjustment_factor = fs * 60.0f / qpm;
+            break;
+        default: // Unknown index
+            return {};
+    }
+
+    if (now_in_user_unit <= msg_time && msg_time < end) {
+        auto time_diff = msg_time - now_in_user_unit;
+        auto msg_copy = juce::MidiMessage(msg);
+        msg_copy.setTimeStamp(std::max(0.0, std::floor(time_diff * adjustment_factor)));
+        return msg_copy;
+    }
+
+    return {};
 }
+
 
 void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
         MidiBuffer &midiMessages, const Optional<AudioPlayHead::PositionInfo> &Pinfo,
@@ -410,7 +438,8 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
                 last_frame_meta_data = frame_meta_data;     // reset last frame meta data
 
                 // clear playback sequence if playbackpolicy specifies so
-                if (playbackPolicies.getShouldClearGenerationsAfterPauseStop()) {
+                if (playbackPolicies.getShouldClearGenerationsAfterPauseStop() &&
+                    UIObjects::MidiInVisualizer::deletePreviousIncomingMidiMessagesOnRestart) {
                     PrintMessage("Clearing Generations");
                     playbackMessageSequence.clear();
                 }
@@ -436,7 +465,7 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
                 // if playhead moved manually backward clear all events after now
                 if (frame_meta_data.Time().inQuarterNotes() < last_frame_meta_data.Time().inQuarterNotes())
                 {
-                    if (false) { // todo add flag to settings file for this
+                    if (UIObjects::MidiInVisualizer::deletePreviousIncomingMidiMessagesOnBackwardPlayhead) { // todo add flag to settings file for this
                         auto incoming_messages_sequence_temp = juce::MidiMessageSequence();
                         for (int i = 0; i < incoming_messages_sequence.getNumEvents(); i++) {
                             auto msg = incoming_messages_sequence.getEventPointer(i);

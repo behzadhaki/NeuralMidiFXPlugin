@@ -84,12 +84,14 @@ struct PlaybackPolicies {
     // allows looping of generations for a specific duration
     // the start of the loop is specified by the playback start policy
     //    i.e. RelativeToNow, RelativeToAbsoluteZero, RelativeToPlaybackStart
-    void enableLooping(double LoopDuration_) {
-        LoopDuration = LoopDuration_;
+    // FOR ANY TIMING POLICY USED, THE LOOP DURATION MUST BE SPECIFIED IN QUARTER NOTES
+    //
+    void ActivateLooping(double LoopDurationInQuarterNotes) {
+        LoopDuration = LoopDurationInQuarterNotes;
     }
 
     //
-    void disableLooping() {
+    void DisableLooping() {
         LoopDuration = -1;
     }
 

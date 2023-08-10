@@ -4,7 +4,7 @@
 
 #pragma once
 #include "GuiParameters.h"
-
+#include "DeploymentSettings/GuiAndParams.h"
 
 using namespace std;
 
@@ -99,6 +99,44 @@ public:
     }
 
     // should manually call repaint() after calling this function
+    void displayLoopedMidiMessageSequence(const juce::MidiMessageSequence& sequence_,
+                                          PlaybackPolicies playbackPolicy_,
+                                          double fs, double qpm,
+                                          double LoopStartPPQ_, double LoopEndPPQ_) {
+
+        midiFile = juce::MidiFile();
+        int ticksPerQuarterNote = 960;
+        midiFile.setTicksPerQuarterNote(ticksPerQuarterNote);  \
+        juce::MidiMessageSequence sequence;
+
+        LoopStartPPQ = LoopStartPPQ_;
+        LoopEndPPQ = LoopEndPPQ_;
+
+        // all timings need to be converted to ticks
+        for (auto m: sequence_) {
+            auto msg = m->message;
+            if (playbackPolicy_.IsTimeUnitIsAudioSamples()) {
+                auto time_in_quartern = msg.getTimeStamp() / fs / 60.0 * qpm;
+                // convert to ticks
+                msg.setTimeStamp(time_in_quartern * ticksPerQuarterNote);
+            } else if (playbackPolicy_.IsTimeUnitIsPPQ()) {
+                // convert to ticks
+                msg.setTimeStamp(msg.getTimeStamp() * ticksPerQuarterNote);
+            } else if (playbackPolicy_.IsTimeUnitIsSeconds()) {
+                auto time_in_quartern = msg.getTimeStamp() / 60.0 * qpm;
+                // convert to ticks
+                msg.setTimeStamp(time_in_quartern * ticksPerQuarterNote);
+            }
+            sequence.addEvent(msg);
+        }
+        midiFile.addTrack(sequence);
+
+        midiDataChanged = true;
+
+        //        repaint();
+    }
+
+    // should manually call repaint() after calling this function
     void displayMidiMessageSequence(double playhead_pos_quarter_notes) {
         int ticksPerQuarterNote = 960;
         playhead_pos = playhead_pos_quarter_notes * ticksPerQuarterNote;
@@ -116,6 +154,19 @@ public:
             {
                 return std::max(track->getEndTime() + 4 * ticksPerQuarterNote,
                                 playhead_pos + 4 * ticksPerQuarterNote);
+            }
+        }
+        return 0;
+    }
+
+    double getMidiLength() {
+        int ticksPerQuarterNote = 960;
+        if (midiFile.getNumTracks() > 0)
+        {
+            auto track = midiFile.getTrack(0);
+            if (track != nullptr)
+            {
+                return track->getEndTime();
             }
         }
         return 0;
@@ -143,6 +194,16 @@ public:
         g.setFont(14.0f); // Font size
         g.drawText(inputLabel, getWidth() - 100, 0, 100, 20, juce::Justification::right);
 
+        // Draw loop start and end brackets
+        if (LoopStartPPQ >= 0 && LoopEndPPQ > 0)
+        {
+            // Draw loop area as a transparent rectangle
+            g.setColour(juce::Colours::brown.withAlpha(0.4f));
+            auto xStart = LoopStartPPQ / disp_length * (float) getWidth() * 960;
+            auto xEnd = LoopEndPPQ / disp_length * (float) getWidth() * 960;
+            g.fillRect(xStart, 0, xEnd - xStart, getHeight());
+        }
+
         if (midiDataChanged) // You need to define and update this flag
         {
             calculateNotePositions();
@@ -154,10 +215,11 @@ public:
         if (playhead_pos >= 0)
         {
             g.setColour(juce::Colours::red);
-            auto x = playhead_pos / disp_length * (float)getWidth();
+            auto x = playhead_pos / disp_length * (float) getWidth();
             g.drawLine(x, 0, x, getHeight(), 2);
         }
     }
+
 
     // call back function for drag and drop out of the component
     // should drag from component to file explorer or DAW if allowed
@@ -210,6 +272,8 @@ private:
     LockFreeQueue<juce::MidiFile, 4>* MidiQue{};
     double playhead_pos{-1};
     double disp_length{8};
+    double LoopStartPPQ{-1};
+    double LoopEndPPQ{-1};
 
     std::set<int> uniquePitches;
     std::map<int, std::vector<std::tuple<float, float, float>>> notePositions; // Maps note numbers to positions and velocity
@@ -561,6 +625,8 @@ public:
     // *NOTE* As soon as loaded, all timings are converted to quarter notes instead of ticks
     bool loadMidiFile(const juce::File& file)
     {
+        if (!UIObjects::MidiInVisualizer::allowToDragInMidi) { return false; }
+
         auto stream = file.createInputStream();
         if (stream != nullptr)
         {
@@ -686,12 +752,12 @@ private:
             }
         };
 
-        if (DraggedMidi.getNumTracks() > 0)
+        if (DraggedMidi.getNumTracks() > 0 && UIObjects::MidiInVisualizer::allowToDragInMidi)
         {
             processTrack(*DraggedMidi.getTrack(0), DraggedNoteColour);
         }
 
-        if (IncomingMidi.getNumTracks() > 0)
+        if (IncomingMidi.getNumTracks() > 0 && UIObjects::MidiInVisualizer::visualizeIncomingMidiFromHost)
         {
             processTrack(*IncomingMidi.getTrack(0), IncomingNoteColour);
         }

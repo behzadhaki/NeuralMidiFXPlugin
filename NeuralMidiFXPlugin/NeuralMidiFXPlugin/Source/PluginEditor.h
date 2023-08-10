@@ -33,8 +33,9 @@ public:
     unique_ptr<InputMidiPianoRollComponent> inputPianoRoll{nullptr};
     unique_ptr<OutputMidiPianoRollComponent> outputPianoRoll{nullptr};
 
-private:
 
+
+private:
     NeuralMidiFXPluginProcessor* NeuralMidiFXPluginProcessorPointer_;
     UIObjects::tab_tuple currentTab;
     std::string tabName;
@@ -44,6 +45,9 @@ private:
     PlaybackPolicies play_policy;
     juce::MidiMessageSequence sequence_to_display;
     LockFreeQueue<juce::MidiMessageSequence, 32>* NMP2GUI_IncomingMessageSequence;
+    bool LoopingEnabled {false};
+    double LoopStart {0};
+    double LoopEnd {0};
     juce::MidiMessageSequence incoming_sequence;
 };
 

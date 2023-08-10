@@ -14,7 +14,6 @@
 
 using namespace juce;
 
-
 struct time_ {
     time_(): seconds(0.0), samples(0), ppq(0.0) {}
 
