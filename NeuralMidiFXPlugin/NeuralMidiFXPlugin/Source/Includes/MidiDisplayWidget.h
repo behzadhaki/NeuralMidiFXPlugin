@@ -454,7 +454,6 @@ public:
                     }
                 }
             }
-            full_repaint = true;
         }
 
         full_repaint = true;
@@ -466,12 +465,6 @@ public:
         int ticksPerQuarterNote = 960;
         playhead_pos = playhead_pos_quarter_notes * ticksPerQuarterNote;
         full_repaint = false;
-    }
-
-    void clearIncomingMidi()
-    {
-        IncomingMidi = juce::MidiFile();
-        repaint();
     }
 
     // draws midi notes on the component (piano roll)
@@ -488,10 +481,8 @@ public:
         g.setFont(14.0f); // Font size
         g.drawText(incomingLabel, getWidth() - 120, 0, 120, 20, juce::Justification::right);
 
-        if (full_repaint) // You need to define and update this flag
-        {
-            calculateNotePositions();
-        }
+        calculateNotePositions();
+
 
         drawNotes(g, *DraggedMidi.getTrack(0));
         drawNotes(g, *IncomingMidi.getTrack(0));
@@ -726,7 +717,6 @@ private:
                 // Draw border around the note
                 g.setColour(juce::Colours::black);
                 g.drawRect(juce::Rectangle<float>(x, y, length, rowHeight), 1);
-
             }
         }
     }
