@@ -436,20 +436,29 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
                 // if playhead moved manually backward clear all events after now
                 if (frame_meta_data.Time().inQuarterNotes() < last_frame_meta_data.Time().inQuarterNotes())
                 {
-                    auto incoming_messages_sequence_temp = juce::MidiMessageSequence();
-                    for (int i = 0; i < incoming_messages_sequence.getNumEvents(); i++) {
-                        auto msg = incoming_messages_sequence.getEventPointer(i);
-                        if (msg->message.getTimeStamp() < frame_meta_data.Time().inQuarterNotes()) {
-                            incoming_messages_sequence_temp.addEvent(msg->message, 0);
+                    if (false) { // todo add flag to settings file for this
+                        auto incoming_messages_sequence_temp = juce::MidiMessageSequence();
+                        for (int i = 0; i < incoming_messages_sequence.getNumEvents(); i++) {
+                            auto msg = incoming_messages_sequence.getEventPointer(i);
+                            if (msg->message.getTimeStamp() < frame_meta_data.Time().inQuarterNotes()) {
+                                incoming_messages_sequence_temp.addEvent(msg->message, 0);
+                            }
                         }
+                        // add all note off at last frame meta data time
+                        for (int i = 0; i < 128; i++) {
+                            incoming_messages_sequence_temp.addEvent(juce::MidiMessage::noteOff(1, i),
+                                                                     last_frame_meta_data.Time().inQuarterNotes());
+                        }
+                        incoming_messages_sequence.swapWith(incoming_messages_sequence_temp);
+                        NMP2GUI_IncomingMessageSequence->push(incoming_messages_sequence);
+                    } else {
+                        // add all note off at last frame meta data time to incoming messages sequence
+                        for (int i = 0; i < 128; i++) {
+                            incoming_messages_sequence.addEvent(juce::MidiMessage::noteOff(1, i),
+                                                                 last_frame_meta_data.Time().inQuarterNotes());
+                        }
+                        NMP2GUI_IncomingMessageSequence->push(incoming_messages_sequence);
                     }
-                    // add all note off at last frame meta data time
-                    for (int i = 0; i < 128; i++) {
-                        incoming_messages_sequence_temp.addEvent(juce::MidiMessage::noteOff(1, i),
-                                                                  last_frame_meta_data.Time().inQuarterNotes());
-                    }
-                    incoming_messages_sequence.swapWith(incoming_messages_sequence_temp);
-                    NMP2GUI_IncomingMessageSequence->push(incoming_messages_sequence);
                 }
 
                 last_frame_meta_data = frame_meta_data;
