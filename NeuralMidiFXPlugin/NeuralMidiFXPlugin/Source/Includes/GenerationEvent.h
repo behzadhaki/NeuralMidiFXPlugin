@@ -78,18 +78,23 @@ struct PlaybackPolicies {
 
     // previous generations are cleared after pause/stop so they can't be played again
     void SetClearGenerationsAfterPauseStop(bool enable) {
-        ClearGenerationsAfterPauseStop = enable ? true : false;
+        ClearGenerationsAfterPauseStop = enable;
     }
 
-    // sets the number of times the generations should be repeated (if enabled)
-    // LoopDuration_ is the duration of the generations
-    void LoopAssumingDuration(bool enable, double LoopDuration_) {
-        if (enable) {
-            assert(LoopDuration_ > 0 && "LoopDuration_ must be greater than 0");
-            LoopDuration = LoopDuration_;
-        } else {
-            LoopDuration = -1;
-        }
+    // allows looping of generations for a specific duration
+    // the start of the loop is specified by the playback start policy
+    //    i.e. RelativeToNow, RelativeToAbsoluteZero, RelativeToPlaybackStart
+    void enableLooping(double LoopDuration_) {
+        LoopDuration = LoopDuration_;
+    }
+
+    //
+    void disableLooping() {
+        LoopDuration = -1;
+    }
+
+    double getLoopDuration() const {
+        return LoopDuration;
     }
 
     // Checks if data is ready for transmission
@@ -116,11 +121,7 @@ struct PlaybackPolicies {
     bool IsOverwritePolicy_KeepAllPreviousEvents() const { return OverwritePolicy == 3; }
     bool shouldForceSendNoteOffs() const { return ForceSendNoteOffsFirst; }
 
-    bool shouldClearGenerationsAfterPauseStop() const { return ClearGenerationsAfterPauseStop; }
-
-    // returns -1 if should not loop else returns the duration of the loop
-    // in the time unit specified by TimeUnit
-    double shouldLoop() const { return LoopDuration; }
+    bool getShouldClearGenerationsAfterPauseStop() const { return ClearGenerationsAfterPauseStop; }
 
     // ============================================================================================================
     int getPlaybackPolicyType () const { return PlaybackPolicy; }

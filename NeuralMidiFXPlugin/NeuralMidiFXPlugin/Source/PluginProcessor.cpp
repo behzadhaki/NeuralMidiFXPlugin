@@ -331,7 +331,7 @@ std::optional<juce::MidiMessage> NeuralMidiFXPluginProcessor::getMessageIfToBePl
 //        playbackPolicies.getTimeUnitIndex());
     auto now_in_user_unit = now_.getTimeWithUnitType(playbackPolicies.getTimeUnitIndex());
 
-    double loop_len = playbackPolicies.shouldLoop();
+    // double loop_len = playbackPolicies.shouldLoop();
 
     auto msg_time = msg.getTimeStamp();
     switch (playbackPolicies.getTimeUnitIndex()) {
@@ -340,15 +340,6 @@ std::optional<juce::MidiMessage> NeuralMidiFXPluginProcessor::getMessageIfToBePl
             if (now_in_user_unit <= msg_time && msg_time < end) {
                 auto msg_copy = juce::MidiMessage(msg);
                 msg_copy.setTimeStamp(std::max(0.0, msg_time - now_in_user_unit));
-                if (loop_len > 0) {
-                    // add if already not in the sequence
-                    auto temp_msg = juce::MidiMessage(msg);
-                    temp_msg.addToTimeStamp(loop_len);
-                    if (!messageExistsInSequence(playbackMessageSequence, temp_msg)) {
-                        PrintMessage("Adding to sequence");
-                        playbackMessageSequence.addEvent(temp_msg, 0);
-                    }
-                }
                 return msg_copy;
             } else {
                 return {};
@@ -361,15 +352,6 @@ std::optional<juce::MidiMessage> NeuralMidiFXPluginProcessor::getMessageIfToBePl
                 auto msg_copy = juce::MidiMessage(msg);
                 auto time_diff = msg_time - now_in_user_unit;
                 msg_copy.setTimeStamp(std::max(0.0, std::floor(time_diff * fs)));
-                if (loop_len > 0) {
-                    // add if already not in the sequence
-                    auto temp_msg = juce::MidiMessage(msg);
-                    temp_msg.addToTimeStamp(loop_len);
-                    if (!messageExistsInSequence(playbackMessageSequence, temp_msg)) {
-                        PrintMessage("Adding to sequence");
-                        playbackMessageSequence.addEvent(temp_msg, 0);
-                    }
-                }
                 return msg_copy;
             } else {
                 return {};
@@ -381,15 +363,6 @@ std::optional<juce::MidiMessage> NeuralMidiFXPluginProcessor::getMessageIfToBePl
                 auto msg_copy = juce::MidiMessage(msg);
                 auto time_diff = msg_time - now_in_user_unit;
                 msg_copy.setTimeStamp(std::max(0.0, std::floor(time_diff * fs * 60.0f / qpm)));
-                if (loop_len > 0) {
-                    // add if already not in the sequence
-                    auto temp_msg = juce::MidiMessage(msg);
-                    temp_msg.addToTimeStamp(loop_len);
-                    if (!messageExistsInSequence(playbackMessageSequence, temp_msg)) {
-                        PrintMessage("Before" + std::to_string(playbackMessageSequence.getNumEvents()) +" Adding to sequence after: " + std::to_string(temp_msg.getTimeStamp()));
-                        playbackMessageSequence.addEvent(temp_msg, 0);
-                    }
-                }
                 return msg_copy;
             } else {
                 return {};
@@ -437,7 +410,7 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
                 last_frame_meta_data = frame_meta_data;     // reset last frame meta data
 
                 // clear playback sequence if playbackpolicy specifies so
-                if (playbackPolicies.shouldClearGenerationsAfterPauseStop()) {
+                if (playbackPolicies.getShouldClearGenerationsAfterPauseStop()) {
                     PrintMessage("Clearing Generations");
                     playbackMessageSequence.clear();
                 }
@@ -459,6 +432,26 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
                         NMP2ITP_Event_Que->push(frame_meta_data);
                     }
                 }
+
+                // if playhead moved manually backward clear all events after now
+                if (frame_meta_data.Time().inQuarterNotes() < last_frame_meta_data.Time().inQuarterNotes())
+                {
+                    auto incoming_messages_sequence_temp = juce::MidiMessageSequence();
+                    for (int i = 0; i < incoming_messages_sequence.getNumEvents(); i++) {
+                        auto msg = incoming_messages_sequence.getEventPointer(i);
+                        if (msg->message.getTimeStamp() < frame_meta_data.Time().inQuarterNotes()) {
+                            incoming_messages_sequence_temp.addEvent(msg->message, 0);
+                        }
+                    }
+                    // add all note off at last frame meta data time
+                    for (int i = 0; i < 128; i++) {
+                        incoming_messages_sequence_temp.addEvent(juce::MidiMessage::noteOff(1, i),
+                                                                  last_frame_meta_data.Time().inQuarterNotes());
+                    }
+                    incoming_messages_sequence.swapWith(incoming_messages_sequence_temp);
+                    NMP2GUI_IncomingMessageSequence->push(incoming_messages_sequence);
+                }
+
                 last_frame_meta_data = frame_meta_data;
             }
         }

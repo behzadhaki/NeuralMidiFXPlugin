@@ -132,7 +132,8 @@ std::pair<bool, bool> PlaybackPreparatorThread::deploy(bool new_model_output_rec
         // playbackPolicy.SetOverwritePolicy_KeepAllPreviousEvents(forceSendNoteOffsFirst); // or
 
         playbackPolicy.SetClearGenerationsAfterPauseStop(false); //
-        playbackPolicy.LoopAssumingDuration(false, 4); // Requires further implementation (debugging)
+        /*playbackPolicy.enableLooping(false,
+                                     4); // Requires further implementation (debugging)*/
 
         newPlaybackPolicyShouldBeSent = true;
 
