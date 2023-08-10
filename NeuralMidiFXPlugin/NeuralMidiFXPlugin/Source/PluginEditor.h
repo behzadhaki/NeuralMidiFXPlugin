@@ -43,5 +43,7 @@ private:
     double playhead_pos;
     PlaybackPolicies play_policy;
     juce::MidiMessageSequence sequence_to_display;
+    LockFreeQueue<juce::MidiMessageSequence, 32>* NMP2GUI_IncomingMessageSequence;
+    juce::MidiMessageSequence incoming_sequence;
 };
 

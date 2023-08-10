@@ -299,7 +299,10 @@ public:
 
     }
 
-    explicit InputMidiPianoRollComponent(LockFreeQueue<juce::MidiFile, 4>* MidiQue_)
+
+    explicit InputMidiPianoRollComponent(
+        LockFreeQueue<juce::MidiFile, 4>* MidiQue_,
+        const juce::MidiMessageSequence& NMP2GUI_IncomingMessageSequence_)
     {
         Initialize();
 
@@ -328,25 +331,29 @@ public:
             }
         }
 
-        int ticksPerQuarterNote = 960;
-        diplayMidi.clear();
-        diplayMidi.setTicksPerQuarterNote(ticksPerQuarterNote);
-        // add content of DraggedMidi and IncomingMidi to diplayMidi
-        if (DraggedMidi.getNumTracks() > 0)
-        {
-            auto track = DraggedMidi.getTrack(0);
-            if (track != nullptr)
-            {
-                diplayMidi.addTrack(*track);
-            }
-        }
+
+        juce::MidiFile mf;
+        mf.setTicksPerQuarterNote(960);
+        mf.addTrack(NMP2GUI_IncomingMessageSequence_);
+        IncomingMidi = mf;
+        // convert all timings to ticks
         if (IncomingMidi.getNumTracks() > 0)
         {
             auto track = IncomingMidi.getTrack(0);
             if (track != nullptr)
             {
-                diplayMidi.addTrack(*track);
+                for (int i = 0; i < track->getNumEvents(); ++i)
+                {
+                    auto event = track->getEventPointer(i);
+                    if (event != nullptr)
+                    {
+                        auto msg = event->message;
+                        msg.setTimeStamp(msg.getTimeStamp() * 960);
+                        event->message = msg;
+                    }
+                }
             }
+            full_repaint = true;
         }
     }
 
@@ -388,13 +395,24 @@ public:
         int ticksPerQuarterNote = 960;
         double len = 0;
 
-        if (diplayMidi.getNumTracks() > 0)
+        if (IncomingMidi.getNumTracks() > 0)
         {
-            auto track = diplayMidi.getTrack(0);
+            auto track = IncomingMidi.getTrack(0);
             if (track != nullptr)
             {
-                len = len + std::max(track->getEndTime() + 4 * ticksPerQuarterNote,
-                                     playhead_pos + 4 * ticksPerQuarterNote);
+                len = std::max(track->getEndTime() + 4 * ticksPerQuarterNote,
+                               playhead_pos + 4 * ticksPerQuarterNote);
+            }
+        }
+
+        if (DraggedMidi.getNumTracks() > 0)
+        {
+            auto track = DraggedMidi.getTrack(0);
+            if (track != nullptr)
+            {
+                auto len2 = std::max(track->getEndTime() + 4 * ticksPerQuarterNote,
+                               playhead_pos + 4 * ticksPerQuarterNote);
+                len = std::max(len, len2);
             }
         }
 
@@ -411,10 +429,34 @@ public:
 
     // should manually call repaint() after calling this function
     // incoming note with time in midi ticks with 960 ticks per quarter note
-    void displayMidiMessageSequence(juce::MidiMessage incoming_note) {
+    void displayMidiMessageSequence(const juce::MidiMessageSequence& incoming_seq) {
         // add incoming_note to IncomingMidi
-        // todo : add incoming_note to IncomingMidi
-        int ticksPerQuarterNote = 960;
+        IncomingMidi = juce::MidiFile();
+        IncomingMidi.setTicksPerQuarterNote(960);
+        IncomingMidi.addTrack(incoming_seq);
+        notePositions.clear();
+        uniquePitches.clear();
+
+        // convert all timings to ticks
+        if (IncomingMidi.getNumTracks() > 0)
+        {
+            auto track = IncomingMidi.getTrack(0);
+            if (track != nullptr)
+            {
+                for (int i = 0; i < track->getNumEvents(); ++i)
+                {
+                    auto event = track->getEventPointer(i);
+                    if (event != nullptr)
+                    {
+                        auto msg = event->message;
+                        msg.setTimeStamp(msg.getTimeStamp() * 960);
+                        event->message = msg;
+                    }
+                }
+            }
+            full_repaint = true;
+        }
+
         full_repaint = true;
     }
 
@@ -451,8 +493,8 @@ public:
             calculateNotePositions();
         }
 
-        drawNotes(g, DraggedNoteColour, *DraggedMidi.getTrack(0));
-        drawNotes(g, IncomingNoteColour, *IncomingMidi.getTrack(0));
+        drawNotes(g, *DraggedMidi.getTrack(0));
+        drawNotes(g, *IncomingMidi.getTrack(0));
 
         // Draw playhead
         if (playhead_pos >= 0)
@@ -469,10 +511,35 @@ public:
     // should drag from component to file explorer or DAW if allowed
     void mouseDrag(const juce::MouseEvent& event) override
     {
-        if (diplayMidi.getNumTracks() <= 0)
+        if (IncomingMidi.getNumTracks() <= 0 && DraggedMidi.getNumTracks() <= 0)
         {
-            return ;
+            return;
         }
+
+        juce::MidiMessageSequence displayedSequence{};
+
+        // add content of DraggedMidi and IncomingMidi to diplayMidi
+        if (DraggedMidi.getNumTracks() > 0)
+        {
+            auto track = DraggedMidi.getTrack(0);
+            if (track != nullptr)
+            {
+                displayedSequence.addSequence(*track, 0, 0, track->getEndTime());
+
+            }
+        }
+        if (IncomingMidi.getNumTracks() > 0)
+        {
+            auto track = IncomingMidi.getTrack(0);
+            if (track != nullptr)
+            {
+                displayedSequence.addSequence(*track, 0, 0, track->getEndTime());
+            }
+        }
+
+        juce::MidiFile diplayMidi = juce::MidiFile();
+        diplayMidi.setTicksPerQuarterNote(960);
+        diplayMidi.addTrack(displayedSequence);
 
         juce::String fileName = juce::Uuid().toString() + ".mid";  // Random filename
 
@@ -538,27 +605,10 @@ public:
                     // Push the quarter note version to the queue
                     MidiQue->push(quarterNoteMidiFile);
 
-                    int ticksPerQuarterNote = 960;
-                    diplayMidi.clear();
-                    diplayMidi.setTicksPerQuarterNote(ticksPerQuarterNote);
-                    // add content of DraggedMidi and IncomingMidi to diplayMidi
-                    if (DraggedMidi.getNumTracks() > 0)
-                    {
-                        auto track = DraggedMidi.getTrack(0);
-                        if (track != nullptr)
-                        {
-                            diplayMidi.addTrack(*track);
-                        }
-                    }
+
                     IncomingMidi.clear();
-                    /*if (IncomingMidi.getNumTracks() > 0)
-                    {
-                        auto track = IncomingMidi.getTrack(0);
-                        if (track != nullptr)
-                        {
-                            diplayMidi.addTrack(*track);
-                        }
-                    }*/
+                    IncomingMidi.setTicksPerQuarterNote(960);
+                    IncomingMidi.addTrack(juce::MidiMessageSequence());
 
                     repaint();
 
@@ -586,8 +636,6 @@ private:
         IncomingMidi = juce::MidiFile();
         IncomingMidi.setTicksPerQuarterNote(960);
 
-        diplayMidi = juce::MidiFile();
-        diplayMidi.setTicksPerQuarterNote(960);
         // Enable drag and drop
         //        setInterceptsMouseClicks(false, true);
         setInterceptsMouseClicks(
@@ -596,16 +644,16 @@ private:
 
     juce::MidiFile DraggedMidi;
     juce::MidiFile IncomingMidi;
-    juce::MidiFile diplayMidi;
     juce::Colour backgroundColour{juce::Colours::whitesmoke};
     juce::Colour DraggedNoteColour = juce::Colours::skyblue;
     juce::Colour IncomingNoteColour = juce::Colours::darkolivegreen;
     LockFreeQueue<juce::MidiFile, 4>* MidiQue{};
+
     double playhead_pos{-1};
     double disp_length{8};
 
     std::set<int> uniquePitches;
-    std::map<int, std::vector<std::tuple<float, float, float>>> notePositions; // Maps note numbers to positions and velocity
+    std::map<int, std::vector<std::tuple<float, float, float, juce::Colour>>> notePositions; // Maps note numbers to positions and velocity and color
     bool full_repaint {false};
 
     void calculateNotePositions()
@@ -613,7 +661,7 @@ private:
         uniquePitches.clear();
         notePositions.clear();
 
-        auto processTrack = [&](const juce::MidiMessageSequence& track) {
+        auto processTrack = [&](const juce::MidiMessageSequence& track, const juce::Colour& color) {
             for (int i = 0; i < track.getNumEvents(); ++i)
             {
                 auto event = track.getEventPointer(i);
@@ -642,23 +690,23 @@ private:
 
                     float velocity = event->message.getFloatVelocity();
 
-                    notePositions[noteNumber].emplace_back(x, length, velocity);
+                    notePositions[noteNumber].emplace_back(x, length, velocity, color);
                 }
             }
         };
 
         if (DraggedMidi.getNumTracks() > 0)
         {
-            processTrack(*DraggedMidi.getTrack(0));
+            processTrack(*DraggedMidi.getTrack(0), DraggedNoteColour);
         }
 
         if (IncomingMidi.getNumTracks() > 0)
         {
-            processTrack(*IncomingMidi.getTrack(0));
+            processTrack(*IncomingMidi.getTrack(0), IncomingNoteColour);
         }
     }
 
-    void drawNotes(juce::Graphics& g, const juce::Colour& noteColour, const juce::MidiMessageSequence& midi)
+    void drawNotes(juce::Graphics& g, const juce::MidiMessageSequence& midi)
     {
         int numRows = uniquePitches.size();
         float rowHeight = (float)getHeight() / (float)numRows;
@@ -668,10 +716,10 @@ private:
         {
             float y = float(numRows - 1 - std::distance(uniquePitches.begin(), uniquePitches.find(pitch))) * rowHeight;
 
-            for (const auto& [x, length, velocity] : notePositions[pitch])
+            for (const auto& [x, length, velocity, color_] : notePositions[pitch])
             {
                 // Set color according to the velocity
-                auto color = noteColour.withAlpha(velocity);
+                auto color = color_.withAlpha(velocity);
                 g.setColour(color);
                 g.fillRect(juce::Rectangle<float>(x, y, length, rowHeight));
 
@@ -679,10 +727,6 @@ private:
                 g.setColour(juce::Colours::black);
                 g.drawRect(juce::Rectangle<float>(x, y, length, rowHeight), 1);
 
-                // Draw label for the pitch class and octave
-                juce::String noteLabel = juce::MidiMessage::getMidiNoteName(pitch, true, true, 3);
-                g.setColour(juce::Colours::black);
-                g.drawText(noteLabel, x, y, length, rowHeight, juce::Justification::centred, true);
             }
         }
     }

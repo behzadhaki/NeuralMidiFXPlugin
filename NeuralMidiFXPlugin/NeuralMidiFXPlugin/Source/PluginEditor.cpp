@@ -33,8 +33,20 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
 
     addAndMakeVisible(tabs);
 
+    NMP2GUI_IncomingMessageSequence = NeuralMidiFXPluginProcessorPointer.NMP2GUI_IncomingMessageSequence.get();
+
+    juce::MidiMessageSequence seq_;
+    if (NMP2GUI_IncomingMessageSequence->getNumberOfWrites() > 0)
+    {
+        seq_ = NMP2GUI_IncomingMessageSequence->getLatestDataWithoutMovingFIFOHeads();
+    } else {
+        seq_ = juce::MidiMessageSequence();
+    }
+
     inputPianoRoll = std::make_unique<InputMidiPianoRollComponent>(
-        NeuralMidiFXPluginProcessorPointer.GUI2ITP_DroppedMidiFile_Que.get());
+        NeuralMidiFXPluginProcessorPointer.GUI2ITP_DroppedMidiFile_Que.get(),
+        seq_);
+
     outputPianoRoll = std::make_unique<OutputMidiPianoRollComponent>(
         NeuralMidiFXPluginProcessorPointer.PPP2GUI_GenerationMidiFile_Que.get());
 
@@ -42,7 +54,6 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
     len = std::max(double(8.0f * 960), len);
     inputPianoRoll->setLength(len);
     outputPianoRoll->setLength(len);
-
 
     addAndMakeVisible(inputPianoRoll.get());
     addAndMakeVisible(outputPianoRoll.get());
@@ -149,6 +160,19 @@ void NeuralMidiFXPluginEditor::timerCallback()
         newPlayheadPos = true;
     }
 
+    if (NMP2GUI_IncomingMessageSequence->getNumReady() > 0)
+    {
+        cout << "NMP2GUI_IncomingMessageSequence->getNumReady() = " << NMP2GUI_IncomingMessageSequence->getNumReady() << endl;
+        incoming_sequence = NMP2GUI_IncomingMessageSequence->pop();
+        cout << "incoming_sequence.getNumEvents() = " << incoming_sequence.getNumEvents() << endl;
+        if (incoming_sequence.getNumEvents() > 0)
+        {
+            cout << incoming_sequence.getEventPointer(0)->message.getDescription() << endl;
+        }
+        inputPianoRoll->displayMidiMessageSequence(incoming_sequence);
+        newContent = true;
+    }
+
     if (newContent)
     {
         outputPianoRoll->displayMidiMessageSequence(
@@ -157,20 +181,6 @@ void NeuralMidiFXPluginEditor::timerCallback()
             fs,
             qpm
             );
-
-
-//        inputPianoRoll->displayMidiMessageSequence(
-//            play_policy,
-//            fs,
-//            qpm,
-//            playhead_pos
-//            );
-
-//        auto len = std::max(inputPianoRoll->getLength(), outputPianoRoll->getLength());
-//        inputPianoRoll->setLength(len);
-//        outputPianoRoll->setLength(len);
-//
-//        repaint();
     }
 
     if (newPlayheadPos)
@@ -184,8 +194,8 @@ void NeuralMidiFXPluginEditor::timerCallback()
         auto len = std::max(inputPianoRoll->getLength(), outputPianoRoll->getLength());
         inputPianoRoll->setLength(len);
         outputPianoRoll->setLength(len);
-//        inputPianoRoll->repaint();
-//        outputPianoRoll->repaint();
+      inputPianoRoll->repaint();
+      outputPianoRoll->repaint();
         repaint();
     }
 

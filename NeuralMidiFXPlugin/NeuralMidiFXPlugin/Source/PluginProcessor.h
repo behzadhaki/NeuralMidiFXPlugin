@@ -76,7 +76,7 @@ public:
         std::lock_guard<std::mutex> lock(mutex);
         return policy;
     }
-    
+
 };
 
 class NeuralMidiFXPluginProcessor : public PluginHelpers::ProcessorBase {
@@ -96,6 +96,7 @@ public:
     unique_ptr<LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size>> ITP2MDL_ModelInput_Que;
     unique_ptr<LockFreeQueue<ModelOutput, queue_settings::MDL2PPP_que_size>> MDL2PPP_ModelOutput_Que;
     unique_ptr<LockFreeQueue<GenerationEvent, queue_settings::PPP2NMP_que_size>> PPP2NMP_GenerationEvent_Que;
+    unique_ptr<LockFreeQueue<juce::MidiMessageSequence, 32>> NMP2GUI_IncomingMessageSequence;
 
     // APVTS Queues
     unique_ptr<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>> APVM2ITP_GuiParams_Que;
@@ -153,6 +154,7 @@ private:
     EventFromHost last_frame_meta_data{};
     std::optional<EventFromHost> NewBarEvent;
     std::optional<EventFromHost> NewTimeShiftEvent;
+    juce::MidiMessageSequence incoming_messages_sequence;
 
     // Gets DAW info and midi messages,
     // Wraps messages as Events

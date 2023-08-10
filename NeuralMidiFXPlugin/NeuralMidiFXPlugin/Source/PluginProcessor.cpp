@@ -65,6 +65,7 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
     // Drag/Drop Midi Queues
     GUI2ITP_DroppedMidiFile_Que = make_unique<LockFreeQueue<juce::MidiFile, 4>>();
     PPP2GUI_GenerationMidiFile_Que = make_unique<LockFreeQueue<juce::MidiFile, 4>>();
+    NMP2GUI_IncomingMessageSequence = make_unique<LockFreeQueue<juce::MidiMessageSequence, 32>>() ;
 
     //       Create shared pointers for Threads (shared with APVTSMediator)
     // --------------------------------------------------------------------------------------
@@ -408,7 +409,9 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
         if (!last_frame_meta_data.isPlaying() != !Pinfo->getIsPlaying()) {
             // if just started, register the playhead starting position
             if ((!last_frame_meta_data.isPlaying()) && Pinfo->getIsPlaying()) {
-                if (print_start_stop_times) { PrintMessage("Started playing"); }
+                if (print_start_stop_times) {
+                    PrintMessage("Started playing");
+                }
                 playhead_start_time = time_{*Pinfo->getTimeInSamples(),
                                             *Pinfo->getTimeInSeconds(),
                                             *Pinfo->getPpqPosition()};
@@ -417,12 +420,17 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
                                                  *Pinfo->getTimeInSeconds(),
                                                  *Pinfo->getPpqPosition()};
 
-                auto frame_meta_data = EventFromHost {Pinfo, fs, buffSize, true};
+                auto frame_meta_data = EventFromHost {Pinfo, fs,
+                                                      buffSize, true};
                 NMP2ITP_Event_Que->push(frame_meta_data);
                 last_frame_meta_data = frame_meta_data;
+                incoming_messages_sequence = juce::MidiMessageSequence();
+                cout << "NMP sending empty message to GUI" << endl;
+                NMP2GUI_IncomingMessageSequence->push(incoming_messages_sequence);
             } else {
                 // if just stopped, register the playhead stopping position
-                auto frame_meta_data = EventFromHost {Pinfo, fs, buffSize, false};
+                auto frame_meta_data = EventFromHost {Pinfo, fs,
+                                                      buffSize, false};
                 if (print_start_stop_times) { PrintMessage("Stopped playing"); }
                 frame_meta_data.setPlaybackStoppedEvent();
                 NMP2ITP_Event_Que->push(frame_meta_data);
@@ -438,10 +446,13 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
             // if still playing, register the playhead position
             if (Pinfo->getIsPlaying()) {
                 if (print_new_buffer_started) { PrintMessage("New Buffer Arrived"); }
-                auto frame_meta_data = EventFromHost {Pinfo, fs, buffSize, false};
+                auto frame_meta_data = EventFromHost {Pinfo, fs,
+                                                      buffSize,
+                                                      false};
                 if (SendEventAtBeginningOfNewBuffers_FLAG) {
                     if (SendEventForNewBufferIfMetadataChanged_FLAG) {
-                        if (frame_meta_data.getBufferMetaData() != last_frame_meta_data.getBufferMetaData()) {
+                        if (frame_meta_data.getBufferMetaData() !=
+                            last_frame_meta_data.getBufferMetaData()) {
                             NMP2ITP_Event_Que->push(frame_meta_data);
                         }
                     } else {
@@ -466,6 +477,8 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
 
         // Step 4. see if new notes are played on the input side
         if (!midiMessages.isEmpty() && Pinfo->getIsPlaying()) {
+            bool NoteOnOffReceived = false;
+
             // if there are new notes, send them to the groove thread
             for (const auto midiMessage: midiMessages) {
                 auto msg = midiMessage.getMessage();
@@ -489,13 +502,32 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
 
                 if (midiEvent.isMidiMessageEvent()) {
                     if (midiEvent.isNoteOnEvent()) {
-                        if (!FilterNoteOnEvents_FLAG) { NMP2ITP_Event_Que->push(midiEvent); }
+                        if (!FilterNoteOnEvents_FLAG) {
+                            NMP2ITP_Event_Que->push(midiEvent);
+                        }
+                        NoteOnOffReceived = true;
+                        incoming_messages_sequence.addEvent(
+                            juce::MidiMessage::noteOn(
+                                1,midiEvent.getNoteNumber(),
+                                 midiEvent.getVelocity()
+                            ), midiEvent.Time().inQuarterNotes());
                     }
 
                     if (midiEvent.isNoteOffEvent()) {
-                        if (!FilterNoteOffEvents_FLAG) { NMP2ITP_Event_Que->push(midiEvent); }
+                        if (!FilterNoteOffEvents_FLAG) {
+                            NMP2ITP_Event_Que->push(midiEvent);
+                        }
+                        NoteOnOffReceived = true;
+                        incoming_messages_sequence.addEvent(
+                            juce::MidiMessage::noteOff(
+                                1, midiEvent.getNoteNumber(),
+                                midiEvent.getVelocity()
+                            ), midiEvent.Time().inQuarterNotes());
                     }
 
+                    if (NoteOnOffReceived) {
+                        NMP2GUI_IncomingMessageSequence->push(incoming_messages_sequence);
+                    }
                     if (midiEvent.isCCEvent()) {
                         if (!FilterCCEvents_FLAG) { NMP2ITP_Event_Que->push(midiEvent); }
                     }
