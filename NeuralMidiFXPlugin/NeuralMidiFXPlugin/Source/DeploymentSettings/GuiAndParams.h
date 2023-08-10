@@ -61,4 +61,34 @@ namespace UIObjects {
                 },
         };
     }
+
+    namespace MidiInVisualizer {
+        // if you need the widget used for visualizing midi notes coming from host
+        // set following to true
+        const bool enable = true;
+
+        // if you want to allow user to drag/drop midi files into the plugin
+        // set following to true
+        // If active, the content of the midi file will be visualized in the
+        // MidiInVisualizer and also be provided to you in the InputTensorPreparatorThread
+        const bool allowToDragInMidi = true;
+
+        // if you want to visualize notes received in real-time from host
+        // set following to true
+        const bool visualizeIncomingMidiFromHost = true;
+        // if playhead is manually moved backward, do you want to delete all the
+        // previously visualized notes received from host?
+        const bool deletePreviousIncomingMidiMessagesOnBackwardPlayhead = true;
+        // if playback is stopped, do you want to delete all the previously
+        // visualized notes received from host?
+        const bool deletePreviousIncomingMidiMessagesOnRestart = true;
+    }
+
+    namespace GenerationVisualizer {
+        // if you need the widget used for visualizing generated midi notes
+        // set following to true
+        // The content here visualizes the playbackSequence in the PlaybackPreparatorThread
+        const bool enable = true;
+    }
+
 }
