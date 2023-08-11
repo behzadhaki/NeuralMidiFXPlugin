@@ -124,16 +124,16 @@ std::pair<bool, bool> PlaybackPreparatorThread::deploy(bool new_model_output_rec
 
         // playbackPolicy.SetTimeUnitIsSeconds(); // or
         playbackPolicy.SetTimeUnitIsPPQ(); // or
-        // playbackPolicy.SetTimeUnitIsAudioSamples(); // or
+        // playbackPolicy.SetTimeUnitIsAudioSamples(); // or FIXME Timestamps near zero don't work well in loop mode
 
         bool forceSendNoteOffsFirst{true};
         // playbackPolicy.SetOverwritePolicy_DeleteAllEventsInPreviousStreamAndUseNewStream(forceSendNoteOffsFirst); // or
         playbackPolicy.SetOverwritePolicy_DeleteAllEventsAfterNow(forceSendNoteOffsFirst); // or
         // playbackPolicy.SetOverwritePolicy_KeepAllPreviousEvents(forceSendNoteOffsFirst); // or
 
-//        playbackPolicy.SetClearGenerationsAfterPauseStop(false); //
-//        playbackPolicy.ActivateLooping(4);
-        playbackPolicy.DisableLooping();
+        // playbackPolicy.SetClearGenerationsAfterPauseStop(false); //
+         playbackPolicy.ActivateLooping(4);
+//        playbackPolicy.DisableLooping();
         newPlaybackPolicyShouldBeSent = true;
 
         // 2. ---- Update Playback Sequence -----
@@ -145,7 +145,7 @@ std::pair<bool, bool> PlaybackPreparatorThread::deploy(bool new_model_output_rec
         int note = rand() % 64;
         float velocity{0.3f};
         double timestamp{0};
-        double duration{44100};
+        double duration{1};
 
         // add noteOn Offs (time stamp shifted by the slider value)
         playbackSequence.addNoteOn(channel, note, velocity,

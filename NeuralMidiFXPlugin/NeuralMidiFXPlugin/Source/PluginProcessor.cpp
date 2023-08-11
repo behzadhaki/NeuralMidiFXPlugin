@@ -362,15 +362,29 @@ std::optional<juce::MidiMessage> NeuralMidiFXPluginProcessor::getMessageIfToBePl
     auto msg_time = msg.getTimeStamp();
 
     double end = 0;
-    double adjustment_factor = 1;
+    double user_unit_to_samples_adjustment_factor = 1;
 
     if (playbackPolicies.getLoopDuration() > 0) {
         auto loop_start = time_anchor_for_playback.getTimeWithUnitType(
             playbackPolicies.getTimeUnitIndex());
         auto loop_end = loop_start + playbackPolicies.getLoopDuration();
         auto now_ppq_mapped = now_.inQuarterNotes();
-        now_ppq_mapped = mapToLoopRange(now_ppq_mapped, loop_start, loop_end);
-        now_in_user_unit = now_ppq_mapped / adjustment_factor;
+        now_ppq_mapped = mapToLoopRange(
+            now_ppq_mapped, loop_start, loop_end);
+        // convert ppq back into user unit
+        switch (playbackPolicies.getTimeUnitIndex()) {
+            case 1: // samples
+                // convert quarter notes to samples
+                now_in_user_unit = now_ppq_mapped * fs * 60.0f / qpm;
+                break;
+            case 2: // seconds
+                // convert quarter notes to seconds
+                now_in_user_unit = now_ppq_mapped * 60.0f / qpm;
+                break;
+            case 3: // QuarterNotes
+                now_in_user_unit = now_ppq_mapped;
+                break;
+        }
     }
 
     switch (playbackPolicies.getTimeUnitIndex()) {
@@ -378,12 +392,12 @@ std::optional<juce::MidiMessage> NeuralMidiFXPluginProcessor::getMessageIfToBePl
             end = now_in_user_unit + buffSize;
             break;
         case 2: // seconds
+            user_unit_to_samples_adjustment_factor = fs;
             end = now_in_user_unit + buffSize / fs;
-            adjustment_factor = fs;
             break;
         case 3: // QuarterNotes
+            user_unit_to_samples_adjustment_factor = fs * 60.0f / qpm;
             end = now_in_user_unit + buffSize / fs * qpm / 60.0f;
-            adjustment_factor = fs * 60.0f / qpm;
             break;
         default: // Unknown index
             return {};
@@ -392,10 +406,10 @@ std::optional<juce::MidiMessage> NeuralMidiFXPluginProcessor::getMessageIfToBePl
     if (now_in_user_unit <= msg_time && msg_time < end) {
         auto time_diff = msg_time - now_in_user_unit;
         auto msg_copy = juce::MidiMessage(msg);
-        msg_copy.setTimeStamp(std::max(0.0, std::floor(time_diff * adjustment_factor)));
+        msg_copy.setTimeStamp(std::max(
+            0.0, std::floor(time_diff * user_unit_to_samples_adjustment_factor)));
         return msg_copy;
     }
-
     return {};
 }
 
