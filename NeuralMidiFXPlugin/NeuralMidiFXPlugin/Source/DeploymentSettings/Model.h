@@ -9,6 +9,20 @@
 #include "../Includes/InputEvent.h"
 #include "../Includes/colored_cout.h"
 
+#define DEFAULT_MODEL_DIR_STR(x) #x
+#define DEFAULT_MODEL_DIR_EXPAND(x) DEFAULT_MODEL_DIR_STR(x)
+
+namespace MDL_path {
+    // -----------------  DO NOT CHANGE THE FOLLOWING -----------------
+    #if defined(_WIN32) || defined(_WIN64)
+        inline const char* default_model_path = R"(C:\NeuralMidiFx\TorchScripts\MDL)";
+        inline const char* path_separator = R"(\)";
+    #else
+        inline const char* default_model_path = "/Library/NeuralMidiFx/TorchScripts/MDL";
+        inline const char* path_separator = "/";
+    #endif
+}
+
 // ======================================================================================
 // ==================       MODEL  IO Structures             ============================
 // ======================================================================================
@@ -63,28 +77,33 @@ struct ModelOutput {
 // ======================================================================================
 // ==================       Model Params                     ============================
 // ======================================================================================
-
 namespace model_settings {
-    char constexpr *default_model_path{(char *) "/Library/NeuralMidiFXPlugin/trained_models/ModelA.pt"};
-}
+    // place your model in the TorchScripts/MDL folder
+    // make sure to reload the cmake project after adding a new model
+    inline const char *model_name = "drumLoopVAE.pt";}
 
 struct Model {
-    string path;            // "/Library/NeuralMidiFXPlugin/trained_models/ModelA.pt"
+    string path;
     std::optional<torch::jit::script::Module> model;
 
     /*
      * constructor for Model to be loaded from a path
      */
-    explicit Model(const string& path_) {
+    explicit Model(const string& model_name) {
+        std::string path_ = std::string(MDL_path::default_model_path) +
+                            std::string(MDL_path::path_separator) +
+                            std::string(model_name);
+
         ifstream myFile;
         myFile.open(path_);
         if (myFile.is_open()) {
+            cout << "Model file found at: " + path_ << " -- Trying to load model..." << endl;
             myFile.close();
             model = torch::jit::load(path_);
             myFile.close();
             this->path = path_;
         } else {
-            DBG("Model file not found at: " + path_);
+            cout << "Model file not found at: " + path_ << endl;
             model = std::nullopt;
             this->path = "";
         }

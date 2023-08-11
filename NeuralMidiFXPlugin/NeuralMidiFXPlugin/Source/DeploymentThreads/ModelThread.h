@@ -63,7 +63,7 @@ private:
     // ============================================================================================================
     ModelInput model_input{};
     ModelOutput model_output{};
-    Model model{model_settings::default_model_path};
+    Model model{model_settings::model_name};
 
     // ============================================================================================================
     // ===          I/O Queues for Receiving/Sending Data
