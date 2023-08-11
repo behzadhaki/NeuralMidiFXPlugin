@@ -615,6 +615,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
     const char* name;
     bool isToggleable;
     double minValue, maxValue, initValue;
+    const char *topleftCorner{};
+    const char *bottomrightCorner{};
 
     size_t numTabs = UIObjects::Tabs::tabList.size();
     size_t numSliders;
@@ -646,7 +648,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
         // Sliders
         for (size_t i = 0; i < numSliders; ++i) {
             sliderTuple = sliderList[i];
-            std::tie(name, minValue, maxValue, initValue) = sliderTuple;
+            std::tie(name, minValue, maxValue, initValue, topleftCorner, bottomrightCorner) = sliderTuple;
 
             // Param ID will read "Slider" + [tab, item] i.e. 'Slider_13"
             juce::String paramIDstr = label2ParamID(name);
@@ -658,7 +660,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
         // Rotaries
         for (size_t i = 0; i < numRotaries; ++i) {
             rotaryTuple = rotaryList[i];
-            std::tie(name, minValue,maxValue, initValue) = rotaryTuple;
+            std::tie(name, minValue,maxValue, initValue, topleftCorner, bottomrightCorner) = rotaryTuple;
 
             auto paramIDstr = label2ParamID(name);
             juce::ParameterID paramID = juce::ParameterID(paramIDstr, version_hint);
@@ -668,7 +670,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
 
         // Buttons
         for (size_t i = 0; i < numButtons; ++i) {
-            std::tie(name, isToggleable) = buttonList[i];
+            std::tie(name, isToggleable, topleftCorner, bottomrightCorner) = buttonList[i];
             auto paramIDstr = label2ParamID(name);
             juce::ParameterID paramID = juce::ParameterID(paramIDstr, version_hint);
             layout.add (std::make_unique<juce::AudioParameterInt> (paramID, name, 0, 1, 0));

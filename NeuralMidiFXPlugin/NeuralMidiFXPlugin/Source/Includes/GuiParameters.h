@@ -40,7 +40,7 @@ struct param {
     bool isToggle{false};           // for buttons
     bool isChanged{false};
 
-    using slider_or_rotary_tuple = std::tuple<const char *, double, double, double>;
+    using slider_or_rotary_tuple = std::tuple<const char *, double, double, double, const char *, const char *>;
 
     param() = default;
 

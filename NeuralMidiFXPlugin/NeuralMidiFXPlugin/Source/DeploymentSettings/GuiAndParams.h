@@ -11,9 +11,9 @@
 
 // GUI settings
 namespace UIObjects {
-    using slider_tuple = std::tuple<const char *, double, double, double>;
-    using rotary_tuple = std::tuple<const char *, double, double, double>;
-    using button_tuple = std::tuple<const char *, bool>;
+    using slider_tuple = std::tuple<const char *, double, double, double, const char *, const char *>;
+    using rotary_tuple = std::tuple<const char *, double, double, double, const char *, const char *>;
+    using button_tuple = std::tuple<const char *, bool, const char *, const char *>;
 
     using slider_list = std::vector<slider_tuple>;
     using rotary_list = std::vector<rotary_tuple>;
@@ -21,46 +21,44 @@ namespace UIObjects {
 
     using tab_tuple = std::tuple<const char *, slider_list, rotary_list, button_list>;
 
+    using tab_tuple = std::tuple<const char *, slider_list, rotary_list, button_list>;
+
     namespace Tabs {
+        const bool show_grid = true;
+        const bool draw_borders_for_components = true;
         const std::vector<tab_tuple> tabList{
+            tab_tuple{
+                "Model",
+                slider_list{
+                    slider_tuple{"Slider 1", 0.0, 1.0, 0.0, "Cc", "Ek"}},
+                rotary_list{
+                    rotary_tuple{"Rotary 1", 0.0, 1.0, 0.5, "Vc", "Xk"},
+                    rotary_tuple{"Rotary 2", 0.0, 4.0, 1.5, "Ij", "Qr"}},
+                button_list{
+                    button_tuple{"ToggleButton 1", true, "Uc", "Xi"}}
+            },
+            tab_tuple{
+                "Tab 2",
+                slider_list{
+                    slider_tuple{"Test 1", 0.0, 1.0, 0.0, "Aa", "Ff"},
+                    slider_tuple{"Gibberish", 0.0, 25.0, 11.0, "Ff", "Ll"}},
+                rotary_list{
+                    rotary_tuple{"Rotary 1B", 0.0, 1.0, 0.5, "Ll", "Pp"},
+                    rotary_tuple{"Test 2B", 0.0, 4.0, 1.5, "Pp", "Tt"}},
+                button_list{
+                    button_tuple{"ToggleButton 2", true, "Tt", "Zz"}}
+            },
 
-                tab_tuple{
-                        "Model",
-                        slider_list{
-                                slider_tuple{"Slider 1", 0.0, 1.0, 0.0},
-                                slider_tuple{"Slider 2", 0.0, 25.0, 11.0}},
-                        rotary_list{
-                                rotary_tuple{"Rotary 1", 0.0, 1.0, 0.5},
-                                rotary_tuple{"Rotary 2", 0.0, 4.0, 1.5},
-                                rotary_tuple{"Rotary 3", 0.0, 1.0, 0.0}},
-                        button_list{
-                                button_tuple{"ToggleButton 1", true},
-                                button_tuple{"TriggerButton 1", false}}
-                },
-
-                tab_tuple{
-                        "Settings",
-                        slider_list{
-                                slider_tuple{"Test 1", 0.0, 1.0, 0.0},
-                                slider_tuple{"Gibberish", 0.0, 25.0, 11.0}},
-                        rotary_list{
-                                rotary_tuple{"Rotary 1B", 0.0, 1.0, 0.5},
-                                rotary_tuple{"Test 2B", 0.0, 4.0, 1.5}},
-                        button_list{
-                                button_tuple{"ToggleButton 2", true},
-                                button_tuple{"ToggleButton 3", true},
-                                button_tuple{"Dynamics", false}}
-                },
-
-                tab_tuple{
-                        "Generation",
-                        slider_list{
-                                slider_tuple{"Generation Playback Delay", 0.0, 10.0, 0.0}},
-                        rotary_list{},
-                        button_list{}
-                },
+            tab_tuple{
+                "Generation",
+                slider_list{
+                    slider_tuple{"Generation Playback Delay", 0.0, 10.0, 0.0, "Aa", "Zz"}},
+                rotary_list{},
+                button_list{}
+            }
         };
     }
+
 
     namespace MidiInVisualizer {
         // if you need the widget used for visualizing midi notes coming from host
