@@ -15,13 +15,13 @@ you want to create, the following information is needed:
 tab_tuple{
     "tab name",
     slider_list {
-        # vertical sliders
+        // vertical sliders
         },
     rotary_list {
-         # rotary knobs
+         // rotary knobs
          },
      button_list {
-         # buttons
+         // buttons
          }
     };
 ```
