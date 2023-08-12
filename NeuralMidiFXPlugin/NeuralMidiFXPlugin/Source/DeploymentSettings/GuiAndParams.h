@@ -103,7 +103,8 @@ namespace UIObjects {
         const bool deletePreviousIncomingMidiMessagesOnRestart = true;
     }
 
-    namespace PlaybackSequenceVisualizer {
+    namespace GeneratedContentVisualizer
+    {
         // if you need the widget used for visualizing generated midi notes
         // set following to true
         // The content here visualizes the playbackSequence as it is at any given time
