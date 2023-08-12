@@ -101,7 +101,7 @@ public:
         resizeSliders();
 
         // Rotaries
-         resizeRotaries();
+        resizeRotaries();
 
         // Buttons
          resizeButtons();
@@ -238,7 +238,7 @@ private:
         auto *newSlider = new juce::Slider;
         newSlider->setSliderStyle(juce::Slider::SliderStyle::LinearVertical);
         newSlider->setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
-                                   newSlider->getTextBoxWidth(), 60);
+                                   newSlider->getTextBoxWidth(), newSlider->getHeight()*.2);
 
         newSlider->setColour(juce::Slider::textBoxBackgroundColourId, juce::Colours::darkgrey);
         newSlider->setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::black);
@@ -259,12 +259,13 @@ private:
         return newSlider;
     }
 
+
     juce::Slider *generateRotary(UIObjects::rotary_tuple rotaryTuple) {
         auto *newRotary = new juce::Slider;
-        newRotary->setSliderStyle(juce::Slider::SliderStyle::RotaryVerticalDrag);
+        newRotary->setSliderStyle(juce::Slider::SliderStyle::RotaryHorizontalVerticalDrag);
 
         newRotary->setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
-                                   newRotary->getTextBoxWidth(), 60);
+                                   newRotary->getTextBoxWidth(), newRotary->getHeight()*.2);
 
         newRotary->setColour(juce::Slider::textBoxBackgroundColourId, juce::Colours::darkgrey);
         newRotary->setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::black);
@@ -309,6 +310,9 @@ private:
         int slider_ix = 0;
         componentBorders.clear();
         for (auto *comp: sliderArray) {
+            comp->setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
+                                  comp->getTextBoxWidth(), comp->getHeight()*.2);
+
             auto [topLeftX, topLeftY] = coordinatesFromString(sliderTopLeftCorners[slider_ix]);
             auto [bottomRightX, bottomRightY] = coordinatesFromString(sliderBottomRightCorners[slider_ix]);
 
@@ -340,6 +344,9 @@ private:
         int rotary_ix = 0;
         for (auto *comp: rotaryArray)
         {
+            comp->setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
+                                  comp->getTextBoxWidth(), comp->getHeight()*.2);
+
             auto [topLeftX, topLeftY] =
                 coordinatesFromString(rotaryTopLeftCorners[rotary_ix]);
             auto [bottomRightX, bottomRightY] =
