@@ -110,23 +110,11 @@ void NeuralMidiFXPluginEditor::resized()
     }
 
     tabs.setBounds(area);
-
-//    auto widthEdge = area.getWidth() * .05;
-//    auto heightEdge = area.getHeight() * .03;
-
-//    area.removeFromTop(heightEdge);
-//    area.removeFromBottom(heightEdge);
-//    area.removeFromLeft(widthEdge);
-//    area.removeFromRight(widthEdge);
-
+    area.removeFromBottom(gap);
     for (int i = 0; i < paramComponentVector.size(); i++)
     {
         paramComponentVector[i]->resizeGuiElements(area);
     }
-
-
-    //parameterElements.resizeGuiElements(area);
-
 
 }
 

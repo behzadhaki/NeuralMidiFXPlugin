@@ -10,39 +10,6 @@
 
 using namespace std;
 
-inline std::pair<int, int> coordinatesFromString(const std::string &coordinate) {
-    if (coordinate.size() != 2)
-        throw std::runtime_error("Invalid coordinate format");
-
-    char letter = coordinate[0];
-    char number = coordinate[1];
-
-    if (letter < 'A' || letter > 'Z' || number < '1' || number > '9')
-        throw std::runtime_error("Invalid coordinate value");
-
-    int x = letter - 'A'; // Convert letter to 0-based index
-    int y = number - '1'; // Convert number to 0-based index
-
-    return {x, y};
-}
-
-inline void place(juce::Component &component, const juce::Rectangle<int> &area,
-           const std::string &topLeftCorner, const std::string &bottomRightCorner) {
-
-    auto [topLeftX, topLeftY] = coordinatesFromString(topLeftCorner);
-    auto [bottomRightX, bottomRightY] = coordinatesFromString(bottomRightCorner);
-
-    int cellWidth = area.getWidth() / ('Z' - 'A' + 1);
-    int cellHeight = area.getHeight() / (9 - 1 + 1);
-
-    int x = topLeftX * cellWidth;
-    int y = topLeftY * cellHeight;
-    int width = (bottomRightX - topLeftX + 1) * cellWidth;
-    int height = (bottomRightY - topLeftY + 1) * cellHeight;
-
-    component.setBounds(x, y, width, height);
-}
-
 // Creates the layout for a single tab
 class ParameterComponent : public juce::Button::Listener,
                            public juce::Component {
@@ -120,84 +87,80 @@ public:
         //reshape the entire component
         setSize(area.getWidth(), area.getHeight());
 
-        int newHeight = int(static_cast<float>(area.getHeight()) * 0.9f);
-        int newWidth = int(static_cast<float>(area.getWidth()) * 0.9f);
+        width = getWidth(); // Get the width of the component
+        height = getHeight(); // Get the height of the component
+        marginWidth = 0.05f * width; // 5% margin on both sides
+        marginHeight = 0.05f * height; // 5% margin on top and bottom
 
-        areaWithBleed = area.withSizeKeepingCentre(newWidth, newHeight);
-
-        //These values keep track of the moving X/Y positions of each component as they are placed
-        // X values incremented in each resized() function, Y values are incremented after each function
-        // for new set of components
-        deltaX = areaWithBleed.getX();
-        deltaY = areaWithBleed.getY();
+        gridWidth = width - 2 * marginWidth; // Width of the grid
+        gridHeight = height - 2 * marginHeight; // Height of the grid
+        cellWidth = gridWidth / (gridSize - 1);
+        cellHeight = gridHeight / (gridSize - 1);
 
         // Sliders
         resizeSliders();
 
         // Rotaries
-//        deltaX = areaWithBleed.getX();
-//        deltaY += int((1.0f / 3.0f) * static_cast<float>(areaWithBleed.getHeight()));
-        // resizeRotaries();
+         resizeRotaries();
 
         // Buttons
-//        deltaX = areaWithBleed.getX();
-//        deltaY += int((1.0f / 3.0f) * static_cast<float>(areaWithBleed.getHeight()));
-        // resizeButtons();
+         resizeButtons();
 
-        repaint();
+         repaint();
     }
 
     void paint(Graphics& g) {
-        if (!UIObjects::Tabs::show_grid) {
-            return;
-        }
 
-        const int gridSize = 26; // Number of cells in each direction
-        const float width = getWidth(); // Get the width of the component
-        const float height = getHeight(); // Get the height of the component
-        const float cellWidth = width / gridSize;
-        const float cellHeight = height / gridSize;
-
-        for (int i = 0; i < gridSize; i++) {
-            for (int j = 0; j < gridSize; j++) {
-            float x = static_cast<float>(i) * cellWidth; // Top-left corner of the cell
-            float y = static_cast<float>(j) * cellHeight; // Top-left corner of the cell
-
-            // Draw the dot at the top-left corner of the cell
-            g.setColour(Colours::black);
-            g.fillEllipse(x, y, 4.0f, 4.0f); // A dot of size 4
-
-            // Label the first row
-            if (j == 0) {
-                char labelX = 'A' + i;
-                String label = String::charToString(labelX);
+        if (UIObjects::Tabs::show_grid) {
+            // Draw the border around the grid
+            if (UIObjects::Tabs::draw_borders_for_components) {
                 g.setColour(Colours::black);
-                g.drawText(label, x, y - 16.0f, 20.0f, 12.0f, Justification::centred, true);
+                g.drawRect(marginWidth, marginHeight, gridWidth, gridHeight, 2.0f);
             }
 
-            // Label the first column
-            if (i == 0) {
-                char labelY = 'a' + j;
-                String label = String::charToString(labelY);
-                g.setColour(Colours::black);
-                g.drawText(label, x - 16.0f, y, 20.0f, 12.0f, Justification::centred, true);
+            for (int i = 0; i < gridSize; i++) {
+                for (int j = 0; j < gridSize; j++) {
+                    float x = marginWidth + static_cast<float>(i) * cellWidth; // Center of the dot
+                    float y = marginHeight + static_cast<float>(j) * cellHeight; // Center of the dot
+
+                    // Draw the dot
+                    g.setColour(Colours::black);
+                    g.fillEllipse(x - 2.0f, y - 2.0f, 4.0f, 4.0f); // A dot of size 4
+
+                    // Label the first row
+                    if (j == 0) {
+                        char labelX = 'A' + i;
+                        String label = String::charToString(labelX);
+                        g.setColour(Colours::black);
+                        g.drawText(label, x - 10.0f, y - 16.0f, 20.0f, 12.0f, Justification::centred, true);
+                    }
+
+                    // Label the first column
+                    if (i == 0) {
+                        char labelY = 'a' + j;
+                        String label = String::charToString(labelY);
+                        g.setColour(Colours::black);
+                        g.drawText(label, x - 24.0f, y - 6.0f, 20.0f, 12.0f, Justification::centred, true);
+                    }
+                }
             }
-            }
+
         }
 
         if (UIObjects::Tabs::draw_borders_for_components) {
             g.setColour(Colours::black);
-            for (auto &border: componentBorders) {
-            float x = std::get<0>(border);
-            float y = std::get<1>(border);
-            float w = std::get<2>(border);
-            float h = std::get<3>(border);
-            Rectangle<float> rect(x, y, w, h);
-            g.drawRect(rect, 1.0f);
+            for (auto border : componentBorders) {
+                auto [x, y, width, height, tl_label, br_label] = border;
+                g.drawRect(x, y, width, height, 2.0f);
+                if (UIObjects::Tabs::show_grid) {
+                    // draw labels inside the component
+                    g.drawText(tl_label, x + 2.0f, y + 2.0f, 20.0f, 12.0f, Justification::centred, true);
+                    g.drawText(br_label, x + width - 22.0f, y + height - 14.0f, 20.0f, 12.0f, Justification::centred, true);
+                }
             }
         }
-    }
 
+    }
 
     void resized() override {}
 
@@ -241,7 +204,18 @@ private:
     std::vector<std::string> rotaryBottomRightCorners;
     std::vector<std::string> buttonTopLeftCorners;
     std::vector<std::string> buttonBottomRightCorners;
-    std::vector<std::tuple<int, int, int, int>> componentBorders;
+    std::vector<std::tuple<float, float, float, float, string, string>> componentBorders;
+
+    int gridSize = 26; // Number of cells in each direction
+    float width; // Get the width of the component
+    float height; // Get the height of the component
+    float marginWidth; // 5% margin on both sides
+    float marginHeight; // 5% margin on top and bottom
+
+    float gridWidth; // Width of the grid
+    float gridHeight; // Height of the grid
+    float cellWidth;
+    float cellHeight;
 
     // Tuple of the current tab with all objects
     UIObjects::tab_tuple currentTab;
@@ -333,121 +307,123 @@ private:
 
     void resizeSliders() {
         int slider_ix = 0;
+        componentBorders.clear();
         for (auto *comp: sliderArray) {
-//            // Initialize with X/Y position of total area, size of rectangle
-//            int sliderWidth = int((1.0f / static_cast<float>(numSliders)) *
-//                                  static_cast<float>(areaWithBleed.getWidth()));
-//            int sliderHeight = int(areaWithBleed.getHeight() / 3);
-//
-//            juce::Rectangle<int> sliderSpacingArea;
-//            sliderSpacingArea.setSize(sliderWidth, sliderHeight);
-//            sliderSpacingArea.setPosition(deltaX, deltaY);
-//
-//            comp->setBounds(sliderSpacingArea);
-//
-//            // Increment J in proportion to number of sliders and width of rectangle
-//            deltaX += sliderWidth;
             auto [topLeftX, topLeftY] = coordinatesFromString(sliderTopLeftCorners[slider_ix]);
             auto [bottomRightX, bottomRightY] = coordinatesFromString(sliderBottomRightCorners[slider_ix]);
 
             auto area = getLocalBounds();
 
 
-            int x = topLeftX * area.getWidth();
-            int y = topLeftY * area.getHeight();
-            int width = (bottomRightX - topLeftX) * area.getWidth();
-            int height = (bottomRightY - topLeftY) * area.getHeight();
+            auto x = topLeftX - 2.0f;
+            auto y = topLeftY - 2.0f;
+            auto width = (bottomRightX - topLeftX) + 4.0f;
+            auto height = (bottomRightY - topLeftY) + 4.0f;
 
             cout << "Slider " << slider_ix << " : " << x << ", " << y << ", " << width << ", " << height << endl;
 
             comp->setBounds(x, y, width, height);
 
             if (UIObjects::Tabs::draw_borders_for_components) {
-                auto border = std::tuple<int, int, int, int>(x, y, width, height);
+                string tl_label = sliderTopLeftCorners[slider_ix];
+                string br_label = sliderBottomRightCorners[slider_ix];
+                auto border = std::tuple<float, float, float, float, string, string>(
+                    x, y, width, height, tl_label, br_label);
                 componentBorders.emplace_back(border);
             }
+
+            slider_ix++;
         }
     }
 
     void resizeRotaries() {
-        for (auto *comp: rotaryArray) {
-            // Initialize with X/Y position of total area, size of rectangle
-            int rotaryWidth = int((1.0f / static_cast<float>(numRotaries)) *
-                                  static_cast<float>(areaWithBleed.getWidth()));
-            int rotaryHeight = int(areaWithBleed.getHeight() / 3);
+        int rotary_ix = 0;
+        for (auto *comp: rotaryArray)
+        {
+            auto [topLeftX, topLeftY] =
+                coordinatesFromString(rotaryTopLeftCorners[rotary_ix]);
+            auto [bottomRightX, bottomRightY] =
+                coordinatesFromString(rotaryBottomRightCorners[rotary_ix]);
 
-            juce::Rectangle<int> rotarySpacingArea;
-            rotarySpacingArea.setSize(rotaryWidth, rotaryHeight);
-            rotarySpacingArea.setPosition(deltaX, deltaY);
+            auto area = getLocalBounds();
 
-            // create a slightly smaller rotary
-            auto rotaryArea = rotarySpacingArea.withSizeKeepingCentre(
-                    int(static_cast<float>(rotarySpacingArea.getWidth()) * 0.8f),
-                    int(static_cast<float>(rotarySpacingArea.getHeight()) * 0.8f));
+            auto x = topLeftX - 2.0f;
+            auto y = topLeftY - 2.0f;
+            auto width = (bottomRightX - topLeftX) + 4.0f;
+            auto height = (bottomRightY - topLeftY) + 4.0f;
 
-            comp->setBounds(rotaryArea);
+            cout << "Rotary " << rotary_ix << " : " << x << ", " << y << ", " << width
+                 << ", " << height << endl;
 
-            // Increment J in proportion to number of sliders and width of rectangle
-            deltaX += rotaryWidth;
+            comp->setBounds(x, y, width, height);
+
+            if (UIObjects::Tabs::draw_borders_for_components) {
+                string tl_label = rotaryTopLeftCorners[rotary_ix];
+                string br_label = rotaryBottomRightCorners[rotary_ix];
+                auto border = std::tuple<float, float, float, float, string, string>(
+                    x, y, width, height, tl_label, br_label);
+                componentBorders.emplace_back(border);
+            }
+
+            rotary_ix++;
         }
     }
 
     void resizeButtons() {
+        int button_ix = 0;
         for (auto *comp: buttonArray) {
-            int verticalSeparation = int(areaWithBleed.getHeight() * .08);
+            auto [topLeftX, topLeftY] = coordinatesFromString(buttonTopLeftCorners[button_ix]);
+            auto [bottomRightX, bottomRightY] = coordinatesFromString(buttonBottomRightCorners[button_ix]);
 
-            int buttonWidth = int((1.0f / static_cast<float>(numButtons)) *
-                    static_cast<float>(areaWithBleed.getWidth()));
-            int buttonHeight = int(areaWithBleed.getHeight() / 3) - verticalSeparation;
+            auto area = getLocalBounds();
 
-            // This creates an overall space for each button
-            juce::Rectangle<int> buttonSpacingArea;
-            buttonSpacingArea.setSize(buttonWidth, buttonHeight);
-            buttonSpacingArea.setPosition(deltaX, deltaY);
+            auto x = topLeftX - 2.0f;
+            auto y = topLeftY - 2.0f;
+            auto width = (bottomRightX - topLeftX) + 4.0f;
+            auto height = (bottomRightY - topLeftY) + 4.0f;
 
-            // Resize button to a square
-            auto buttonArea = buttonSpacingArea.withSizeKeepingCentre(buttonHeight, buttonHeight);
+            cout << "Button " << button_ix << " : " << x << ", " << y << ", " << width << ", " << height << endl;
 
-            comp->setBounds(buttonArea);
+            comp->setBounds(x, y, width, height);
 
-            deltaX += buttonWidth;
+            if (UIObjects::Tabs::draw_borders_for_components) {
+                string tl_label = buttonTopLeftCorners[button_ix];
+                string br_label = buttonBottomRightCorners[button_ix];
+                auto border = std::tuple<float, float, float, float, string, string>(
+                    x, y, width, height, tl_label, br_label);
+                componentBorders.emplace_back(border);
+            }
+
+            button_ix++;
         }
     }
 
     std::pair<float, float> coordinatesFromString(const std::string &coordinate) {
-        if (coordinate.size() != 2)
-        {
-            cout << "Invalid coordinate format - select from Aa to Zz"  << endl;
+        if (coordinate.size() != 2) {
+            cout << "Invalid coordinate format - select from Aa to Zz" << endl;
             throw std::runtime_error("Invalid coordinate format - select from Aa to Zz");
         }
+        const int gridSize = 26; // Number of cells in each direction
+
         char letter_x = coordinate[0];
         char letter_y = coordinate[1];
 
         if ((letter_x < 'A' || letter_x > 'Z') || (letter_y < 'a' || letter_y > 'z'))
             throw std::runtime_error("Invalid coordinate value");
 
-        float x = (letter_x - 'A') / 25.0f; // Convert letter to ratio, 'A' to 'Z' -> 0 to 1
-        float y = (letter_y - 'a') / 25.0f; // Convert letter to ratio, 'a' to 'z' -> 0 to 1
+        const float width = getWidth(); // Get the width of the component
+        const float height = getHeight(); // Get the height of the component
+        const float marginWidth = 0.05f * width; // 5% margin on both sides
+        const float marginHeight = 0.05f * height; // 5% margin on top and bottom
+        const float gridWidth = width - 2 * marginWidth; // Width of the grid
+        const float gridHeight = height - 2 * marginHeight; // Height of the grid
+        const float cellWidth = gridWidth / (gridSize - 1);
+        const float cellHeight = gridHeight / (gridSize - 1);
+
+        float x = marginWidth + (letter_x - 'A') * cellWidth;
+        float y = marginHeight + (letter_y - 'a') * cellHeight;
 
         return {x, y};
-    }
-
-    void place(juce::Component &component,
-               const std::string &topLeftCorner, const std::string &bottomRightCorner) {
-
-        auto area = getLocalBounds();
-        auto [topLeftX, topLeftY] = coordinatesFromString(topLeftCorner);
-        auto [bottomRightX, bottomRightY] = coordinatesFromString(bottomRightCorner);
-
-        int cellWidth = area.getWidth() / ('Z' - 'A' + 1);
-        int cellHeight = area.getHeight() / (9 - 1 + 1);
-
-        int x = topLeftX * cellWidth;
-        int y = topLeftY * cellHeight;
-        int width = (bottomRightX - topLeftX + 1) * cellWidth;
-        int height = (bottomRightY - topLeftY + 1) * cellHeight;
-
-        component.setBounds(x, y, width, height);
     }
 
 };

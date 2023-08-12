@@ -27,34 +27,55 @@ namespace UIObjects {
         const bool show_grid = true;
         const bool draw_borders_for_components = true;
         const std::vector<tab_tuple> tabList{
-            tab_tuple{
-                "Model",
-                slider_list{
-                    slider_tuple{"Slider 1", 0.0, 1.0, 0.0, "Cc", "Ek"}},
-                rotary_list{
+            tab_tuple
+            {
+                "Tab 1", // use any name you want for the tab
+                slider_list
+                {
+                    slider_tuple{"Slider 1", 0.0, 1.0, 0.0, "Cc", "Ek"}
+                },
+                rotary_list
+                {
                     rotary_tuple{"Rotary 1", 0.0, 1.0, 0.5, "Vc", "Xk"},
-                    rotary_tuple{"Rotary 2", 0.0, 4.0, 1.5, "Ij", "Qr"}},
-                button_list{
-                    button_tuple{"ToggleButton 1", true, "Uc", "Xi"}}
+                    rotary_tuple{"Rotary 2", 0.0, 4.0, 1.5, "Ij", "Qr"}
+                },
+                button_list
+                {
+                    button_tuple{"ClickButton 1", false, "Wv", "Zz"}
+                }
             },
             tab_tuple{
                 "Tab 2",
-                slider_list{
+                slider_list
+                {
                     slider_tuple{"Test 1", 0.0, 1.0, 0.0, "Aa", "Ff"},
-                    slider_tuple{"Gibberish", 0.0, 25.0, 11.0, "Ff", "Ll"}},
-                rotary_list{
+                    slider_tuple{"Gibberish", 0.0, 25.0, 11.0, "Ff", "Ll"}
+                },
+                rotary_list
+                {
                     rotary_tuple{"Rotary 1B", 0.0, 1.0, 0.5, "Ll", "Pp"},
-                    rotary_tuple{"Test 2B", 0.0, 4.0, 1.5, "Pp", "Tt"}},
-                button_list{
-                    button_tuple{"ToggleButton 2", true, "Tt", "Zz"}}
+                    rotary_tuple{"Test 2B", 0.0, 4.0, 1.5, "Pp", "Tt"}
+                },
+                button_list
+                {
+                    button_tuple{"ToggleButton 2", true, "Tt", "Zz"}
+                }
             },
 
             tab_tuple{
-                "Generation",
-                slider_list{
-                    slider_tuple{"Generation Playback Delay", 0.0, 10.0, 0.0, "Aa", "Zz"}},
-                rotary_list{},
-                button_list{}
+                "Tab 3",
+                slider_list
+                {
+                    slider_tuple{"Generation Playback Delay", 0.0, 10.0, 0.0, "Aa", "Zz"}
+                },
+                rotary_list
+                {
+
+                },
+                button_list
+                {
+
+                }
             }
         };
     }
@@ -69,17 +90,17 @@ namespace UIObjects {
         // set following to true
         // If active, the content of the midi file will be visualized in the
         // MidiInVisualizer and also be provided to you in the InputTensorPreparatorThread
-        const bool allowToDragInMidi = false;
+        const bool allowToDragInMidi = true;
 
         // if you want to visualize notes received in real-time from host
         // set following to true
         const bool visualizeIncomingMidiFromHost = true;
         // if playhead is manually moved backward, do you want to delete all the
         // previously visualized notes received from host?
-        const bool deletePreviousIncomingMidiMessagesOnBackwardPlayhead = false;
+        const bool deletePreviousIncomingMidiMessagesOnBackwardPlayhead = true;
         // if playback is stopped, do you want to delete all the previously
         // visualized notes received from host?
-        const bool deletePreviousIncomingMidiMessagesOnRestart = false;
+        const bool deletePreviousIncomingMidiMessagesOnRestart = true;
     }
 
     namespace PlaybackSequenceVisualizer {
@@ -92,7 +113,7 @@ namespace UIObjects {
 
         // if you want to allow the user to drag out the visualized content,
         // set following to true
-        const bool allowToDragOutAsMidi = false;
+        const bool allowToDragOutAsMidi = true;
     }
 
 

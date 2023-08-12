@@ -225,30 +225,32 @@ public:
     // should drag from component to file explorer or DAW if allowed
     void mouseDrag(const juce::MouseEvent& event) override
     {
-
-        if (midiFile.getNumTracks() <= 0)
+        if (UIObjects::PlaybackSequenceVisualizer::allowToDragOutAsMidi)
         {
-            return;
-        }
-
-        juce::String fileName = juce::Uuid().toString() + ".mid";  // Random filename
-
-        juce::File outf = juce::File::getSpecialLocation(
-            juce::File::SpecialLocationType::tempDirectory
-        ).getChildFile(fileName);
-        juce::TemporaryFile tempf(outf);
-        {
-            auto p_os = std::make_unique<juce::FileOutputStream>(
-                tempf.getFile());
-            if (p_os->openedOk()) {
-                midiFile.writeTo(*p_os, 0);
+            if (midiFile.getNumTracks() <= 0)
+            {
+                return;
             }
-        }
 
-        bool succeeded = tempf.overwriteTargetFileWithTemporary();
-        if (succeeded) {
-            juce::DragAndDropContainer::performExternalDragDropOfFiles(
-                {outf.getFullPathName()}, false);
+            juce::String fileName = juce::Uuid().toString() + ".mid";  // Random filename
+
+            juce::File outf = juce::File::getSpecialLocation(
+                juce::File::SpecialLocationType::tempDirectory
+            ).getChildFile(fileName);
+            juce::TemporaryFile tempf(outf);
+            {
+                auto p_os = std::make_unique<juce::FileOutputStream>(
+                    tempf.getFile());
+                if (p_os->openedOk()) {
+                    midiFile.writeTo(*p_os, 0);
+                }
+            }
+
+            bool succeeded = tempf.overwriteTargetFileWithTemporary();
+            if (succeeded) {
+                juce::DragAndDropContainer::performExternalDragDropOfFiles(
+                    {outf.getFullPathName()}, false);
+            }
         }
     }
 
