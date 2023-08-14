@@ -41,7 +41,7 @@ namespace UIObjects {
                 },
                 button_list
                 {
-                    button_tuple{"ClickButton 1", false, "Wv", "Zz"}
+                    button_tuple{"TriggerButton 1", false, "Wv", "Zz"}
                 }
             },
             tab_tuple{
@@ -58,7 +58,7 @@ namespace UIObjects {
                 },
                 button_list
                 {
-                    button_tuple{"ToggleButton 2", true, "Tt", "Zz"}
+                    button_tuple{"ToggleButton 1", true, "Tt", "Zz"}
                 }
             },
 

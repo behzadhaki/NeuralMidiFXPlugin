@@ -130,24 +130,25 @@ void NeuralMidiFXPluginEditor::timerCallback()
     bool newContent = false;
     bool newPlayheadPos = false;
     auto fs_ = NeuralMidiFXPluginProcessorPointer_->generationsToDisplay.getFs();
-    if (fs_.value() != fs)
-    {
-        fs = fs_.value();
-        newContent = true;
+
+    if (fs_ != std::nullopt) {
+        if ((*fs_ - fs) > 0.0001) {
+            fs = *fs_;
+            newContent = true;
+        }
     }
 
     auto qpm_ = NeuralMidiFXPluginProcessorPointer_->generationsToDisplay.getQpm();
-    if (qpm_.value() != qpm)
-    {
-        qpm = qpm_.value();
-        newContent = true;
+    if (qpm_ != std::nullopt) {
+        if ((*qpm_ - qpm) > 0.0001) {
+            qpm = *qpm_;
+            newContent = true;
+        }
     }
 
-
     auto policy_ = NeuralMidiFXPluginProcessorPointer_->generationsToDisplay.getPolicy();
-    if (policy_.has_value())
-    {
-        play_policy = policy_.value();
+    if (policy_ != std::nullopt) {
+        play_policy = *policy_;
         newContent = true;
 
         if (policy_->getLoopDuration() > 0) {
@@ -164,24 +165,22 @@ void NeuralMidiFXPluginEditor::timerCallback()
     }
 
     auto sequence_to_display_ = NeuralMidiFXPluginProcessorPointer_->generationsToDisplay.getSequence();
-    if (sequence_to_display_.has_value())
-    {
-        sequence_to_display = sequence_to_display_.value();
+    if (sequence_to_display_ != std::nullopt) {
+        sequence_to_display = *sequence_to_display_;
         newContent = true;
     }
 
     auto playhead_pos_ = NeuralMidiFXPluginProcessorPointer_->generationsToDisplay.getPlayheadPos();
-    if (playhead_pos_.value() != playhead_pos)
-    {
-        playhead_pos = playhead_pos_.value();
-        newPlayheadPos = true;
+    if (playhead_pos_ != std::nullopt){
+        if (*playhead_pos_ != playhead_pos) {
+            playhead_pos = *playhead_pos_;
+            newPlayheadPos = true;
+        }
     }
 
-    if (NMP2GUI_IncomingMessageSequence->getNumReady() > 0)
-    {
+    if (NMP2GUI_IncomingMessageSequence->getNumReady() > 0) {
         incoming_sequence = NMP2GUI_IncomingMessageSequence->pop();
-        if (incoming_sequence.getNumEvents() > 0)
-        {
+        if (incoming_sequence.getNumEvents() > 0) {
             cout << incoming_sequence.getEventPointer(0)->message.getDescription() << endl;
         }
         inputPianoRoll->displayMidiMessageSequence(incoming_sequence);
