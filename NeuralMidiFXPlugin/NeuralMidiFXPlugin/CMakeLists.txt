@@ -7,12 +7,13 @@ set (BaseTargetName NeuralMidiFXPlugin)
 
 set(TORCH_VERSION 2.0.0)
 
-# Libtorch Installation Path for Windows
+# Libtorch Installation Path for Windows and MacOS
 if(MSVC)
     set(LIBTORCH_INSTALL_DIR "C:/libtorch-${TORCH_VERSION}-${CMAKE_BUILD_TYPE}")
     find_package(Torch HINTS ${LIBTORCH_INSTALL_DIR})
 else()
-    find_package(Torch)
+    set(LIBTORCH_INSTALL_DIR "$ENV{HOME}/Library/libtorch-${TORCH_VERSION}-${CMAKE_BUILD_TYPE}")
+    find_package(Torch HINTS "${LIBTORCH_INSTALL_DIR}/libtorch")
 endif()
 
 if(NOT Torch_FOUND)
@@ -47,7 +48,7 @@ if(NOT Torch_FOUND)
         # Move the extracted libtorch directory to the desired location
         file(RENAME ${CMAKE_BINARY_DIR}/libtorch ${LIBTORCH_INSTALL_DIR})
 
-        set(Torch_DIR ${LIBTORCH_INSTALL_DIR}/share/cmake/Torch)
+            set(Torch_DIR ${LIBTORCH_INSTALL_DIR}/libtorch/share/cmake/Torch)
         find_package(Torch REQUIRED)
 
         # Add Torch to the include directories
@@ -65,9 +66,20 @@ if(NOT Torch_FOUND)
                 SHOW_PROGRESS
                 )
 
-        execute_process(COMMAND unzip ${TORCH_FILE}
+
+
+        # Create the directory if it does not exist
+        if(NOT EXISTS "${LIBTORCH_INSTALL_DIR}")
+            file(MAKE_DIRECTORY "${LIBTORCH_INSTALL_DIR}")
+        endif()
+
+        # Extract the zip file
+        execute_process(COMMAND unzip -q ${TORCH_FILE} -d "${LIBTORCH_INSTALL_DIR}"
                 WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
                 )
+
+        # Add Torch to the include directories
+        include_directories(${TORCH_INCLUDE_DIRS})
 
     endif()
 
@@ -138,6 +150,7 @@ if(WIN32)
     file(COPY "${CMAKE_SOURCE_DIR}/TorchScripts" DESTINATION "C:/${BaseTargetName}")
     add_definitions(-DDEFAULT_MODEL_DIR="\"C:\\\\${BaseTargetName}\\\\TorchScripts\\\\MDL\"")
 elseif(APPLE)
-    file(COPY "${CMAKE_SOURCE_DIR}/TorchScripts" DESTINATION "/Library/${BaseTargetName}/")
-    add_definitions(-DDEFAULT_MODEL_DIR="\"/Library/${BaseTargetName}/TorchScripts/MDL\"")
+    set(TARGET_DIR "$ENV{HOME}/Library/${BaseTargetName}")
+    file(COPY "${CMAKE_SOURCE_DIR}/TorchScripts" DESTINATION "${TARGET_DIR}")
+    add_definitions(-DDEFAULT_MODEL_DIR="\"${TARGET_DIR}/TorchScripts/MDL\"")
 endif()
