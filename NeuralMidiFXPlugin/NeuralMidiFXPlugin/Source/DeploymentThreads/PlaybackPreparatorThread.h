@@ -9,11 +9,11 @@
 #include "../Includes/GuiParameters.h"
 #include "../Includes/GenerationEvent.h"
 #include "../Includes/LockFreeQueue.h"
-#include "../DeploymentSettings/ThreadsAndQueuesAndInputEvents.h"
-#include "../DeploymentSettings/Model.h"
+#include "../../Configs_HostEvents.h"
+#include "../../Configs_Model.h"
 #include "../Includes/colored_cout.h"
 #include "../Includes/chrono_timer.h"
-#include "../DeploymentSettings/Debugging.h"
+#include "../../Configs_Debugging.h"
 
 class PlaybackPreparatorThread : public juce::Thread {
 public:

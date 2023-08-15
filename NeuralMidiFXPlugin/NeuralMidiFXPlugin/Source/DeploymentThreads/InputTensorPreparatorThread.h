@@ -10,11 +10,11 @@
 #include "../Includes/GuiParameters.h"
 #include "../Includes/InputEvent.h"
 #include "../Includes/LockFreeQueue.h"
-#include "../DeploymentSettings/ThreadsAndQueuesAndInputEvents.h"
-#include "../DeploymentSettings/Model.h"
+#include "../../Configs_HostEvents.h"
+#include "../../Configs_Model.h"
 #include "../Includes/colored_cout.h"
 #include "../Includes/chrono_timer.h"
-#include "../DeploymentSettings/Debugging.h"
+#include "../../Configs_Debugging.h"
 
 class InputTensorPreparatorThread : public juce::Thread {
 public:

@@ -5,9 +5,9 @@
 #pragma once
 
 #include <torch/script.h> // One-stop header.
-#include "../Includes/GuiParameters.h"
-#include "../Includes/InputEvent.h"
-#include "../Includes/colored_cout.h"
+#include "Source/Includes/GuiParameters.h"
+#include "Source/Includes/InputEvent.h"
+#include "Source/Includes/colored_cout.h"
 
 #define DEFAULT_MODEL_DIR_STR(x) #x
 #define DEFAULT_MODEL_DIR_EXPAND(x) DEFAULT_MODEL_DIR_STR(x)
@@ -82,14 +82,15 @@ namespace model_settings {
     // make sure to reload the cmake project after adding a new model
     inline const char *model_name = "drumLoopVAE.pt";}
 
-struct Model {
+struct Configs_Model
+    {
     string path;
     std::optional<torch::jit::script::Module> model;
 
     /*
      * constructor for Model to be loaded from a path
      */
-    explicit Model(const string& model_name) {
+    explicit Configs_Model(const string& model_name) {
         std::string path_ = std::string(MDL_path::default_model_path) +
                             std::string(MDL_path::path_separator) +
                             std::string(model_name);

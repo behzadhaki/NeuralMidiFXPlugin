@@ -38,6 +38,13 @@ bool InputTensorPreparatorThread::deploy(
     auto ToggleButton1 = gui_params.isToggleButtonOn("ToggleButton 1");
     auto ButtonTrigger = gui_params.wasButtonClicked("TriggerButton 1");
 
+    // Or get value only when a change occurs
+    /*if (gui_params_changed_since_last_call) {
+        auto Slider1 = gui_params.getValueFor("Slider 1");
+        auto ToggleButton1 = gui_params.isToggleButtonOn("ToggleButton 1");
+        auto ButtonTrigger = gui_params.wasButtonClicked("TriggerButton 1");
+    }*/
+
     // =================================================================================
 
     // =================================================================================

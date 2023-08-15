@@ -5,8 +5,8 @@
 
 // #include <utility>
 
-#include "../DeploymentSettings/ThreadsAndQueuesAndInputEvents.h"
-#include "../../GUI_Configs.h"
+#include "../../Configs_HostEvents.h"
+#include "../../Configs_GUI.h"
 #include "chrono_timer.h"
 #include <torch/script.h> // One-stop header.
 

@@ -8,11 +8,11 @@
 #include "shared_plugin_helpers/shared_plugin_helpers.h"
 #include "../Includes/GuiParameters.h"
 #include "../Includes/LockFreeQueue.h"
-#include "../DeploymentSettings/ThreadsAndQueuesAndInputEvents.h"
-#include "../DeploymentSettings/Model.h"
+#include "../../Configs_HostEvents.h"
+#include "../../Configs_Model.h"
 #include "../Includes/colored_cout.h"
 #include "../Includes/chrono_timer.h"
-#include "../DeploymentSettings/Debugging.h"
+#include "../../Configs_Debugging.h"
 
 class ModelThread : public juce::Thread {
 public:
@@ -63,7 +63,7 @@ private:
     // ============================================================================================================
     ModelInput model_input{};
     ModelOutput model_output{};
-    Model model{model_settings::model_name};
+    Configs_Model model{model_settings::model_name};
 
     // ============================================================================================================
     // ===          I/O Queues for Receiving/Sending Data

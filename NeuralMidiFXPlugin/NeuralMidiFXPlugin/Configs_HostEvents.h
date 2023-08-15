@@ -5,7 +5,7 @@
 #pragma once
 
 // ======================================================================================
-// ==================        EventFromHost Communication Settings                ================
+// ==================        EventFromHost Communication Settings        ================
 // ======================================================================================
 /*
  * You can send Events to ITP at different frequencies with different
@@ -84,8 +84,6 @@ namespace thread_configurations::Model {
 namespace thread_configurations::PlaybackPreparator {
     // waittime between iterations in ms
     constexpr double waitTimeBtnIters{0.5};
-
-
 }
 
 namespace thread_configurations::APVTSMediatorThread {
