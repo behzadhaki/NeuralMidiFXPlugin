@@ -1,6 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-#include "../src/DeploymentSettings/GuiAndParams.h"
+#include "DeploymentSettings/GuiAndParams.h"
 
 inline double mapToLoopRange(double value, double loopStart, double loopEnd) {
 
@@ -79,8 +79,7 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
     setInterceptsMouseClicks(false, true);
 
     startTimer(50);
-    resized(); // Is this a terrible idea?
-
+    resized();
 
 }
 
