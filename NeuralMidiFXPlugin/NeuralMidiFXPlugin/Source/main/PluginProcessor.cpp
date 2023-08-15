@@ -1,7 +1,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-#include "Includes/GenerationEvent.h"
-#include "Includes/APVTSMediatorThread.h"
+#include "../src/Includes/GenerationEvent.h"
+#include "../src/Includes/APVTSMediatorThread.h"
 
 using namespace std;
 using namespace debugging_settings::ProcessorThread;

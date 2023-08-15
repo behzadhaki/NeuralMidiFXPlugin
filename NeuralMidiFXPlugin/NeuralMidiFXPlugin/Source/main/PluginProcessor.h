@@ -1,16 +1,16 @@
 #pragma once
 
-#include <shared_plugin_helpers/shared_plugin_helpers.h>
+#include "shared_plugin_helpers/shared_plugin_helpers.h"
 //#include <vector>
 #include <torch/torch.h>
-#include "DeploymentSettings/Model.h"
-#include "DeploymentThreads/InputTensorPreparatorThread.h"
-#include "DeploymentThreads/ModelThread.h"
-#include "DeploymentThreads/PlaybackPreparatorThread.h"
-#include "Includes/APVTSMediatorThread.h"
-#include "Includes/LockFreeQueue.h"
-#include "Includes/GenerationEvent.h"
-#include "Includes/APVTSMediatorThread.h"
+#include "../src/DeploymentSettings/Model.h"
+#include "../src/DeploymentThreads/InputTensorPreparatorThread.h"
+#include "../src/DeploymentThreads/ModelThread.h"
+#include "../src/DeploymentThreads/PlaybackPreparatorThread.h"
+#include "../src/Includes/APVTSMediatorThread.h"
+#include "../src/Includes/LockFreeQueue.h"
+#include "../src/Includes/GenerationEvent.h"
+#include "../src/Includes/APVTSMediatorThread.h"
 #include <chrono>
 #include <mutex>
 

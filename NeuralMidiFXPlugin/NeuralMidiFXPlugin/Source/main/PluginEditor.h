@@ -1,8 +1,8 @@
 #pragma once
 
 #include "PluginProcessor.h"
-#include "Includes/GuiElements.h"
-#include "Includes/MidiDisplayWidget.h"
+#include "../src/Includes/GuiElements.h"
+#include "../src/Includes/MidiDisplayWidget.h"
 
 using namespace std;
 

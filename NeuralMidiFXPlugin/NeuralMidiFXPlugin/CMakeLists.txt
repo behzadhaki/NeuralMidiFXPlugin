@@ -108,12 +108,15 @@ juce_add_plugin("${BaseTargetName}"
 #include(libtorch_setup.cmake)
 
 target_sources(${BaseTargetName} PRIVATE
-        Source/PluginProcessor.cpp
-        Source/PluginEditor.cpp
-        Source/DeploymentThreads/InputTensorPreparatorThread.cpp
-        Source/DeploymentThreads/ModelThread.cpp
-        Source/DeploymentThreads/PlaybackPreparatorThread.cpp
-        Source/Includes/colored_cout.cpp
+        Source/main/PluginProcessor.cpp
+        Source/main/PluginEditor.cpp
+        Source/src/DeploymentThreads/InputTensorPreparatorThread.cpp
+        Source/ITP_Deploy.cpp
+        Source/src/DeploymentThreads/ModelThread.cpp
+        Source/MDL_Deploy.cpp
+        Source/src/DeploymentThreads/PlaybackPreparatorThread.cpp
+        Source/PPP_Deploy.cpp
+        Source/src/Includes/colored_cout.cpp
         )
 
 target_compile_definitions(${BaseTargetName}

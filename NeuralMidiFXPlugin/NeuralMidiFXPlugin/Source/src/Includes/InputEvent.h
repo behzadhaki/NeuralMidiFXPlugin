@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <shared_plugin_helpers/shared_plugin_helpers.h>
-#include "../Includes/GuiParameters.h"
-#include "../Includes/chrono_timer.h"
+#include "shared_plugin_helpers/shared_plugin_helpers.h"
+#include "GuiParameters.h"
+#include "chrono_timer.h"
 #include "../DeploymentSettings/ThreadsAndQueuesAndInputEvents.h"
 #include <utility>
 #include <mutex>

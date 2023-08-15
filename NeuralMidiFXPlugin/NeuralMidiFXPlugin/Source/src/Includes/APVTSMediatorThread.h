@@ -7,7 +7,7 @@
 #include "shared_plugin_helpers/shared_plugin_helpers.h"
 #include "../DeploymentSettings/ThreadsAndQueuesAndInputEvents.h"
 #include "GuiParameters.h"
-#include "../Includes/LockFreeQueue.h"
+#include "LockFreeQueue.h"
 
 #pragma once
 

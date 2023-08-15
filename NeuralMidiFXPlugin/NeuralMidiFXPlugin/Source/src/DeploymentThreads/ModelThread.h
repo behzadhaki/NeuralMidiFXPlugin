@@ -5,7 +5,7 @@
 #ifndef JUCECMAKEREPO_MODELTHREAD_H
 #define JUCECMAKEREPO_MODELTHREAD_H
 
-#include <shared_plugin_helpers/shared_plugin_helpers.h>
+#include "shared_plugin_helpers/shared_plugin_helpers.h"
 #include "../Includes/GuiParameters.h"
 #include "../Includes/LockFreeQueue.h"
 #include "../DeploymentSettings/ThreadsAndQueuesAndInputEvents.h"
