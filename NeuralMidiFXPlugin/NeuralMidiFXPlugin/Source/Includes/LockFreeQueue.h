@@ -6,7 +6,7 @@
 // #include <utility>
 
 #include "../DeploymentSettings/ThreadsAndQueuesAndInputEvents.h"
-#include "../DeploymentSettings/GuiAndParams.h"
+#include "../../GUI_Configs.h"
 
 #include <torch/script.h> // One-stop header.
 

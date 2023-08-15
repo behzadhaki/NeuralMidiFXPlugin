@@ -9,8 +9,16 @@
 // ==================     UI Settings                      ==============================
 // ======================================================================================
 
+
 // GUI settings
 namespace UIObjects {
+
+    // ---------------------------------------------------------------------------------
+    // Don't Modify the following
+    // ---------------------------------------------------------------------------------
+
+    // slider_tuple = {label, min, max, defaultVal, topLeftCorner, bottomRightCorner}
+    // topLeftCorner and bottomRightCorner are coordinates on the grid ("Aa" to "Zz")
     using slider_tuple = std::tuple<const char *, double, double, double, const char *, const char *>;
     using rotary_tuple = std::tuple<const char *, double, double, double, const char *, const char *>;
     using button_tuple = std::tuple<const char *, bool, const char *, const char *>;
@@ -20,9 +28,11 @@ namespace UIObjects {
     using button_list = std::vector<button_tuple>;
 
     using tab_tuple = std::tuple<const char *, slider_list, rotary_list, button_list>;
+    // ---------------------------------------------------------------------------------
 
-    using tab_tuple = std::tuple<const char *, slider_list, rotary_list, button_list>;
-
+    // ---------------------------------------------------------------------------------
+    // Feel Free to Modify the following
+    // ---------------------------------------------------------------------------------
     namespace Tabs {
         const bool show_grid = true;
         const bool draw_borders_for_components = true;
