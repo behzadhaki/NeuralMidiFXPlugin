@@ -5,14 +5,14 @@
 #ifndef JUCECMAKEREPO_MODELTHREAD_H
 #define JUCECMAKEREPO_MODELTHREAD_H
 
-#include <shared_plugin_helpers/shared_plugin_helpers.h>
+#include "shared_plugin_helpers/shared_plugin_helpers.h"
 #include "../Includes/GuiParameters.h"
 #include "../Includes/LockFreeQueue.h"
-#include "../DeploymentSettings/ThreadsAndQueuesAndInputEvents.h"
-#include "../DeploymentSettings/Model.h"
+#include "../../Configs_HostEvents.h"
+#include "../../Configs_Model.h"
 #include "../Includes/colored_cout.h"
 #include "../Includes/chrono_timer.h"
-#include "../DeploymentSettings/Debugging.h"
+#include "../../Configs_Debugging.h"
 
 class ModelThread : public juce::Thread {
 public:
@@ -28,9 +28,10 @@ public:
     // ---         Step 2 . give access to resources needed to communicate with other threads
     // ------------------------------------------------------------------------------------------------------------
     void startThreadUsingProvidedResources(
-            LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size> *ITP2MDL_ModelInput_Que_ptr_,
-            LockFreeQueue<ModelOutput, queue_settings::MDL2PPP_que_size> *MDL2PPP_ModelOutput_Que_ptr_,
-            LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2MDL_Parameters_Queu_ptr_);
+        LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size> *ITP2MDL_ModelInput_Que_ptr_,
+        LockFreeQueue<ModelOutput, queue_settings::MDL2PPP_que_size> *MDL2PPP_ModelOutput_Que_ptr_,
+        LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2MDL_Parameters_Queu_ptr_,
+        RealTimePlaybackInfo *realtimePlaybackInfo_ptr_);
 
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 3 . start run() thread by calling startThread().
@@ -62,7 +63,7 @@ private:
     // ============================================================================================================
     ModelInput model_input{};
     ModelOutput model_output{};
-    Model model{model_settings::default_model_path};
+    Configs_Model model{model_settings::model_name};
 
     // ============================================================================================================
     // ===          I/O Queues for Receiving/Sending Data
@@ -70,6 +71,7 @@ private:
     LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size> *ITP2MDL_ModelInput_Que_ptr{};
     LockFreeQueue<ModelOutput, queue_settings::MDL2PPP_que_size> *MDL2PPP_ModelOutput_Que_ptr{};
     LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2MDL_Parameters_Queu_ptr{};
+    RealTimePlaybackInfo *realtimePlaybackInfo{};
     // ============================================================================================================
 
     // ============================================================================================================

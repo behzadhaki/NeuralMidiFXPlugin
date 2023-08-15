@@ -5,9 +5,9 @@
 
 // #include <utility>
 
-#include "../DeploymentSettings/ThreadsAndQueuesAndInputEvents.h"
-#include "../DeploymentSettings/GuiAndParams.h"
-#include "../Includes/chrono_timer.h"
+#include "../../Configs_HostEvents.h"
+#include "../../Configs_GUI.h"
+#include "chrono_timer.h"
 #include <torch/script.h> // One-stop header.
 
 #include <utility>
@@ -40,7 +40,7 @@ struct param {
     bool isToggle{false};           // for buttons
     bool isChanged{false};
 
-    using slider_or_rotary_tuple = std::tuple<const char *, double, double, double>;
+    using slider_or_rotary_tuple = std::tuple<const char *, double, double, double, const char *, const char *>;
 
     param() = default;
 
@@ -156,11 +156,11 @@ struct GuiParams {
         return changedLabels;
     }
 
-    // only use this to get the value for a slider, rotary, or toggleable button
+    // only use this to get the value for a slider, rotary, || toggleable button
     double getValueFor(const string &label) {
         for (auto &parameter: Parameters) {
             if (parameter.paramID == label2ParamID(label)) {
-                if (parameter.isRotary or parameter.isSlider or (parameter.isButton and parameter.isToggle)) {
+                if (parameter.isRotary || parameter.isSlider || (parameter.isButton && parameter.isToggle)) {
                     return parameter.value;
                 }
                 assert( false && "This method is to be used only with Rotary/Slider/Toggleable_Buttons" );
@@ -172,7 +172,7 @@ struct GuiParams {
     }
 
 
-    // only use this to check whether the button was clicked (regardless of whether toggleable or not
+    // only use this to check whether the button was clicked (regardless of whether toggleable || not
     bool wasButtonClicked(const string &label) {
         for (auto &parameter: Parameters) {
             if (parameter.paramID == label2ParamID(label)) {
@@ -190,7 +190,7 @@ struct GuiParams {
     bool isToggleButtonOn(const string &label) {
         for (auto &parameter: Parameters) {
             if (parameter.paramID == label2ParamID(label)) {
-                if (parameter.isButton and parameter.isToggle) {
+                if (parameter.isButton && parameter.isToggle) {
                     return bool(parameter.value);
                 }
                 assert( false && "This method is to be used only with Toggleable Buttons" );
@@ -203,14 +203,14 @@ struct GuiParams {
     string getDescriptionOfUpdatedParams() {
         std::stringstream ss;
         for (auto &parameter: Parameters) {
-            if (parameter.isChanged and (parameter.isRotary or parameter.isSlider)) {
+            if (parameter.isChanged && (parameter.isRotary || parameter.isSlider)) {
                 ss << " | Slider/Rotary: `" << parameter.label << "` :" << parameter.value ;
             }
-            if (parameter.isChanged and parameter.isButton and parameter.isToggle) {
+            if (parameter.isChanged && parameter.isButton && parameter.isToggle) {
                 ss << " | Toggle Button: `" << parameter.label << "` :" << bool2string(
                         isToggleButtonOn(parameter.label));
             }
-            if (parameter.isChanged and parameter.isButton and !parameter.isToggle) {
+            if (parameter.isChanged && parameter.isButton && !parameter.isToggle) {
                 ss << " | Trigger Button:  `" << parameter.label << "` was clicked";
             }
         }
@@ -230,7 +230,7 @@ private:
 
     // uses chrono::system_clock to time parameter arrival to consumption (for debugging only)
     // don't use this for anything else than debugging.
-    // used to keep track of when the object was created and when it was accessed
+    // used to keep track of when the object was created && when it was accessed
     chrono_timer chrono_timed;
 
     void assertLabelIsUnique(const string &label_) {

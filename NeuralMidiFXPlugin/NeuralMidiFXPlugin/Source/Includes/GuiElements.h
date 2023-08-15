@@ -10,7 +10,6 @@
 
 using namespace std;
 
-
 // Creates the layout for a single tab
 class ParameterComponent : public juce::Button::Listener,
                            public juce::Component {
@@ -44,8 +43,9 @@ public:
             sliderAttachmentArray.push_back(std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
                     *apvtsPointer, paramID, *newSlider));
             sliderArray.add(newSlider);
+            sliderTopLeftCorners.emplace_back(std::get<4>(sliderTuple));
+            sliderBottomRightCorners.emplace_back(std::get<5>(sliderTuple));
             addAndMakeVisible(newSlider);
-
         }
 
         for (const auto &rotaryTuple: rotariesList) {
@@ -54,6 +54,8 @@ public:
             rotaryAttachmentArray.push_back(std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
                     *apvtsPointer, paramID, *newRotary));
             rotaryArray.add(newRotary);
+            rotaryTopLeftCorners.emplace_back(std::get<4>(rotaryTuple));
+            rotaryBottomRightCorners.emplace_back(std::get<5>(rotaryTuple));
             addAndMakeVisible(newRotary);
         }
 
@@ -73,42 +75,92 @@ public:
             }
 
             buttonArray.add(textButton);
-            buttonParameterIDs.push_back(paramID);
-
+            buttonParameterIDs.emplace_back(paramID);
+            buttonTopLeftCorners.emplace_back(std::get<2>(buttonTuple));
+            buttonBottomRightCorners.emplace_back(std::get<3>(buttonTuple));
             addAndMakeVisible(textButton);
         }
     }
 
     void resizeGuiElements(juce::Rectangle<int> area) {
+
         //reshape the entire component
         setSize(area.getWidth(), area.getHeight());
 
-        int newHeight = int(static_cast<float>(area.getHeight()) * 0.9f);
-        int newWidth = int(static_cast<float>(area.getWidth()) * 0.9f);
+        width = getWidth(); // Get the width of the component
+        height = getHeight(); // Get the height of the component
+        marginWidth = 0.05f * width; // 5% margin on both sides
+        marginHeight = 0.05f * height; // 5% margin on top and bottom
 
-        areaWithBleed = area.withSizeKeepingCentre(newWidth, newHeight);
-
-        //These values keep track of the moving X/Y positions of each component as they are placed
-        // X values incremented in each resized() function, Y values are incremented after each function
-        // for new set of components
-        deltaX = areaWithBleed.getX();
-        deltaY = areaWithBleed.getY();
+        gridWidth = width - 2 * marginWidth; // Width of the grid
+        gridHeight = height - 2 * marginHeight; // Height of the grid
+        cellWidth = gridWidth / (gridSize - 1);
+        cellHeight = gridHeight / (gridSize - 1);
 
         // Sliders
         resizeSliders();
 
         // Rotaries
-        deltaX = areaWithBleed.getX();
-        deltaY += int((1.0f / 3.0f) * static_cast<float>(areaWithBleed.getHeight()));
         resizeRotaries();
 
         // Buttons
-        deltaX = areaWithBleed.getX();
-        deltaY += int((1.0f / 3.0f) * static_cast<float>(areaWithBleed.getHeight()));
-        resizeButtons();
+         resizeButtons();
+
+         repaint();
     }
 
-    void paint(juce::Graphics &) override {}
+    void paint(Graphics& g) {
+
+        if (UIObjects::Tabs::show_grid) {
+            // Draw the border around the grid
+            if (UIObjects::Tabs::draw_borders_for_components) {
+                g.setColour(Colours::black);
+                g.drawRect(marginWidth, marginHeight, gridWidth, gridHeight, 2.0f);
+            }
+
+            for (int i = 0; i < gridSize; i++) {
+                for (int j = 0; j < gridSize; j++) {
+                    float x = marginWidth + static_cast<float>(i) * cellWidth; // Center of the dot
+                    float y = marginHeight + static_cast<float>(j) * cellHeight; // Center of the dot
+
+                    // Draw the dot
+                    g.setColour(Colours::black);
+                    g.fillEllipse(x - 2.0f, y - 2.0f, 4.0f, 4.0f); // A dot of size 4
+
+                    // Label the first row
+                    if (j == 0) {
+                        char labelX = 'A' + i;
+                        String label = String::charToString(labelX);
+                        g.setColour(Colours::black);
+                        g.drawText(label, x - 10.0f, y - 16.0f, 20.0f, 12.0f, Justification::centred, true);
+                    }
+
+                    // Label the first column
+                    if (i == 0) {
+                        char labelY = 'a' + j;
+                        String label = String::charToString(labelY);
+                        g.setColour(Colours::black);
+                        g.drawText(label, x - 24.0f, y - 6.0f, 20.0f, 12.0f, Justification::centred, true);
+                    }
+                }
+            }
+
+        }
+
+        if (UIObjects::Tabs::draw_borders_for_components) {
+            g.setColour(Colours::black);
+            for (auto border : componentBorders) {
+                auto [x, y, width, height, tl_label, br_label] = border;
+                g.drawRect(x, y, width, height, 2.0f);
+                if (UIObjects::Tabs::show_grid) {
+                    // draw labels inside the component
+                    g.drawText(tl_label, x + 2.0f, y + 2.0f, 20.0f, 12.0f, Justification::centred, true);
+                    g.drawText(br_label, x + width - 22.0f, y + height - 14.0f, 20.0f, 12.0f, Justification::centred, true);
+                }
+            }
+        }
+
+    }
 
     void resized() override {}
 
@@ -131,6 +183,7 @@ private:
 
     const char *name{};
     double minValue{}, maxValue{}, initValue{};
+    const char *topleftCorner{}, *bottomrightCorner{};
 
     // In Runtime, APVTS used only for untoggleable buttons
     juce::AudioProcessorValueTreeState *apvtsPointer{nullptr};
@@ -143,6 +196,26 @@ private:
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>> sliderAttachmentArray;
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>> rotaryAttachmentArray;
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment>> buttonAttachmentArray;
+
+
+    std::vector<std::string> sliderTopLeftCorners;
+    std::vector<std::string> sliderBottomRightCorners;
+    std::vector<std::string> rotaryTopLeftCorners;
+    std::vector<std::string> rotaryBottomRightCorners;
+    std::vector<std::string> buttonTopLeftCorners;
+    std::vector<std::string> buttonBottomRightCorners;
+    std::vector<std::tuple<float, float, float, float, string, string>> componentBorders;
+
+    int gridSize = 26; // Number of cells in each direction
+    float width; // Get the width of the component
+    float height; // Get the height of the component
+    float marginWidth; // 5% margin on both sides
+    float marginHeight; // 5% margin on top and bottom
+
+    float gridWidth; // Width of the grid
+    float gridHeight; // Height of the grid
+    float cellWidth;
+    float cellHeight;
 
     // Tuple of the current tab with all objects
     UIObjects::tab_tuple currentTab;
@@ -165,14 +238,14 @@ private:
         auto *newSlider = new juce::Slider;
         newSlider->setSliderStyle(juce::Slider::SliderStyle::LinearVertical);
         newSlider->setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
-                                   newSlider->getTextBoxWidth(), 60);
+                                   newSlider->getTextBoxWidth(), newSlider->getHeight()*.2);
 
         newSlider->setColour(juce::Slider::textBoxBackgroundColourId, juce::Colours::darkgrey);
         newSlider->setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::black);
         newSlider->setColour(juce::Slider::textBoxTextColourId, juce::Colours::whitesmoke);
 
 
-        std::tie(name, minValue, maxValue, initValue) = sliderTuple;
+        std::tie(name, minValue, maxValue, initValue, topleftCorner, bottomrightCorner) = sliderTuple;
 
         // Generate labels
         juce::String str = juce::String(" ") + juce::String(name);
@@ -186,12 +259,13 @@ private:
         return newSlider;
     }
 
+
     juce::Slider *generateRotary(UIObjects::rotary_tuple rotaryTuple) {
         auto *newRotary = new juce::Slider;
-        newRotary->setSliderStyle(juce::Slider::SliderStyle::RotaryVerticalDrag);
+        newRotary->setSliderStyle(juce::Slider::SliderStyle::RotaryHorizontalVerticalDrag);
 
         newRotary->setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
-                                   newRotary->getTextBoxWidth(), 60);
+                                   newRotary->getTextBoxWidth(), newRotary->getHeight()*.2);
 
         newRotary->setColour(juce::Slider::textBoxBackgroundColourId, juce::Colours::darkgrey);
         newRotary->setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::black);
@@ -199,7 +273,7 @@ private:
         newRotary->setColour(juce::Slider::rotarySliderFillColourId , juce::Colours::lightskyblue);
 
         // Retrieve single rotary and its values
-        std::tie(name, minValue, maxValue, initValue) = rotaryTuple;
+        std::tie(name, minValue, maxValue, initValue, topleftCorner, bottomrightCorner) = rotaryTuple;
 
         // Set Name
         juce::String str = juce::String(" ") + juce::String(name);
@@ -233,66 +307,130 @@ private:
     }
 
     void resizeSliders() {
+        int slider_ix = 0;
+        componentBorders.clear();
         for (auto *comp: sliderArray) {
-            // Initialize with X/Y position of total area, size of rectangle
-            int sliderWidth = int((1.0f / static_cast<float>(numSliders)) *
-                                  static_cast<float>(areaWithBleed.getWidth()));
-            int sliderHeight = int(areaWithBleed.getHeight() / 3);
+            comp->setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
+                                  comp->getTextBoxWidth(), comp->getHeight()*.2);
 
-            juce::Rectangle<int> sliderSpacingArea;
-            sliderSpacingArea.setSize(sliderWidth, sliderHeight);
-            sliderSpacingArea.setPosition(deltaX, deltaY);
+            auto [topLeftX, topLeftY] = coordinatesFromString(sliderTopLeftCorners[slider_ix]);
+            auto [bottomRightX, bottomRightY] = coordinatesFromString(sliderBottomRightCorners[slider_ix]);
 
-            comp->setBounds(sliderSpacingArea);
+            auto area = getLocalBounds();
 
-            // Increment J in proportion to number of sliders and width of rectangle
-            deltaX += sliderWidth;
+
+            auto x = topLeftX - 2.0f;
+            auto y = topLeftY - 2.0f;
+            auto width = (bottomRightX - topLeftX) + 4.0f;
+            auto height = (bottomRightY - topLeftY) + 4.0f;
+
+            cout << "Slider " << slider_ix << " : " << x << ", " << y << ", " << width << ", " << height << endl;
+
+            comp->setBounds(x, y, width, height);
+
+            if (UIObjects::Tabs::draw_borders_for_components) {
+                string tl_label = sliderTopLeftCorners[slider_ix];
+                string br_label = sliderBottomRightCorners[slider_ix];
+                auto border = std::tuple<float, float, float, float, string, string>(
+                    x, y, width, height, tl_label, br_label);
+                componentBorders.emplace_back(border);
+            }
+
+            slider_ix++;
         }
     }
 
     void resizeRotaries() {
-        for (auto *comp: rotaryArray) {
-            // Initialize with X/Y position of total area, size of rectangle
-            int rotaryWidth = int((1.0f / static_cast<float>(numRotaries)) *
-                                  static_cast<float>(areaWithBleed.getWidth()));
-            int rotaryHeight = int(areaWithBleed.getHeight() / 3);
+        int rotary_ix = 0;
+        for (auto *comp: rotaryArray)
+        {
+            comp->setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
+                                  comp->getTextBoxWidth(), comp->getHeight()*.2);
 
-            juce::Rectangle<int> rotarySpacingArea;
-            rotarySpacingArea.setSize(rotaryWidth, rotaryHeight);
-            rotarySpacingArea.setPosition(deltaX, deltaY);
+            auto [topLeftX, topLeftY] =
+                coordinatesFromString(rotaryTopLeftCorners[rotary_ix]);
+            auto [bottomRightX, bottomRightY] =
+                coordinatesFromString(rotaryBottomRightCorners[rotary_ix]);
 
-            // create a slightly smaller rotary
-            auto rotaryArea = rotarySpacingArea.withSizeKeepingCentre(
-                    int(static_cast<float>(rotarySpacingArea.getWidth()) * 0.8f),
-                    int(static_cast<float>(rotarySpacingArea.getHeight()) * 0.8f));
+            auto area = getLocalBounds();
 
-            comp->setBounds(rotaryArea);
+            auto x = topLeftX - 2.0f;
+            auto y = topLeftY - 2.0f;
+            auto width = (bottomRightX - topLeftX) + 4.0f;
+            auto height = (bottomRightY - topLeftY) + 4.0f;
 
-            // Increment J in proportion to number of sliders and width of rectangle
-            deltaX += rotaryWidth;
+            cout << "Rotary " << rotary_ix << " : " << x << ", " << y << ", " << width
+                 << ", " << height << endl;
+
+            comp->setBounds(x, y, width, height);
+
+            if (UIObjects::Tabs::draw_borders_for_components) {
+                string tl_label = rotaryTopLeftCorners[rotary_ix];
+                string br_label = rotaryBottomRightCorners[rotary_ix];
+                auto border = std::tuple<float, float, float, float, string, string>(
+                    x, y, width, height, tl_label, br_label);
+                componentBorders.emplace_back(border);
+            }
+
+            rotary_ix++;
         }
     }
 
     void resizeButtons() {
+        int button_ix = 0;
         for (auto *comp: buttonArray) {
-            int verticalSeparation = int(areaWithBleed.getHeight() * .08);
+            auto [topLeftX, topLeftY] = coordinatesFromString(buttonTopLeftCorners[button_ix]);
+            auto [bottomRightX, bottomRightY] = coordinatesFromString(buttonBottomRightCorners[button_ix]);
 
-            int buttonWidth = int((1.0f / static_cast<float>(numButtons)) *
-                    static_cast<float>(areaWithBleed.getWidth()));
-            int buttonHeight = int(areaWithBleed.getHeight() / 3) - verticalSeparation;
+            auto area = getLocalBounds();
 
-            // This creates an overall space for each button
-            juce::Rectangle<int> buttonSpacingArea;
-            buttonSpacingArea.setSize(buttonWidth, buttonHeight);
-            buttonSpacingArea.setPosition(deltaX, deltaY);
+            auto x = topLeftX - 2.0f;
+            auto y = topLeftY - 2.0f;
+            auto width = (bottomRightX - topLeftX) + 4.0f;
+            auto height = (bottomRightY - topLeftY) + 4.0f;
 
-            // Resize button to a square
-            auto buttonArea = buttonSpacingArea.withSizeKeepingCentre(buttonHeight, buttonHeight);
+            cout << "Button " << button_ix << " : " << x << ", " << y << ", " << width << ", " << height << endl;
 
-            comp->setBounds(buttonArea);
+            comp->setBounds(x, y, width, height);
 
-            deltaX += buttonWidth;
+            if (UIObjects::Tabs::draw_borders_for_components) {
+                string tl_label = buttonTopLeftCorners[button_ix];
+                string br_label = buttonBottomRightCorners[button_ix];
+                auto border = std::tuple<float, float, float, float, string, string>(
+                    x, y, width, height, tl_label, br_label);
+                componentBorders.emplace_back(border);
+            }
+
+            button_ix++;
         }
+    }
+
+    std::pair<float, float> coordinatesFromString(const std::string &coordinate) {
+        if (coordinate.size() != 2) {
+            cout << "Invalid coordinate format - select from Aa to Zz" << endl;
+            throw std::runtime_error("Invalid coordinate format - select from Aa to Zz");
+        }
+        const int gridSize = 26; // Number of cells in each direction
+
+        char letter_x = coordinate[0];
+        char letter_y = coordinate[1];
+
+        if ((letter_x < 'A' || letter_x > 'Z') || (letter_y < 'a' || letter_y > 'z'))
+            throw std::runtime_error("Invalid coordinate value");
+
+        const float width = getWidth(); // Get the width of the component
+        const float height = getHeight(); // Get the height of the component
+        const float marginWidth = 0.05f * width; // 5% margin on both sides
+        const float marginHeight = 0.05f * height; // 5% margin on top and bottom
+        const float gridWidth = width - 2 * marginWidth; // Width of the grid
+        const float gridHeight = height - 2 * marginHeight; // Height of the grid
+        const float cellWidth = gridWidth / (gridSize - 1);
+        const float cellHeight = gridHeight / (gridSize - 1);
+
+        float x = marginWidth + (letter_x - 'A') * cellWidth;
+        float y = marginHeight + (letter_y - 'a') * cellHeight;
+
+        return {x, y};
     }
 
 };

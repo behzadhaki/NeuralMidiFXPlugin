@@ -5,73 +5,6 @@
 #include "ModelThread.h"
 using namespace debugging_settings::ModelThread;
 
-// ===================================================================================
-// $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-//                       YOUR IMPLEMENTATION SHOULD BE DONE HERE
-// $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-// ===================================================================================
-bool ModelThread::deploy(bool new_model_input_received,
-                         bool did_any_gui_params_change) {
-
-    /*              IF YOU NEED TO PRINT TO CONSOLE FOR DEBUGGING,
-    *                  YOU CAN USE THE FOLLOWING METHOD:
-    *                      PrintMessage("YOUR MESSAGE HERE");
-    */
-
-    /* A flag like this one can be used to check whether or not the model input
-        is ready to be sent to the model thread (MDL)*/
-
-    // =================================================================================
-    // ===         1. ACCESSING GUI PARAMETERS
-    // =================================================================================
-
-    /* **NOTE**
-        If you need to access information from the GUI, you can do so by using the
-        following methods:
-
-          Rotary/Sliders: gui_params.getValueFor([slider/button name])
-          Toggle Buttons: gui_params.isToggleButtonOn([button name])
-          Trigger Buttons: gui_params.wasButtonClicked([button name])
-    **NOTE**
-       If you only need this data when the GUI parameters CHANGE, you can use the
-          provided gui_params_changed_since_last_call flag */
-
-    auto Slider1 = gui_params.getValueFor("Slider 1");
-    auto ToggleButton1 = gui_params.isToggleButtonOn("ToggleButton 1");
-    auto ButtonTrigger = gui_params.wasButtonClicked("TriggerButton 1");
-
-    // =================================================================================
-    // ===         Inference
-    // =================================================================================
-    // ---       the input is available in model_input
-    // ---       the output MUST be placed in model_output
-    // ---       if the output is ready for transmission to PPP, return true,
-    // ---                                             otherwise return false
-    // ---       The API of the model MUST be defined in DeploymentSettings/Model.h
-    // =================================================================================
-    if (new_model_input_received) {
-
-        /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-         * Use DisplayTensor to display the data if debugging
-         * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-        DisplayTensor(model_input.tensor1, "INPUT");
-
-        // =================================================================================
-        // ===        Run the Model
-        //           (update definitions in DeploymentSettings/Model.h)
-        // =================================================================================
-        auto out = model.forwardPredict(model_input);
-        if (out.has_value()) {
-            model_output = *out; // NECESSARY!!  Must copy the data to the model_output
-            DisplayTensor(out->tensor1, "OUTPUT");
-            return true; // notify the wrapper to send the updated model_output
-        }
-    } else {
-        return false;
-    }
-}
-
-
 // $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 //                                    DO NOT CHANGE ANYTHING BELOW THIS LINE
 // $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
@@ -79,15 +12,17 @@ bool ModelThread::deploy(bool new_model_input_received,
 ModelThread::ModelThread() : juce::Thread("ModelThread") {}
 
 void ModelThread::startThreadUsingProvidedResources(
-        LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size> *ITP2MDL_ModelInput_Que_ptr_,
-        LockFreeQueue<ModelOutput, queue_settings::MDL2PPP_que_size> *MDL2PPP_ModelOutput_Que_ptr_,
-        LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2MDL_Parameters_Queu_ptr_) {
+    LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size> *ITP2MDL_ModelInput_Que_ptr_,
+    LockFreeQueue<ModelOutput, queue_settings::MDL2PPP_que_size> *MDL2PPP_ModelOutput_Que_ptr_,
+    LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2MDL_Parameters_Queu_ptr_,
+    RealTimePlaybackInfo *realtimePlaybackInfo_ptr_){
 
     // Provide access to resources needed to communicate with other threads
     // ---------------------------------------------------------------------------------------------
     ITP2MDL_ModelInput_Que_ptr = ITP2MDL_ModelInput_Que_ptr_;
     MDL2PPP_ModelOutput_Que_ptr = MDL2PPP_ModelOutput_Que_ptr_;
     APVM2MDL_Parameters_Queu_ptr = APVM2MDL_Parameters_Queu_ptr_;
+    realtimePlaybackInfo = realtimePlaybackInfo_ptr_;
 
     // Start the thread. This function internally calls run() method. DO NOT CALL run() DIRECTLY.
     // ---------------------------------------------------------------------------------------------
@@ -120,7 +55,6 @@ void ModelThread::DisplayTensor(const torch::Tensor &tensor, const string Label)
     ss << "TENSOR:" << Label ;
     if (!disable_printing_tensor_info) {
         ss << " | Tensor metadata: " ;
-        ss << " | Type: " << tensor.type().toString();
         ss << " | Device: " << tensor.device();
         ss << " | Size: " << tensor.sizes();
         ss << " |  - Storage data pointer: " << tensor.storage().data_ptr();
@@ -181,7 +115,7 @@ void ModelThread::run() {
             new_model_input_received = false;
         }
 
-        if (new_model_input_received or gui_params.changed())
+        if (new_model_input_received || gui_params.changed())
         {
             new_model_output_to_push = deploy(new_model_input_received, gui_params.changed());
             if (new_model_output_to_push) {
@@ -220,7 +154,7 @@ void ModelThread::prepareToStop() {
 }
 
 ModelThread::~ModelThread() {
-    if (not readyToStop) {
+    if (!readyToStop) {
         prepareToStop();
     }
 }

@@ -5,8 +5,8 @@
 
 // #include <utility>
 
-#include "../DeploymentSettings/ThreadsAndQueuesAndInputEvents.h"
-#include "../DeploymentSettings/GuiAndParams.h"
+#include "../../Configs_HostEvents.h"
+#include "../../Configs_GUI.h"
 
 #include <torch/script.h> // One-stop header.
 
@@ -137,3 +137,5 @@ public:
         return writingActive;
     }
 };
+
+

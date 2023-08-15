@@ -5,9 +5,9 @@
 #pragma once
 
 #include "shared_plugin_helpers/shared_plugin_helpers.h"
-#include "../DeploymentSettings/ThreadsAndQueuesAndInputEvents.h"
+#include "../../Configs_HostEvents.h"
 #include "GuiParameters.h"
-#include "../Includes/LockFreeQueue.h"
+#include "LockFreeQueue.h"
 
 #pragma once
 
@@ -110,7 +110,7 @@ public:
     }
 
     ~APVTSMediatorThread() override {
-        if (not readyToStop) {
+        if (!readyToStop) {
             prepareToStop();
         }
     }
