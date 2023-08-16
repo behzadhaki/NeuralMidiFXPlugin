@@ -9,7 +9,7 @@
 #include "../Includes/GuiParameters.h"
 #include "../Includes/LockFreeQueue.h"
 #include "../../Configs_HostEvents.h"
-#include "../../Configs_Model.h"
+#include "Configs_Model.h"
 #include "../Includes/colored_cout.h"
 #include "../Includes/chrono_timer.h"
 #include "../../Configs_Debugging.h"
@@ -63,7 +63,10 @@ private:
     // ============================================================================================================
     ModelInput model_input{};
     ModelOutput model_output{};
-    Configs_Model model{model_settings::model_name};
+    torch::jit::script::Module model;
+    bool isModelLoaded{false};
+    bool load(std::string model_name_);
+    std::string model_path;
 
     // ============================================================================================================
     // ===          I/O Queues for Receiving/Sending Data

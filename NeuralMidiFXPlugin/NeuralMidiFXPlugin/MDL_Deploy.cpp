@@ -16,8 +16,13 @@ bool ModelThread::deploy(bool new_model_input_received,
     *                      PrintMessage("YOUR MESSAGE HERE");
     */
 
-    /* A flag like this one can be used to check whether || not the model input
-        is ready to be sent to the model thread (MDL)*/
+    // =================================================================================
+    // ===         0. LOADING THE MODEL
+    // =================================================================================
+    // Try loading the model if it hasn't been loaded yet
+    if (!isModelLoaded) {
+        load("drumLoopVAE.pt");
+    }
 
     // =================================================================================
     // ===         1. ACCESSING GUI PARAMETERS
@@ -67,22 +72,53 @@ bool ModelThread::deploy(bool new_model_input_received,
     // ---                                             otherwise return false
     // ---       The API of the model MUST be defined in DeploymentSettings/Model.h
     // =================================================================================
-    if (new_model_input_received) {
+    if (new_model_input_received || did_any_gui_params_change) {
 
         /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
          * Use DisplayTensor to display the data if debugging
          * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-        DisplayTensor(model_input.tensor1, "INPUT");
+        // DisplayTensor(model_input.tensor1, "INPUT");
 
-        // =================================================================================
-        // ===        Run the Model
-        //           (update definitions in DeploymentSettings/Model.h)
-        // =================================================================================
-        auto out = model.forwardPredict(model_input);
-        if (out.has_value()) {
-            model_output = *out; // NECESSARY!!  Must copy the data to the model_output
-            DisplayTensor(out->tensor1, "OUTPUT");
-            return true; // notify the wrapper to send the updated model_output
+        if (isModelLoaded)
+        { // =================================================================================
+            // ===       Prepare your input
+            // =================================================================================
+            // Prepare The Input To Your Model
+            // example: let's assume the pytorch model has some method that you want to
+            // use for inference, e.g.:
+            //          def SomeMethod(self, x: float, y: torch.Tensor)
+            //             ....
+            //             return a, b
+
+            // Step A: To Prepare the inputs, first create a vector of torch::jit::IValue
+            // e.g.:
+            // >> std::vector<torch::jit::IValue> inputs;
+
+            // Step B: Push the input parameters
+            // Remember that if you need data passed from the ITP thread,
+            // you can access it from the model_input struct
+            // e.g.:
+            // >> inputs.emplace_back(float(Slider1)); // this is the x parameter
+            // >> inputs.emplace_back(model_input.tensor1); // this is the y parameter
+            // =================================================================================
+
+            // =================================================================================
+            // ===        Run Inference
+            // =================================================================================
+            // Get the method for inference or use the forward method
+            // auto SomeMethod = model.get_method("SomeMethod");
+            // auto outs = SomeMethod(inputs);
+            // auto outs = model.forward(inputs);
+
+            // =================================================================================
+            // ===        Prepare the model_output struct and return true to signal
+            // ===        that the output is ready to be sent to PPP
+            // =================================================================================
+            // auto outs_as_tuple = outs.toTuple()->elements();
+            // model_output.tensor1 = outs_as_tuple[0].toTensor();
+            // model_output.tensor2 = outs_as_tuple[1].toTensor();
+
+            return true;
         }
     } else {
         return false;

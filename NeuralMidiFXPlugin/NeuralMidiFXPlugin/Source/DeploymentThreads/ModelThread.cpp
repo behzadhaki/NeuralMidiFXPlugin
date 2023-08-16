@@ -158,3 +158,44 @@ ModelThread::~ModelThread() {
         prepareToStop();
     }
 }
+
+// Tries to load a model that cmake copied from projects TorchScripts/MDL folder to the
+// cloned local TorchScripts/MDL folder (OS dependent).
+//
+// Returns true if the model was loaded successfully, false otherwise.
+// If a path was already tried, it won't try loading the model again.
+bool ModelThread::load(std::string model_name_)
+{
+
+    // Creates the path depending on the OS
+    std::string model_path_ = std::string(MDL_path::default_model_path) +
+                        std::string(MDL_path::path_separator) +
+                        std::string(model_name_);
+
+    // If already tried the path, don't try again
+    if (model_path == model_path_) {
+        if (isModelLoaded) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    model_path = model_path_;
+
+    ifstream myFile;
+    myFile.open(model_path);
+    if (myFile.is_open()) {
+        cout << "Model file found at: " + model_path << " -- Trying to load model..." << endl;
+        myFile.close();
+        model = torch::jit::load(model_path);
+        isModelLoaded = true;
+        myFile.close();
+        return true;
+    } else {
+        cout << "Model file not found at: " + model_path << endl;
+        isModelLoaded = false;
+        return false;
+    }
+}
+

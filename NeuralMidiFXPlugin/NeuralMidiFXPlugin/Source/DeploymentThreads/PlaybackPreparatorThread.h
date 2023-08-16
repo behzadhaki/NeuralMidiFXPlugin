@@ -10,10 +10,11 @@
 #include "../Includes/GenerationEvent.h"
 #include "../Includes/LockFreeQueue.h"
 #include "../../Configs_HostEvents.h"
-#include "../../Configs_Model.h"
+#include "Configs_Model.h"
 #include "../Includes/colored_cout.h"
 #include "../Includes/chrono_timer.h"
 #include "../../Configs_Debugging.h"
+
 
 class PlaybackPreparatorThread : public juce::Thread {
 public:

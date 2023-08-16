@@ -3,7 +3,7 @@
 #include "shared_plugin_helpers/shared_plugin_helpers.h"
 //#include <vector>
 #include <torch/torch.h>
-#include "../Configs_Model.h"
+#include "DeploymentThreads/Configs_Model.h"
 #include "DeploymentThreads/InputTensorPreparatorThread.h"
 #include "DeploymentThreads/ModelThread.h"
 #include "DeploymentThreads/PlaybackPreparatorThread.h"

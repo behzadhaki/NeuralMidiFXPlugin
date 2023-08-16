@@ -108,7 +108,7 @@ bool InputTensorPreparatorThread::deploy(
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     /* Warning!
          * DO NOT USE realtime_playback_info for input preparations here, because
-         * the notes are most registered prior to NOW and stored in the queue for access
+         * the notes are most likely registered prior to NOW and stored in the queue for access
          * As Such, for this part, use only the information provided within the received
          * new_event_from_host object. */
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
