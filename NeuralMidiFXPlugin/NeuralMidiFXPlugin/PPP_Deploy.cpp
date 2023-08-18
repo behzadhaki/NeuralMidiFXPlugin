@@ -9,19 +9,13 @@
 std::pair<bool, bool> PlaybackPreparatorThread::deploy(bool new_model_output_received, bool did_any_gui_params_change) {
 
     // =================================================================================
-    // ===         1. ACCESSING GUI PARAMETERS
+    // ===         1.a. ACCESSING GUI PARAMETERS
+    // Refer to:
+    // https://neuralmidifx.github.io/datatypes/GuiParams#accessing-the-ui-parameters
     // =================================================================================
 
-    /* **NOTE**
-        If you need to access information from the GUI, you can do so by using the
-        following methods:
 
-          Rotary/Sliders: gui_params.getValueFor([slider/button name])
-          Toggle Buttons: gui_params.isToggleButtonOn([button name])
-          Trigger Buttons: gui_params.wasButtonClicked([button name])
-    **NOTE**
-       If you only need this data when the GUI parameters CHANGE, you can use the
-          provided gui_params_changed_since_last_call flag */
+    // =================================================================================
 
     // ---------------------------------------------------------------------------------
     // --- ExampleStarts ------ ExampleStarts ------ ExampleStarts ---- ExampleStarts --
@@ -40,27 +34,14 @@ std::pair<bool, bool> PlaybackPreparatorThread::deploy(bool new_model_output_rec
 
     // =================================================================================
     // ===         1.b. ACCESSING REALTIME PLAYBACK INFORMATION
-    // =================================================================================
-    auto realtime_playback_info = realtimePlaybackInfo->get();
-    auto sample_rate = realtime_playback_info.sample_rate;
-    auto buffer_size_in_samples = realtime_playback_info.buffer_size_in_samples;
-    auto qpm = realtime_playback_info.qpm;
-    auto numerator = realtime_playback_info.numerator;
-    auto denominator = realtime_playback_info.denominator;
-    auto isPlaying = realtime_playback_info.isPlaying;
-    auto isRecording = realtime_playback_info.isRecording;
-    auto current_time_in_samples = realtime_playback_info.time_in_samples;
-    auto current_time_in_seconds = realtime_playback_info.time_in_seconds;
-    auto current_time_in_quarterNotes = realtime_playback_info.time_in_ppq;
-    auto isLooping = realtime_playback_info.isLooping;
-    auto loopStart_in_quarterNotes = realtime_playback_info.loop_start_in_ppq;
-    auto loopEnd_in_quarterNotes = realtime_playback_info.loop_end_in_ppq;
-    auto last_bar_pos_in_quarterNotes = realtime_playback_info.ppq_position_of_last_bar_start;
-    // PrintMessage("qpm: " + std::to_string(qpm));
+    // Refer to:
+    // https://neuralmidifx.github.io/datatypes/RealtimePlaybackInfo#accessing-the-realtimeplaybackinfo
     // =================================================================================
 
     // =================================================================================
-    // ===         Step 2 . Extract NoteOn/Off/CC events from the generation data
+    // ===         2. ACCESSING INFORMATION (EVENTS) RECEIVED FROM HOST
+    // Refer to:
+    //  https://neuralmidifx.github.io/datatypes/EventFromHost
     // =================================================================================
 
     // ---------------------------------------------------------------------------------
@@ -72,39 +53,17 @@ std::pair<bool, bool> PlaybackPreparatorThread::deploy(bool new_model_output_rec
     // ---------------------------------------------------------------------------------
 
     // =================================================================================
-    // ===         Step 3 . At least once, before sending generations,
-    //                  Specify the PlaybackPolicy, Time_unit, OverwritePolicy
+    // ===         3. Add Extracted Generations to Playback Sequence
+    // Refer to:
+    // https://neuralmidifx.github.io/datatypes/PlaybackSequence
     // =================================================================================
 
-    /*
-     * Here you Notify the main NMP thread that a new stream of generations is available.
-     * Moreover, you also specify what time_unit is used for the generations (eg. sec, ppq, samples)
-     * && also specify the OverwritePolicy (whether to delete all previously generated events
-     * || to keep them while also adding the new ones in parallel, || only clear the events after
-     * the time at which the current event is received)
-
-     *
-     * PlaybackPolicy:
-     *   - Timing Specification:
-     *      1. relative to Now (register the current time, && play messages relative to that)
-     *      2. relative to 0 (stream should be played relative to absolute 0 time)
-     *      3. relative to playback start (stream should be played relative to the time when playback started)
-     *
-     *   - Time_unit:
-     *      1. seconds
-     *      2. ppq
-     *      3. audio samples
-     *
-     *   - Overwrite Policy:
-     *      1. delete all events in previous stream && use new stream
-     *      2. delete all events after now
-     *      3. Keep all previous events (that is generations can be played on top of each other)
-     *
-     *    - Additional Info:
-     *      1. Clear generations after pause/stop
-     *      2. Loop Generations indefinitely until new one received (loop start at Now, 0, or playback start)
-     *
-     */
+    // =================================================================================
+    // ===         4. At least once, before sending generations,
+    //                  Specify the PlaybackPolicy, Time_unit, OverwritePolicy
+    // Refer to:
+    // https://neuralmidifx.github.io/datatypes/PlaybackPolicy
+    // =================================================================================
 
     // -----------------------------------------------------------------------------------------
     // ------ ExampleStarts ------ ExampleStarts ------ ExampleStarts ------ ExampleStarts -----
@@ -129,12 +88,13 @@ std::pair<bool, bool> PlaybackPreparatorThread::deploy(bool new_model_output_rec
 
         // playbackPolicy.SetClearGenerationsAfterPauseStop(false); //
          playbackPolicy.ActivateLooping(4);
-//        playbackPolicy.DisableLooping();
+        // playbackPolicy.DisableLooping();
         newPlaybackPolicyShouldBeSent = true;
 
         // 2. ---- Update Playback Sequence -----
         // clear the previous sequence || append depending on your requirements
         playbackSequence.clear();
+        playbackSequence.clearStartingAt(0);
 
         // I'm generating a single note to be played at timestamp 4 && delayed by the slider value
         int channel{1};

@@ -26,42 +26,23 @@ bool ModelThread::deploy(bool new_model_input_received,
 
     // =================================================================================
     // ===         1. ACCESSING GUI PARAMETERS
+    // Refer to:
+    // https://neuralmidifx.github.io/datatypes/GuiParams#accessing-the-ui-parameters
     // =================================================================================
 
-    /* **NOTE**
-        If you need to access information from the GUI, you can do so by using the
-        following methods:
 
-          Rotary/Sliders: gui_params.getValueFor([slider/button name])
-          Toggle Buttons: gui_params.isToggleButtonOn([button name])
-          Trigger Buttons: gui_params.wasButtonClicked([button name])
-    **NOTE**
-       If you only need this data when the GUI parameters CHANGE, you can use the
-          provided gui_params_changed_since_last_call flag */
+    // =================================================================================
 
-    auto Slider1 = gui_params.getValueFor("Slider 1");
-    auto ToggleButton1 = gui_params.isToggleButtonOn("ToggleButton 1");
-    auto ButtonTrigger = gui_params.wasButtonClicked("TriggerButton 1");
 
     // =================================================================================
     // ===         1.b. ACCESSING REALTIME PLAYBACK INFORMATION
+    // Refer to:
+    // https://neuralmidifx.github.io/datatypes/RealtimePlaybackInfo#accessing-the-realtimeplaybackinfo
     // =================================================================================
-    auto realtime_playback_info = realtimePlaybackInfo->get();
-    auto sample_rate = realtime_playback_info.sample_rate;
-    auto buffer_size_in_samples = realtime_playback_info.buffer_size_in_samples;
-    auto qpm = realtime_playback_info.qpm;
-    auto numerator = realtime_playback_info.numerator;
-    auto denominator = realtime_playback_info.denominator;
-    auto isPlaying = realtime_playback_info.isPlaying;
-    auto isRecording = realtime_playback_info.isRecording;
-    auto current_time_in_samples = realtime_playback_info.time_in_samples;
-    auto current_time_in_seconds = realtime_playback_info.time_in_seconds;
-    auto current_time_in_quarterNotes = realtime_playback_info.time_in_ppq;
-    auto isLooping = realtime_playback_info.isLooping;
-    auto loopStart_in_quarterNotes = realtime_playback_info.loop_start_in_ppq;
-    auto loopEnd_in_quarterNotes = realtime_playback_info.loop_end_in_ppq;
-    auto last_bar_pos_in_quarterNotes = realtime_playback_info.ppq_position_of_last_bar_start;
+
+
     // =================================================================================
+
 
     // =================================================================================
     // ===         Inference
