@@ -77,7 +77,7 @@ bool InputTensorPreparatorThread::deploy(
         Multiple Types of Events can be received from the host:
 
            1. FirstBufferEvent --> always sent at the beginning of the host start
-           2. PlaybackSxtoppedEvent --> always sent when the host stops the playback
+           2. PlaybackStoppedEvent --> always sent when the host stops the playback
            3. NewBufferEvent   --> sent at the beginning of every new buffer (if enabled in settings.h)
                                    || when qpm, meter, ... changes (if specified in settings.h)
            4. NewBarEvent     --> sent at the beginning of every new bar (if enabled in settings.h)
@@ -102,7 +102,7 @@ bool InputTensorPreparatorThread::deploy(
            7. new_event_from_host.isLooping()                    --> whether || not the host is looping
            8. new_event_from_host.loopStart(), new_event_from_host.loopEnd() --> loop start && end times (in quarter notes)
            9. new_event_from_host.barCount()                     --> number of bars elapsed since beginning
-           10. new_event_from_host.lastBarPos()                  --> Position of last bar passed (in quarter notes)
+           10. new_event_from_host.lastBarPos()                  --> Position of last bar passed
            */
 
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -131,11 +131,15 @@ bool InputTensorPreparatorThread::deploy(
         } else if (new_event_from_host->isNewTimeShiftEvent()) {
 
         } else if (new_event_from_host->isNoteOnEvent()) {
-
+            auto note_n = new_event_from_host->getNoteNumber();
+            auto vel =new_event_from_host->getVelocity();
+            auto channel = new_event_from_host->getChannel();
+            auto time = new_event_from_host->Time().inSeconds();
         } else if (new_event_from_host->isNoteOffEvent()) {
-
+            auto note_n = new_event_from_host->getNoteNumber();
+            auto vel =new_event_from_host->getVelocity();
+            auto channel = new_event_from_host->getChannel();
         } else if (new_event_from_host->isCCEvent()) {
-
         }
     }
     // =================================================================================

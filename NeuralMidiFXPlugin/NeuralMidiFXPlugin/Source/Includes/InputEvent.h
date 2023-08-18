@@ -586,11 +586,25 @@ public:
     }
 
     bool isLooping() const { return bufferMetaData.isLooping; }
-    double loopStart() const { return bufferMetaData.loop_start_in_ppq; }
+    double loopStart() const {
+        return bufferMetaData.loop_start_in_ppq;
+    }
     double loopEnd() const { return bufferMetaData.loop_end_in_ppq; }
 
     int64_t barCount() const { return bufferMetaData.bar_count; }
-    double lastBarPos() const { return bufferMetaData.ppq_position_of_last_bar_start; }
+    time_ lastBarPos() const
+    {
+        auto l_bar_ppq = bufferMetaData.ppq_position_of_last_bar_start;
+        auto buffer_start = BufferStartTime();
+        auto l_bar_sec =
+            buffer_start.inSeconds()
+            + (l_bar_ppq - buffer_start.inQuarterNotes()) / 60.0 * bufferMetaData.qpm;
+        auto l_bar_samples = buffer_start.inSamples()
+                             + (l_bar_ppq - buffer_start.inQuarterNotes())
+                                   / bufferMetaData.qpm * 60.0
+                                   * bufferMetaData.sample_rate;
+        return time_(l_bar_samples, l_bar_sec, l_bar_ppq);
+    }
 
     time_ time_from(EventFromHost e) {
         return time_(time_in_samples - e.time_in_samples,
