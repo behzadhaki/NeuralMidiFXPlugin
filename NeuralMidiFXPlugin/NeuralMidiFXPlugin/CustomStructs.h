@@ -24,10 +24,6 @@
  update in CustomStructs.h if necessary
  */
 struct ModelInput {
-    torch::Tensor tensor1{};
-    // torch::Tensor tensor2{};
-    // torch::Tensor tensor3{};
-    double someDouble{};
 
     // ==============================================
     // Don't Change Anything in the following section
@@ -53,10 +49,9 @@ struct ModelInput {
  update in CustomStructs.h if necessary
  */
 struct ModelOutput {
-    torch::Tensor tensor1{};
-    torch::Tensor tensor2{};
-    torch::Tensor tensor3{};
-    // std::vector<int> intVector{};
+    torch::Tensor hits;
+    torch::Tensor velocities;
+    torch::Tensor offsets;
 
     // ==============================================
     // Don't Change Anything in the following section

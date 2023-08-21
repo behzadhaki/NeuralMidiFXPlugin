@@ -29,18 +29,10 @@ bool ModelThread::deploy(bool new_model_input_received,
     // Refer to:
     // https://neuralmidifx.github.io/datatypes/GuiParams#accessing-the-ui-parameters
     // =================================================================================
-
-
-    // =================================================================================
-
-
-    // =================================================================================
-    // ===         1.b. ACCESSING REALTIME PLAYBACK INFORMATION
-    // Refer to:
-    // https://neuralmidifx.github.io/datatypes/RealtimePlaybackInfo#accessing-the-realtimeplaybackinfo
-    // =================================================================================
-
-
+    auto ButtonTrigger = gui_params.wasButtonClicked("RandomGeneration");
+    if (ButtonTrigger) {
+        PrintMessage("ButtonTriggered");
+    }
     // =================================================================================
 
 
@@ -51,57 +43,53 @@ bool ModelThread::deploy(bool new_model_input_received,
     // ---       the output MUST be placed in model_output
     // ---       if the output is ready for transmission to PPP, return true,
     // ---                                             otherwise return false
-    // ---       The API of the model MUST be defined in DeploymentSettings/Model.h
     // =================================================================================
-    if (new_model_input_received || did_any_gui_params_change) {
 
-        /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-         * Use DisplayTensor to display the data if debugging
-         * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-        // DisplayTensor(model_input.tensor1, "INPUT");
+    // flag to indicate if a new pattern has been generated and is ready for transmission
+    // to the PPP thread
+    bool newPatternGenerated = false;
+
+    if (ButtonTrigger) {
 
         if (isModelLoaded)
-        { // =================================================================================
-            // ===       Prepare your input
-            // =================================================================================
-            // Prepare The Input To Your Model
-            // example: let's assume the pytorch model has some method that you want to
-            // use for inference, e.g.:
-            //          def SomeMethod(self, x: float, y: torch.Tensor)
-            //             ....
-            //             return a, b
+        {
+            // Generate a random latent vector
+            auto latentVector = torch::randn({ 1, 128});
 
-            // Step A: To Prepare the inputs, first create a vector of torch::jit::IValue
-            // e.g.:
-            // >> std::vector<torch::jit::IValue> inputs;
+            // Prepare other inputs
+            auto voice_thresholds = torch::ones({9 }, torch::kFloat32) * 0.5f;
+            auto max_counts_allowed = torch::ones({9 }, torch::kFloat32) * 32;
+            int sampling_mode = 0;
+            float temperature = 1.0f;
 
-            // Step B: Push the input parameters
-            // Remember that if you need data passed from the ITP thread,
-            // you can access it from the model_input struct
-            // e.g.:
-            // >> inputs.emplace_back(float(Slider1)); // this is the x parameter
-            // >> inputs.emplace_back(model_input.tensor1); // this is the y parameter
-            // =================================================================================
+            // Prepare above for inference
+            std::vector<torch::jit::IValue> inputs;
+            inputs.emplace_back(latentVector);
+            inputs.emplace_back(voice_thresholds);
+            inputs.emplace_back(max_counts_allowed);
+            inputs.emplace_back(sampling_mode);
+            inputs.emplace_back(temperature);
 
-            // =================================================================================
-            // ===        Run Inference
-            // =================================================================================
-            // Get the method for inference or use the forward method
-            // auto SomeMethod = model.get_method("SomeMethod");
-            // auto outs = SomeMethod(inputs);
-            // auto outs = model.forward(inputs);
+            // Get the scripted method
+            auto sample_method = model.get_method("sample");
 
-            // =================================================================================
-            // ===        Prepare the model_output struct and return true to signal
-            // ===        that the output is ready to be sent to PPP
-            // =================================================================================
-            // auto outs_as_tuple = outs.toTuple()->elements();
-            // model_output.tensor1 = outs_as_tuple[0].toTensor();
-            // model_output.tensor2 = outs_as_tuple[1].toTensor();
+            // Run inference
+            auto output = sample_method(inputs);
 
-            return true;
+            // Extract the generated tensors from the output
+            auto hits = output.toTuple()->elements()[0].toTensor();
+            auto velocities = output.toTuple()->elements()[1].toTensor();
+            auto offsets = output.toTuple()->elements()[2].toTensor();
+
+            // wrap the generated tensors into a ModelOutput struct
+            model_output.hits = hits;
+            model_output.velocities = velocities;
+            model_output.offsets = offsets;
+
+            // Set the flag to true
+            newPatternGenerated = true;
         }
-    } else {
-        return false;
     }
+
+    return newPatternGenerated;
 }

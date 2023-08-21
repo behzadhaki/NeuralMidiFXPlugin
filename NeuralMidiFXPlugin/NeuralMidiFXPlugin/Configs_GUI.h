@@ -39,7 +39,7 @@ namespace UIObjects {
         const std::vector<tab_tuple> tabList{
             tab_tuple
             {
-                "RandomGeneration", // use any name you want for the tab
+                "RandomGeneration",
                 slider_list
                 {
                 },
@@ -49,6 +49,31 @@ namespace UIObjects {
                 button_list
                 {
                     button_tuple{"Randomize", false, "Kh", "Pm"}
+                }
+            },
+            tab_tuple
+            {
+                "Midi Mappings",
+                slider_list
+                {
+                },
+                rotary_list
+                {
+                    rotary_tuple{"Kick", 0, 127, 36, "Cc", "Gi"},
+                    rotary_tuple{"Snare", 0, 127, 38, "Hc", "Li"},
+                    rotary_tuple{"ClosedHat", 0, 127, 42, "Pc", "Ti"},
+                    rotary_tuple{"OpenHat", 0, 127, 46, "Uc", "Yi"},
+
+                    rotary_tuple{"LowTom", 0, 127, 41, "Cm", "Gs"},
+                    rotary_tuple{"MidTom", 0, 127, 48, "Hm", "Ls"},
+                    rotary_tuple{"HighTom", 0, 127, 45, "Pm", "Ts"},
+                    rotary_tuple{"Crash", 0, 127, 49, "Um", "Ys"},
+
+                    rotary_tuple{"Ride", 0, 127, 51, "Lt", "Pz"},
+
+                },
+                button_list
+                {
                 }
             }
         };
