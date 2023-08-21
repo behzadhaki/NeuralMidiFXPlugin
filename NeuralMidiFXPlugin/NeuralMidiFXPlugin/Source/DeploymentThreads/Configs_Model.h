@@ -7,8 +7,8 @@
 #include <torch/script.h> // One-stop header.
 #include "../Includes/GuiParameters.h"
 #include "../Includes/InputEvent.h"
-# include "../../Model_Input.h"
-#include "../../Model_Output.h"
+# include "../../CustomStructs.h"
+#include "../../CustomStructs.h"
 
 #define DEFAULT_MODEL_DIR_STR(x) #x
 #define DEFAULT_MODEL_DIR_EXPAND(x) DEFAULT_MODEL_DIR_STR(x)
