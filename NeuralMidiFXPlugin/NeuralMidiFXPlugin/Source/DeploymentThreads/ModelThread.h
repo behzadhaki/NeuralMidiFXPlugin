@@ -91,7 +91,9 @@ private:
     // ============================================================================================================
     // ===          User Customizable Struct
     // ============================================================================================================
-    MDLData mdl_data{};
+
+    // You can update the MDLData struct in CustomStructs.h if you need any additional data
+    MDLData user_data{};
 };
 
 
