@@ -1,6 +1,6 @@
-project(NeuralMidiFXPlugin VERSION 0.0.1)
+project(Tutorial1NMFx VERSION 0.0.1)
 
-set (BaseTargetName NeuralMidiFXPlugin)
+set (BaseTargetName Tutorial1NMFx)
 
 # --------------------------------------------
 #---- Torch Installation ---------------------
@@ -92,7 +92,7 @@ juce_add_plugin("${BaseTargetName}"
         # VERSION ...                               # Set this if the plugin version is different to the project version
         # ICON_BIG ...                              # ICON_* arguments specify a path to an image file to use as an icon for the Standalone
         # ICON_SMALL ...
-        COMPANY_NAME "MyCompanyTBD"                 # Replace with a tag identifying your name
+        COMPANY_NAME "AIMCTutorials"                 # Replace with a tag identifying your name
         IS_SYNTH TRUE                               # There is no MIDI vst3 plugin format, so we are going to assume a midi instrument plugin
         NEEDS_MIDI_INPUT TRUE
         NEEDS_MIDI_OUTPUT TRUE
@@ -100,9 +100,9 @@ juce_add_plugin("${BaseTargetName}"
         EDITOR_WANTS_KEYBOARD_FOCUS FALSE
         COPY_PLUGIN_AFTER_BUILD TRUE                 # copies the plugin to user plugins folder so as to easily load in DAW
         PLUGIN_MANUFACTURER_CODE Juce                #
-        PLUGIN_CODE NMFx                             # MUST BE UNIQUE!! If similar to other plugins, conflicts will occur
+        PLUGIN_CODE AZCK                             # MUST BE UNIQUE!! If similar to other plugins, conflicts will occur
         FORMATS AU VST3 Standalone
-        PRODUCT_NAME "NeuralMidiFXPlugin")           # Replace with your plugin title
+        PRODUCT_NAME "Tutorial1NMFx")           # Replace with your plugin title
 
 # Include the libtorch setup file
 #include(libtorch_setup.cmake)

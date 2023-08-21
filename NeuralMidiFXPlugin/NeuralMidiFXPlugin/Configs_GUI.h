@@ -34,57 +34,21 @@ namespace UIObjects {
     // Feel Free to Modify the following
     // ---------------------------------------------------------------------------------
     namespace Tabs {
-        const bool show_grid = true;
-        const bool draw_borders_for_components = true;
+        const bool show_grid = false;
+        const bool draw_borders_for_components = false;
         const std::vector<tab_tuple> tabList{
             tab_tuple
             {
-                "Tab 1", // use any name you want for the tab
+                "RandomGeneration", // use any name you want for the tab
                 slider_list
                 {
-                    slider_tuple{"Slider 1", 0.0, 1.0, 0.0, "Cc", "Ek"}
                 },
                 rotary_list
                 {
-                    rotary_tuple{"Rotary 1", 0.0, 1.0, 0.5, "Vc", "Xk"},
-                    rotary_tuple{"Rotary 2", 0.0, 4.0, 1.5, "Ij", "Qr"}
                 },
                 button_list
                 {
-                    button_tuple{"TriggerButton 1", false, "Wv", "Zz"}
-                }
-            },
-            tab_tuple{
-                "Tab 2",
-                slider_list
-                {
-                    slider_tuple{"Test 1", 0.0, 1.0, 0.0, "Aa", "Ff"},
-                    slider_tuple{"Gibberish", 0.0, 25.0, 11.0, "Ff", "Ll"}
-                },
-                rotary_list
-                {
-                    rotary_tuple{"Rotary 1B", 0.0, 1.0, 0.5, "Ll", "Pp"},
-                    rotary_tuple{"Test 2B", 0.0, 4.0, 1.5, "Pp", "Tt"}
-                },
-                button_list
-                {
-                    button_tuple{"ToggleButton 1", true, "Tt", "Zz"}
-                }
-            },
-
-            tab_tuple{
-                "Tab 3",
-                slider_list
-                {
-                    slider_tuple{"Generation Playback Delay", 0.0, 10.0, 0.0, "Aa", "Zz"}
-                },
-                rotary_list
-                {
-
-                },
-                button_list
-                {
-
+                    button_tuple{"Randomize", false, "Kh", "Pm"}
                 }
             }
         };
@@ -94,23 +58,23 @@ namespace UIObjects {
     namespace MidiInVisualizer {
         // if you need the widget used for visualizing midi notes coming from host
         // set following to true
-        const bool enable = true;
+        const bool enable = false;
 
         // if you want to allow user to drag/drop midi files into the plugin
         // set following to true
         // If active, the content of the midi file will be visualized in the
         // MidiInVisualizer and also be provided to you in the InputTensorPreparatorThread
-        const bool allowToDragInMidi = true;
+        const bool allowToDragInMidi = false;
 
         // if you want to visualize notes received in real-time from host
         // set following to true
-        const bool visualizeIncomingMidiFromHost = true;
+        const bool visualizeIncomingMidiFromHost = false;
         // if playhead is manually moved backward, do you want to delete all the
         // previously visualized notes received from host?
-        const bool deletePreviousIncomingMidiMessagesOnBackwardPlayhead = true;
+        const bool deletePreviousIncomingMidiMessagesOnBackwardPlayhead = false;
         // if playback is stopped, do you want to delete all the previously
         // visualized notes received from host?
-        const bool deletePreviousIncomingMidiMessagesOnRestart = true;
+        const bool deletePreviousIncomingMidiMessagesOnRestart = false;
     }
 
     namespace GeneratedContentVisualizer
