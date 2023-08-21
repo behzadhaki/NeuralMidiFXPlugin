@@ -84,17 +84,6 @@ bool InputTensorPreparatorThread::deploy(
          return false. --> NOTE: This is necessary so that the wrapper can know when to
          send the data to the model thread. */
 
-    if (SHOULD_SEND_TO_MODEL_FOR_GENERATION_) {
-        // Example:
-        //      If should send to model, update model_input && return true
-        model_input.tensor1 = torch::rand({1, 32, 27}, torch::kFloat32);
-        model_input.someDouble = 0.5f;
-        /*  ... set other model_input fields */
-
-        // Notify ITP thread to send the updated data by returning true
-        return true;
-    } else {
-        return false;
-    }
+    return SHOULD_SEND_TO_MODEL_FOR_GENERATION_;
     // =================================================================================
 }

@@ -8,118 +8,100 @@
 
 std::pair<bool, bool> PlaybackPreparatorThread::deploy(bool new_model_output_received, bool did_any_gui_params_change) {
 
-    // =================================================================================
-    // ===         1.a. ACCESSING GUI PARAMETERS
-    // Refer to:
-    // https://neuralmidifx.github.io/datatypes/GuiParams#accessing-the-ui-parameters
-    // =================================================================================
-
+    bool newPlaybackPolicyShouldBeSent = false;
+    bool newPlaybackSequenceGeneratedAndShouldBeSent = false;
 
     // =================================================================================
+    // ===         1. check if new model output is received
+    // =================================================================================
+    if (new_model_output_received || did_any_gui_params_change)
+    {
+        // =================================================================================
+        // ===         2. ACCESSING GUI PARAMETERS
+        // Refer to:
+        // https://neuralmidifx.github.io/datatypes/GuiParams#accessing-the-ui-parameters
+        // =================================================================================
+        std::map<int, int> voiceMap;
+        voiceMap[0] = int(gui_params.getValueFor("Kick"));
+        voiceMap[1] = int(gui_params.getValueFor("Snare"));
+        voiceMap[2] = int(gui_params.getValueFor("ClosedHat"));
+        voiceMap[3] = int(gui_params.getValueFor("OpenHat"));
+        voiceMap[4] = int(gui_params.getValueFor("LowTom"));
+        voiceMap[5] = int(gui_params.getValueFor("MidTom"));
+        voiceMap[6] = int(gui_params.getValueFor("HighTom"));
+        voiceMap[7] = int(gui_params.getValueFor("Crash"));
+        voiceMap[8] = int(gui_params.getValueFor("Ride"));
 
-    // ---------------------------------------------------------------------------------
-    // --- ExampleStarts ------ ExampleStarts ------ ExampleStarts ---- ExampleStarts --
-    // in this example, whenever the slider is moved, I resend a sequence of generations
-    // to the processor thread (NMP)
-    bool testFlag{false};
-    auto newPlaybackDelaySlider = gui_params.getValueFor("Generation Playback Delay");
-    if (PlaybackDelaySlider != newPlaybackDelaySlider) {
-        PrintMessage("PlaybackPreparatorThread: PlaybackDelaySlider changed from" +
-        std::to_string(PlaybackDelaySlider) + " to " + std::to_string(newPlaybackDelaySlider));
-        PlaybackDelaySlider = newPlaybackDelaySlider;
-        testFlag = true;
+        PrintMessage("Here1");
+
+        if (new_model_output_received)
+        {
+            // =================================================================================
+            // ===         3. Extract Notes from Model Output
+            // =================================================================================
+            auto hits = model_output.hits;
+            auto velocities = model_output.velocities;
+            auto offsets = model_output.offsets;
+
+            // print content of hits
+            std::stringstream ss;
+            ss << "Hits: ";
+            for (int i = 0; i < hits.sizes()[0]; i++)
+            {
+                for (int j = 0; j < hits.sizes()[1]; j++)
+                {
+                    for (int k = 0; k < hits.sizes()[2]; k++)
+                    {
+                        if (hits[i][j][k].item<float>() > 0.5)
+                            ss << "(" << i << ", " << j << ", " << k << ") ";
+                    }
+                }
+            }
+            PrintMessage(ss.str());
+
+            if (!hits.sizes().empty()) // check if any hits are available
+            {
+                // clear playback sequence
+                playbackSequence.clear();
+
+                // set the flag to notify new playback sequence is generated
+                newPlaybackSequenceGeneratedAndShouldBeSent = true;
+
+                // iterate through all voices, and time steps
+                int batch_ix = 0;
+                for (int step_ix = 0; step_ix < 32; step_ix++)
+                {
+                    for (int voice_ix = 0; voice_ix < 9; voice_ix++)
+                    {
+
+                        // check if the voice is active at this time step
+                        if (hits[batch_ix][step_ix][voice_ix].item<float>() > 0.5)
+                        {
+                            auto midi_num = voiceMap[voice_ix];
+                            auto velocity = velocities[batch_ix][step_ix][voice_ix].item<float>();
+                            auto offset = offsets[batch_ix][step_ix][voice_ix].item<float>();
+                            // we are going to convert the onset time to a ratio of quarter notes
+                            auto time = (step_ix + offset) * 0.25f;
+
+                            playbackSequence.addNoteWithDuration(
+                                0, midi_num, velocity, time, 0.1f);
+
+                        }
+                    }
+                }
+            }
+
+            // Specify the playback policy
+            playbackPolicy.SetPlaybackPolicy_RelativeToAbsoluteZero();
+            playbackPolicy.SetTimeUnitIsPPQ();
+            playbackPolicy.SetOverwritePolicy_DeleteAllEventsInPreviousStreamAndUseNewStream(true);
+            playbackPolicy.ActivateLooping(8);
+            newPlaybackPolicyShouldBeSent = true;
+        }
     }
-    // --- ExampleEnds -------- ExampleEnds -------- ExampleEnds ------ ExampleEnds ----
-    // ---------------------------------------------------------------------------------
 
-    // =================================================================================
-    // ===         1.b. ACCESSING REALTIME PLAYBACK INFORMATION
-    // Refer to:
-    // https://neuralmidifx.github.io/datatypes/RealtimePlaybackInfo#accessing-the-realtimeplaybackinfo
-    // =================================================================================
 
-    // =================================================================================
-    // ===         2. ACCESSING INFORMATION (EVENTS) RECEIVED FROM HOST
-    // Refer to:
-    //  https://neuralmidifx.github.io/datatypes/EventFromHost
-    // =================================================================================
 
-    // ---------------------------------------------------------------------------------
-    // --- ExampleStarts ------ ExampleStarts ------ ExampleStarts ---- ExampleStarts --
-    auto onsets = model_output.tensor1; // I'm not using this tensor below, just an e.g.
 
-    // ...
-    // --- ExampleEnds -------- ExampleEnds -------- ExampleEnds ------ ExampleEnds ----
-    // ---------------------------------------------------------------------------------
-
-    // =================================================================================
-    // ===         3. Add Extracted Generations to Playback Sequence
-    // Refer to:
-    // https://neuralmidifx.github.io/datatypes/PlaybackSequence
-    // =================================================================================
-
-    // =================================================================================
-    // ===         4. At least once, before sending generations,
-    //                  Specify the PlaybackPolicy, Time_unit, OverwritePolicy
-    // Refer to:
-    // https://neuralmidifx.github.io/datatypes/PlaybackPolicy
-    // =================================================================================
-
-    // -----------------------------------------------------------------------------------------
-    // ------ ExampleStarts ------ ExampleStarts ------ ExampleStarts ------ ExampleStarts -----
-    bool newPlaybackPolicyShouldBeSent{false};
-    bool newPlaybackSequenceGeneratedAndShouldBeSent{false};
-
-    if (testFlag) {
-        // 1. ---- Update Playback Policy -----
-        // Can be sent just once, || every time the policy changes
-        // playbackPolicy.SetPaybackPolicy_RelativeToNow();  // or
-        playbackPolicy.SetPlaybackPolicy_RelativeToAbsoluteZero(); // or
-        // playbackPolicy.SetPlaybackPolicy_RelativeToPlaybackStart(); // or
-
-        // playbackPolicy.SetTimeUnitIsSeconds(); // or
-        playbackPolicy.SetTimeUnitIsPPQ(); // or
-        // playbackPolicy.SetTimeUnitIsAudioSamples(); // or FIXME Timestamps near zero don't work well in loop mode
-
-        bool forceSendNoteOffsFirst{true};
-        // playbackPolicy.SetOverwritePolicy_DeleteAllEventsInPreviousStreamAndUseNewStream(forceSendNoteOffsFirst); // or
-        playbackPolicy.SetOverwritePolicy_DeleteAllEventsAfterNow(forceSendNoteOffsFirst); // or
-        // playbackPolicy.SetOverwritePolicy_KeepAllPreviousEvents(forceSendNoteOffsFirst); // or
-
-        // playbackPolicy.SetClearGenerationsAfterPauseStop(false); //
-         playbackPolicy.ActivateLooping(4);
-        // playbackPolicy.DisableLooping();
-        newPlaybackPolicyShouldBeSent = true;
-
-        // 2. ---- Update Playback Sequence -----
-        // clear the previous sequence || append depending on your requirements
-        playbackSequence.clear();
-        playbackSequence.clearStartingAt(0);
-
-        // I'm generating a single note to be played at timestamp 4 && delayed by the slider value
-        int channel{1};
-        int note = rand() % 64;
-        float velocity{0.3f};
-        double timestamp{0};
-        double duration{1};
-
-        // add noteOn Offs (time stamp shifted by the slider value)
-        playbackSequence.addNoteOn(channel, note, velocity,
-                                   timestamp + newPlaybackDelaySlider);
-        playbackSequence.addNoteOff(channel, note, velocity,
-                                    timestamp + newPlaybackDelaySlider + duration);
-        // or add a note with duration (an octave higher)
-        playbackSequence.addNoteWithDuration(channel, note+12, velocity,
-                                             timestamp + newPlaybackDelaySlider, duration);
-
-        newPlaybackSequenceGeneratedAndShouldBeSent = true;
-    }
-    // --- ExampleEnds -------- ExampleEnds -------- ExampleEnds ------ ExampleEnds ----
-    // ---------------------------------------------------------------------------------
-
-    // MUST Notify What Data Ready to be Sent
-    // If you don't want to send anything, just set both flags to false
-    // If you have a new playback policy, set the first flag to true
-    // If you have a new playback sequence, set the second flag to true
     return {newPlaybackPolicyShouldBeSent, newPlaybackSequenceGeneratedAndShouldBeSent};
 }
