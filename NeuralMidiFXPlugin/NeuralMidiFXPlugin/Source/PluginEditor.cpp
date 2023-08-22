@@ -58,23 +58,31 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
         seq_ = juce::MidiMessageSequence();
     }
 
-    inputPianoRoll = std::make_unique<InputMidiPianoRollComponent>(
-        NeuralMidiFXPluginProcessorPointer.GUI2ITP_DroppedMidiFile_Que.get(),
-        seq_);
+    double len = 8.0f * 960;
 
-    outputPianoRoll = std::make_unique<OutputMidiPianoRollComponent>(
-        NeuralMidiFXPluginProcessorPointer.PPP2GUI_GenerationMidiFile_Que.get());
+    if (UIObjects::MidiInVisualizer::enable) {
+        inputPianoRoll = std::make_unique<InputMidiPianoRollComponent>(
+            NeuralMidiFXPluginProcessorPointer.GUI2ITP_DroppedMidiFile_Que.get(),
+            seq_);
+        len = std::max(len, inputPianoRoll->getLength());
+    }
 
-    auto len = std::max(inputPianoRoll->getLength(), outputPianoRoll->getLength());
-    len = std::max(double(8.0f * 960), len);
-    inputPianoRoll->setLength(len);
-    outputPianoRoll->setLength(len);
+    if (UIObjects::GeneratedContentVisualizer::enable) {
+        outputPianoRoll = std::make_unique<OutputMidiPianoRollComponent>(
+            NeuralMidiFXPluginProcessorPointer.PPP2GUI_GenerationMidiFile_Que.get());
+        len = std::max(len, outputPianoRoll->getLength());
+    }
 
-    addAndMakeVisible(inputPianoRoll.get());
-    addAndMakeVisible(outputPianoRoll.get());
 
-//    inputPianoRoll->generateRandomMidiFile(10);
-//    outputPianoRoll->generateRandomMidiFile(10);
+    if (inputPianoRoll != nullptr) {
+        inputPianoRoll->setLength(len);
+        addAndMakeVisible(inputPianoRoll.get());
+    }
+
+    if (outputPianoRoll != nullptr) {
+        outputPianoRoll->setLength(len);
+        addAndMakeVisible(outputPianoRoll.get());
+    }
 
     setInterceptsMouseClicks(false, true);
 
@@ -100,9 +108,11 @@ void NeuralMidiFXPluginEditor::resized()
     if (outputPianoRoll != nullptr){
         outputPianoRoll->setBounds(area.removeFromBottom(proll_height));
     }
-    if (inputPianoRoll != nullptr || outputPianoRoll != nullptr){
+
+    if (inputPianoRoll != nullptr && outputPianoRoll != nullptr){
         area.removeFromBottom(gap);
     }
+
     if (inputPianoRoll != nullptr){
         inputPianoRoll->setBounds(area.removeFromBottom(proll_height));
     }
@@ -178,54 +188,76 @@ void NeuralMidiFXPluginEditor::timerCallback()
 
     if (NMP2GUI_IncomingMessageSequence->getNumReady() > 0) {
         incoming_sequence = NMP2GUI_IncomingMessageSequence->pop();
-        inputPianoRoll->displayMidiMessageSequence(incoming_sequence);
-        newContent = true;
+        if (inputPianoRoll != nullptr)
+        {
+            inputPianoRoll->displayMidiMessageSequence(incoming_sequence);
+            newContent = true;
+        }
     }
 
     if (newPlayheadPos)
     {
-        inputPianoRoll->displayMidiMessageSequence(playhead_pos);
-        if (LoopingEnabled) {
-            auto adjusted_playhead_pos = mapToLoopRange(playhead_pos, LoopStart, LoopEnd);
-            outputPianoRoll->displayMidiMessageSequence(adjusted_playhead_pos);
-        } else {
-            outputPianoRoll->displayMidiMessageSequence(playhead_pos);
+        if (inputPianoRoll != nullptr) {
+            inputPianoRoll->displayMidiMessageSequence(playhead_pos);
+        }
+
+        if (outputPianoRoll != nullptr) {
+            if (LoopingEnabled) {
+                auto adjusted_playhead_pos = mapToLoopRange(playhead_pos, LoopStart, LoopEnd);
+                outputPianoRoll->displayMidiMessageSequence(adjusted_playhead_pos);
+            } else {
+                outputPianoRoll->displayMidiMessageSequence(playhead_pos);
+            }
         }
     }
 
     if (newContent)
     {
-        if (LoopingEnabled) {
-            outputPianoRoll->displayLoopedMidiMessageSequence(
-                sequence_to_display,
-                play_policy,
-                fs,
-                qpm,
-                LoopStart,
-                LoopEnd
-            );
-        } else {
-            outputPianoRoll->displayMidiMessageSequence(
-                sequence_to_display,
-                play_policy,
-                fs,
-                qpm
-            );
+        if (outputPianoRoll != nullptr) {
+            if (LoopingEnabled) {
+                outputPianoRoll->displayLoopedMidiMessageSequence(
+                    sequence_to_display,
+                    play_policy,
+                    fs,
+                    qpm,
+                    LoopStart,
+                    LoopEnd
+                );
+            } else {
+                outputPianoRoll->displayMidiMessageSequence(
+                    sequence_to_display,
+                    play_policy,
+                    fs,
+                    qpm
+                );
+            }
         }
     }
 
     if (newContent || newPlayheadPos)
     {
 
-        auto len = std::max(inputPianoRoll->getLength(), outputPianoRoll->getLength());
-        inputPianoRoll->setLength(len);
-        if (LoopingEnabled) {
-           len = std::max(outputPianoRoll->getMidiLength(), LoopEnd * 960);
+        double len = 8.0f * 960;
+        if (inputPianoRoll != nullptr) {
+            len = std::max(inputPianoRoll->getLength(), len);
+        }
+        if (outputPianoRoll != nullptr) {
+            len = std::max(outputPianoRoll->getLength(), len);
         }
 
-        outputPianoRoll->setLength(len);
-        inputPianoRoll->repaint();
-        outputPianoRoll->repaint();
+        if (inputPianoRoll != nullptr) {
+            inputPianoRoll->setLength(len);
+            inputPianoRoll->repaint();
+        }
+
+        if (outputPianoRoll != nullptr) {
+            if (LoopingEnabled) {
+                len = std::max(outputPianoRoll->getMidiLength(), LoopEnd * 960);
+            }
+            outputPianoRoll->setLength(len);
+            outputPianoRoll->repaint();
+        }
+
         repaint();
     }
 
