@@ -22,7 +22,7 @@ namespace debugging_settings::ModelThread {
     constexpr bool disable_user_print_requests{false};              // disable all user requested prints
     constexpr bool disable_user_tensor_display_requests{false};     // disable all user requested prints of tensors
     constexpr bool disable_printing_tensor_content{false};           // disable printing of the tensor content
-    constexpr bool disable_printing_tensor_info{true};             // disable printing of the tensor content
+    constexpr bool disable_printing_tensor_info{false};             // disable printing of the tensor content
 }
 
 namespace debugging_settings::PlaybackPreparatorThread {

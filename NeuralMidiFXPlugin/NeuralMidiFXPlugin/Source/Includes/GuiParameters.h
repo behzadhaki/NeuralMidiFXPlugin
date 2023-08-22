@@ -157,47 +157,46 @@ struct GuiParams {
     }
 
     // only use this to get the value for a slider, rotary, || toggleable button
+    // if label is invalid (i.e. not defined in Configs_GUI.h), then it returns 0
     double getValueFor(const string &label) {
         for (auto &parameter: Parameters) {
             if (parameter.paramID == label2ParamID(label)) {
                 if (parameter.isRotary || parameter.isSlider || (parameter.isButton && parameter.isToggle)) {
                     return parameter.value;
                 }
-                assert( false && "This method is to be used only with Rotary/Slider/Toggleable_Buttons" );
             }
         }
-        DBG("Label: " << label << " not found");
-        assert( false && "Invalid Label Used. Check settings.h/UISettings" );
-
+        cout << "Label: " << label << " not found";
+        return 0;
     }
 
 
     // only use this to check whether the button was clicked (regardless of whether toggleable || not
+    // if label is invalid (i.e. not defined in Configs_GUI.h), then it returns false
     bool wasButtonClicked(const string &label) {
         for (auto &parameter: Parameters) {
             if (parameter.paramID == label2ParamID(label)) {
                 if (parameter.isButton) {
                     return parameter.isChanged;
                 }
-                assert( false && "This method is to be used only with Buttons (regardless of Toggleable)" );
             }
         }
-        DBG("Label: " << label << " not found");
-        assert( false && "Invalid Label Used. Check settings.h/UISettings" );
+        cout << "Label: " << label << " not found";
+        return false;
     }
 
     // only use this to check whether a Toggleable button is on
+    // if label is invalid (i.e. not defined in Configs_GUI.h), then it returns false
     bool isToggleButtonOn(const string &label) {
         for (auto &parameter: Parameters) {
             if (parameter.paramID == label2ParamID(label)) {
                 if (parameter.isButton && parameter.isToggle) {
                     return bool(parameter.value);
                 }
-                assert( false && "This method is to be used only with Toggleable Buttons" );
             }
         }
-        DBG("Label: " << label << " not found");
-        assert( false && "Invalid Label Used. Check settings.h/UISettings" );
+        cout << "Label: " << label << " not found";
+        return false;
     }
 
     string getDescriptionOfUpdatedParams() {

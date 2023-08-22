@@ -16,6 +16,7 @@ bool ModelThread::deploy(bool new_model_input_received,
     *                      PrintMessage("YOUR MESSAGE HERE");
     */
 
+
     // =================================================================================
     // ===         0. LOADING THE MODEL
     // =================================================================================
@@ -24,17 +25,43 @@ bool ModelThread::deploy(bool new_model_input_received,
         load("drumLoopVAE.pt");
     }
 
+    bool should_interpolate = false;   // flag to check if we should interpolate
+
     // =================================================================================
     // ===         1. ACCESSING GUI PARAMETERS
     // Refer to:
     // https://neuralmidifx.github.io/datatypes/GuiParams#accessing-the-ui-parameters
     // =================================================================================
-    auto ButtonTrigger = gui_params.wasButtonClicked("RandomGeneration");
-    if (ButtonTrigger) {
-        PrintMessage("ButtonTriggered");
+    // check if the buttons have been clicked, if so, update the user_data
+    auto ButtonATriggered = gui_params.wasButtonClicked("Random A");
+    if (ButtonATriggered) {
+        should_interpolate = true;
+        user_data.latent_A = torch::randn({ 1, 128 });
+    }
+    auto ButtonBTriggered = gui_params.wasButtonClicked("Random B");
+    if (ButtonBTriggered) {
+        should_interpolate = true;
+        user_data.latent_B = torch::randn({ 1, 128 });
+    }
+
+    // check if the interpolate slider has changed, if so, update the user_data
+    auto sliderValue = gui_params.getValueFor("Interpolate");
+    bool sliderChanged = (sliderValue != user_data.interpolate_slider_value);
+    if (sliderChanged) {
+        should_interpolate = true;
+        user_data.interpolate_slider_value = sliderValue;
     }
     // =================================================================================
 
+    // =================================================================================
+    // ===         2. initialize latent vectors on the first call
+    // =================================================================================
+    if (user_data.latent_A.size(0) == 0) {
+        user_data.latent_A = torch::randn({ 1, 128 });
+    }
+    if (user_data.latent_B.size(0) == 0) {
+        user_data.latent_B = torch::randn({ 1, 128 });
+    }
 
     // =================================================================================
     // ===         Inference
@@ -49,12 +76,15 @@ bool ModelThread::deploy(bool new_model_input_received,
     // to the PPP thread
     bool newPatternGenerated = false;
 
-    if (ButtonTrigger) {
+    if (should_interpolate || did_any_gui_params_change) {
 
         if (isModelLoaded)
         {
-            // Generate a random latent vector
-            auto latentVector = torch::randn({ 1, 128});
+            // calculate interpolated latent vector
+            auto slider_value = user_data.interpolate_slider_value;
+            auto latent_A = user_data.latent_A;
+            auto latent_B = user_data.latent_B;
+            auto latentVector = (1 - slider_value) * latent_A + slider_value * latent_B;
 
             // Prepare other inputs
             auto voice_thresholds = torch::ones({9 }, torch::kFloat32) * 0.5f;

@@ -81,7 +81,9 @@ struct ITPData {
 };
 
 struct MDLData {
-
+    torch::Tensor latent_A;
+    torch::Tensor latent_B;
+    double interpolate_slider_value{0};
 };
 
 struct PPPData {

@@ -45,10 +45,12 @@ namespace UIObjects {
                 },
                 rotary_list
                 {
+                    rotary_tuple {"Interpolate", 0, 1, 0.0, "Kg", "Pr"},
                 },
                 button_list
                 {
-                    button_tuple{"Randomize", false, "Kh", "Pm"}
+                    button_tuple{"Random A", false, "El", "Iq"},
+                    button_tuple{"Random B", false, "Rl", "Vq"},
                 }
             },
             tab_tuple
