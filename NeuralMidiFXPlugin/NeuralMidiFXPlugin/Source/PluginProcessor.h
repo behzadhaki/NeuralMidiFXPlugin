@@ -54,7 +54,13 @@ public:
 
     std::optional<juce::MidiMessageSequence> getSequence() {
         std::lock_guard<std::mutex> lock(mutex);
-        return sequence_to_display;
+        juce::MidiMessageSequence sequence_to_display_copy{sequence_to_display};
+        sequence_to_display.clear();
+        if (sequence_to_display_copy.getNumEvents() > 0) {
+            return sequence_to_display_copy;
+        } else {
+            return std::nullopt;
+        }
     }
 
     std::optional<double> getFs() {

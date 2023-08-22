@@ -32,8 +32,6 @@ std::pair<bool, bool> PlaybackPreparatorThread::deploy(bool new_model_output_rec
         voiceMap[7] = int(gui_params.getValueFor("Crash"));
         voiceMap[8] = int(gui_params.getValueFor("Ride"));
 
-        PrintMessage("Here1");
-
         if (new_model_output_received)
         {
             // =================================================================================
