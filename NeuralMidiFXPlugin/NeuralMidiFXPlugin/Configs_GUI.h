@@ -39,18 +39,16 @@ namespace UIObjects {
         const std::vector<tab_tuple> tabList{
             tab_tuple
             {
-                "RandomGeneration",
+                "Generation Controls",
                 slider_list
                 {
                 },
                 rotary_list
                 {
-                    rotary_tuple {"Interpolate", 0, 1, 0.0, "Kg", "Pr"},
+                    rotary_tuple {"Density", 0, 1, 0.5, "Kg", "Pr"},
                 },
                 button_list
                 {
-                    button_tuple{"Random A", false, "El", "Iq"},
-                    button_tuple{"Random B", false, "Rl", "Vq"},
                 }
             },
             tab_tuple
@@ -85,13 +83,13 @@ namespace UIObjects {
     namespace MidiInVisualizer {
         // if you need the widget used for visualizing midi notes coming from host
         // set following to true
-        const bool enable = false;
+        const bool enable = true;
 
         // if you want to allow user to drag/drop midi files into the plugin
         // set following to true
         // If active, the content of the midi file will be visualized in the
         // MidiInVisualizer and also be provided to you in the InputTensorPreparatorThread
-        const bool allowToDragInMidi = false;
+        const bool allowToDragInMidi = true;
 
         // if you want to visualize notes received in real-time from host
         // set following to true

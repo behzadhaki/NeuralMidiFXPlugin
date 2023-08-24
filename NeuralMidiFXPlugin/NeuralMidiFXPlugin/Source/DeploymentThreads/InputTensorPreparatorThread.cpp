@@ -228,3 +228,30 @@ InputTensorPreparatorThread::~InputTensorPreparatorThread() {
         prepareToStop();
     }
 }
+
+void InputTensorPreparatorThread::DisplayTensor(const torch::Tensor &tensor, const string Label) {
+    // if (disable_user_tensor_display_requests) { return; }
+    auto showMessage = [](const std::string& input) {
+        // if input is multiline, split it into lines and print each line separately
+        std::stringstream ss(input);
+        std::string line;
+
+        while (std::getline(ss, line)) {
+            std::cout << clr::green << "[ITP] " << line << std::endl;
+        }
+    };
+
+    std::stringstream ss;
+    ss << "TENSOR:" << Label ;
+    if (true) { //(!disable_printing_tensor_info) {
+        ss << " | Tensor metadata: " ;
+        ss << " | Device: " << tensor.device();
+        ss << " | Size: " << tensor.sizes();
+        ss << " |  - Storage data pointer: " << tensor.storage().data_ptr();
+    }
+    if (true) { // (!disable_printing_tensor_content) {
+        ss << "Tensor content:" << std::endl;
+        ss << tensor << std::endl;
+    }
+    showMessage(ss.str());
+}

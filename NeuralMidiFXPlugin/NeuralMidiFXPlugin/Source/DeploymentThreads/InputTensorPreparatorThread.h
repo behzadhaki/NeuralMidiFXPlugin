@@ -93,6 +93,7 @@ private:
     // ============================================================================================================
     static void DisplayEvent(const EventFromHost&event, bool compact_mode, double event_count);
     static void PrintMessage(const std::string &input);
+    static void DisplayTensor(const torch::Tensor &tensor, const string Label);
 
     // ============================================================================================================
     // ===          User Customizable Struct

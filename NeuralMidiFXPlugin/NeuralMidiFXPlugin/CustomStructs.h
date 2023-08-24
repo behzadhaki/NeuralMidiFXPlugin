@@ -26,7 +26,7 @@
  */
 
 struct ModelInput {
-
+    torch::Tensor hvo = torch::zeros({1, 32, 3}, torch::kFloat32);
     // ==============================================
     // Don't Change Anything in the following section
     // ==============================================
@@ -82,7 +82,9 @@ struct ModelOutput {
 // Any Extra Variables You need in ITP can be defined here
 // An instance called 'ITPdata' will be provided to you in Deploy() method
 struct ITPData {
-
+    torch::Tensor hits = torch::zeros({1, 32, 1}, torch::kFloat32);
+    torch::Tensor velocities = torch::zeros({1, 32, 1}, torch::kFloat32);
+    torch::Tensor offsets = torch::zeros({1, 32, 1}, torch::kFloat32);
 };
 
 // Any Extra Variables You need in MDL can be defined here

@@ -1,89 +1,63 @@
 #include "Source/DeploymentThreads/InputTensorPreparatorThread.h"
 
 // ===================================================================================
-// $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-//                       YOUR IMPLEMENTATION SHOULD BE DONE HERE
-// $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+// ===         Refer to:
+// https://neuralmidifx.github.io/DeploymentStages/ITP/Deploy
 // ===================================================================================
 
 bool InputTensorPreparatorThread::deploy(
     std::optional<MidiFileEvent> & new_midi_event_dragdrop,
     std::optional<EventFromHost> & new_event_from_host,
     bool gui_params_changed_since_last_call) {
-    /*              IF YOU NEED TO PRINT TO CONSOLE FOR DEBUGGING,
-     *                  YOU CAN USE THE FOLLOWING METHOD:
-     *                      PrintMessage("YOUR MESSAGE HERE");
-     */
 
-    /* A flag like this one can be used to check whether || not the model input
-        is ready to be sent to the model thread (MDL)*/
     bool SHOULD_SEND_TO_MODEL_FOR_GENERATION_ = false;
 
     // =================================================================================
-    // ===         1.a. ACCESSING GUI PARAMETERS
-    // Refer to:
-    // https://neuralmidifx.github.io/datatypes/GuiParams#accessing-the-ui-parameters
-    // =================================================================================
-
-    // =================================================================================
-
-
-    // =================================================================================
-    // ===         1.b. ACCESSING REALTIME PLAYBACK INFORMATION
-    // Refer to:
-    // https://neuralmidifx.github.io/datatypes/RealtimePlaybackInfo#accessing-the-realtimeplaybackinfo
-    // =================================================================================
-
-
-    // =================================================================================
-
-
-    // =================================================================================
-    // ===         2. ACCESSING INFORMATION (EVENTS) RECEIVED FROM HOST
-    // Refer to:
-    //  https://neuralmidifx.github.io/datatypes/EventFromHost
-    // =================================================================================
-    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    /* Warning!
-         * DO NOT USE realtime_playback_info for input preparations here, because
-         * the notes are most likely registered prior to NOW and stored in the queue for access
-         * As Such, for this part, use only the information provided within the received
-         * new_event_from_host object. */
-    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-    // =================================================================================
-
-    // =================================================================================
-    // ===         3. ACCESSING INFORMATION (EVENTS) RECEIVED FROM
+    // ===         ACCESSING INFORMATION (EVENTS) RECEIVED FROM
     //                Mannually Drag-Dropped Midi Files
     // Refer to:
     // https://neuralmidifx.github.io/datatypes/MidiFileEvent
     // =================================================================================
+    // check if there is a new midi file event
+    if (new_midi_event_dragdrop.has_value()) {
 
+        if (new_midi_event_dragdrop->isFirstMessage()) {
+            // clear hits, velocities, offsets
+            ITPdata.hits = torch::zeros({1, 32, 1}, torch::kFloat32);
+            ITPdata.velocities = torch::zeros({1, 32, 1}, torch::kFloat32);
+            ITPdata.offsets = torch::zeros({1, 32, 1}, torch::kFloat32);
+        }
 
-    // =================================================================================
+        if (new_midi_event_dragdrop->isNoteOnEvent()) {
+            auto ppq  = new_midi_event_dragdrop->Time(); // time in ppq
+            auto velocity = new_midi_event_dragdrop->getVelocity(); // velocity
+            auto div = round(ppq / .25f);
+            auto offset = (ppq - (div * .25f)) / 0.125 * 0.5 ;
+            auto grid_index = (long long) fmod(div, 32);
 
+            // check if louder if overlapping
+            if (ITPdata.hits[0][grid_index][0].item<float>() > 0) {
+                if (ITPdata.velocities[0][grid_index][0].item<float>() < velocity) {
+                    ITPdata.velocities[0][grid_index][0] = velocity;
+                    ITPdata.offsets[0][grid_index][0] = offset;
+                }
+            } else {
+                ITPdata.hits[0][grid_index][0] = 1;
+                ITPdata.velocities[0][grid_index][0] = velocity;
+                ITPdata.offsets[0][grid_index][0] = offset;
+            }
+        }
 
-    // =================================================================================
-    // ===         4. Sending data to the model thread (MDL) if necessary
-    // =================================================================================
+        // if all messages have been received, send to model for generation
+        if (new_midi_event_dragdrop->isLastMessage()) {
 
-    // A.  Place necessary data in `model_input` object
+            model_input.hvo = torch::concat(
+                {ITPdata.hits, ITPdata.velocities, ITPdata.offsets}, 2);
+            DisplayTensor(model_input.hvo, "model_input.hvo");
 
-
-    // B.  Return true if updated data should be sent to the model thread (MDL)
-
-
-    /* All data to be sent to the model thread (MDL) should be stored in the model_input
-            object. This object is defined in the header file of this class.
-            The class ModelInput is defined in the file model_input.h && should be modified
-            to include all the data you want to send to the model thread.
-
-         Once prepared && should be sent, return true from this function! Otherwise,
-         return false. --> NOTE: This is necessary so that the wrapper can know when to
-         send the data to the model thread. */
+            SHOULD_SEND_TO_MODEL_FOR_GENERATION_ = true;
+        }
+    }
 
     return SHOULD_SEND_TO_MODEL_FOR_GENERATION_;
-    // =================================================================================
 }
