@@ -90,9 +90,7 @@ struct ITPData {
 // Any Extra Variables You need in MDL can be defined here
 // An instance called 'MDLdata' will be provided to you in Deploy() method
 struct MDLData {
-    torch::Tensor latent_A;
-    torch::Tensor latent_B;
-    double interpolate_slider_value{0};
+
 };
 
 // Any Extra Variables You need in PPP can be defined here

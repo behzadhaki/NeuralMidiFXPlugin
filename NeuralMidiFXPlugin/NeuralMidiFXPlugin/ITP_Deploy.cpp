@@ -53,7 +53,6 @@ bool InputTensorPreparatorThread::deploy(
 
             model_input.hvo = torch::concat(
                 {ITPdata.hits, ITPdata.velocities, ITPdata.offsets}, 2);
-            DisplayTensor(model_input.hvo, "model_input.hvo");
 
             SHOULD_SEND_TO_MODEL_FOR_GENERATION_ = true;
         }
