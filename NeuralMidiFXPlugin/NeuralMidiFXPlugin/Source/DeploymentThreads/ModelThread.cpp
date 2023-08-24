@@ -3,6 +3,8 @@
 //
 
 #include "ModelThread.h"
+
+#include <utility>
 using namespace debugging_settings::ModelThread;
 
 // $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
@@ -159,8 +161,8 @@ ModelThread::~ModelThread() {
     }
 }
 
-// Tries to load a model that cmake copied from projects TorchScripts/MDL folder to the
-// cloned local TorchScripts/MDL folder (OS dependent).
+// Tries to load a model that cmake copied from projects TorchScripts/Models folder to the
+// cloned local TorchScripts/Models folder (OS dependent).
 //
 // Returns true if the model was loaded successfully, false otherwise.
 // If a path was already tried, it won't try loading the model again.
@@ -168,9 +170,10 @@ bool ModelThread::load(std::string model_name_)
 {
 
     // Creates the path depending on the OS
-    std::string model_path_ = std::string(MDL_path::default_model_path) +
-                        std::string(MDL_path::path_separator) +
-                        std::string(model_name_);
+    std::string model_path_ = stripQuotes(std::string(MDL_path::default_model_path)) +
+                              std::string(MDL_path::path_separator) +
+                              model_name_;
+
 
     // If already tried the path, don't try again
     if (model_path == model_path_) {

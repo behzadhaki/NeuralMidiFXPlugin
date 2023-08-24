@@ -16,6 +16,7 @@ bool ModelThread::deploy(bool new_model_input_received,
     *                      PrintMessage("YOUR MESSAGE HERE");
     */
 
+
     // =================================================================================
     // ===         0. LOADING THE MODEL
     // =================================================================================
@@ -29,7 +30,7 @@ bool ModelThread::deploy(bool new_model_input_received,
     // Refer to:
     // https://neuralmidifx.github.io/datatypes/GuiParams#accessing-the-ui-parameters
     // =================================================================================
-    auto ButtonTrigger = gui_params.wasButtonClicked("RandomGeneration");
+    auto ButtonTrigger = gui_params.wasButtonClicked("Randomize");
     if (ButtonTrigger) {
         PrintMessage("ButtonTriggered");
     }

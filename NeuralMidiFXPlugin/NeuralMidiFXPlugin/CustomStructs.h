@@ -6,6 +6,7 @@
 
 #include <torch/script.h> // One-stop header.
 #include "Source/Includes/chrono_timer.h"
+#include "Source/Includes/ProcessingScriptsLoader.h"
 
 // ======================================================================================
 // ==================       Structure For Sending Data       ============================
@@ -23,6 +24,7 @@
 
  update in CustomStructs.h if necessary
  */
+
 struct ModelInput {
 
     // ==============================================
@@ -66,24 +68,31 @@ struct ModelOutput {
 // ======================================================================================
 // ==================       Structures For Custom Data       ============================
 //                                 Per Thread
-//                                  user_data
+//
 // ======================================================================================
 /* If you need to reuse some data within each of the deploy() functions
  * of each thread, you can update the following structures to hold the data.
  * An instance of these structures will be available in each of the corresponding
- * threads ---> This instance is called `user_data`.
+ * threads ---> These instance are called `ITPdata`, `MDLdata`, `PPPdata`.
  *
  *
  * */
 
+
+// Any Extra Variables You need in ITP can be defined here
+// An instance called 'ITPdata' will be provided to you in Deploy() method
 struct ITPData {
 
 };
 
+// Any Extra Variables You need in MDL can be defined here
+// An instance called 'MDLdata' will be provided to you in Deploy() method
 struct MDLData {
 
 };
 
+// Any Extra Variables You need in PPP can be defined here
+// An instance called 'PPPdata' will be provided to you in Deploy() method
 struct PPPData {
 
 };
