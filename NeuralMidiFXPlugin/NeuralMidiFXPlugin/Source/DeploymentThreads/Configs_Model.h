@@ -28,6 +28,3 @@ namespace MDL_path {
 
 
 
-
-// update above and replace NeuralMidiFxPlugin with DEFAULT_MODEL_DIR_STR
-

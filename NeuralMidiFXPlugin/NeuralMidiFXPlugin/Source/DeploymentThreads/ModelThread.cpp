@@ -160,14 +160,6 @@ ModelThread::~ModelThread() {
         prepareToStop();
     }
 }
-inline std::string stripQuotes(const std::string &input) {
-    if (input.size() < 2) return input;
-    if (input.front() == '"' && input.back() == '"') {
-        return input.substr(1, input.size() - 2);
-    }
-    return input;
-}
-
 
 // Tries to load a model that cmake copied from projects TorchScripts/Models folder to the
 // cloned local TorchScripts/Models folder (OS dependent).
