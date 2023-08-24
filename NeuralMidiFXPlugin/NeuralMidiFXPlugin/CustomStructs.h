@@ -6,6 +6,7 @@
 
 #include <torch/script.h> // One-stop header.
 #include "Source/Includes/chrono_timer.h"
+#include "Source/Includes/ProcessingScriptsLoader.h"
 
 // ======================================================================================
 // ==================       Structure For Sending Data       ============================
@@ -23,11 +24,8 @@
 
  update in CustomStructs.h if necessary
  */
+
 struct ModelInput {
-    torch::Tensor tensor1{};
-    // torch::Tensor tensor2{};
-    // torch::Tensor tensor3{};
-    double someDouble{};
 
     // ==============================================
     // Don't Change Anything in the following section
@@ -53,10 +51,6 @@ struct ModelInput {
  update in CustomStructs.h if necessary
  */
 struct ModelOutput {
-    torch::Tensor tensor1{};
-    torch::Tensor tensor2{};
-    torch::Tensor tensor3{};
-    // std::vector<int> intVector{};
 
     // ==============================================
     // Don't Change Anything in the following section
