@@ -82,7 +82,7 @@ struct ModelOutput {
 // Any Extra Variables You need in ITP can be defined here
 // An instance called 'ITPdata' will be provided to you in Deploy() method
 struct ITPData {
-    torch::jit::script::Module my_script = load_processing_script("my_script.pt");
+
 };
 
 // Any Extra Variables You need in MDL can be defined here
