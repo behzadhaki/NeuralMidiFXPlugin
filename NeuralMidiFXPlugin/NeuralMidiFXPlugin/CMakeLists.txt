@@ -151,9 +151,10 @@ target_include_directories(${BaseTargetName} PRIVATE "${TORCH_INCLUDE_DIRS}")
 # Copying the TorchScripts directory and all its contents
 if(WIN32)
     file(COPY "${CMAKE_SOURCE_DIR}/TorchScripts" DESTINATION "C:/${BaseTargetName}")
-    add_definitions(-DDEFAULT_MODEL_DIR="\"C:\\\\${BaseTargetName}\\\\TorchScripts\\\\MDL\"")
+    add_definitions(-DDEFAULT_MODEL_DIR="C:\\${BaseTargetName}\\TorchScripts\\Models")
 elseif(APPLE)
     set(TARGET_DIR "$ENV{HOME}/Library/${BaseTargetName}")
     file(COPY "${CMAKE_SOURCE_DIR}/TorchScripts" DESTINATION "${TARGET_DIR}")
-    add_definitions(-DDEFAULT_MODEL_DIR="\"${TARGET_DIR}/TorchScripts/MDL\"")
+    add_definitions(-DDEFAULT_MODEL_DIR="${TARGET_DIR}/TorchScripts/Models")
+
 endif()

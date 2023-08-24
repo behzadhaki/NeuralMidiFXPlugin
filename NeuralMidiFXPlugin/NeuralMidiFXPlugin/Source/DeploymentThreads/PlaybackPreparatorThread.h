@@ -93,7 +93,7 @@ private:
     // ============================================================================================================
 
     // You can update the PPPData struct in CustomStructs.h if you need any additional data
-    PPPData user_data{};
+    PPPData PPPdata{};
 };
 
 #endif //JUCECMAKEREPO_PLAYBACKPREPARATORTHREAD_H

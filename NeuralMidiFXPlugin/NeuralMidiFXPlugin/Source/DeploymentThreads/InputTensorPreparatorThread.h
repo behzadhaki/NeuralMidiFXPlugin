@@ -99,7 +99,7 @@ private:
     // ============================================================================================================
 
     // You can update the ITPData struct in CustomStructs.h if you need any additional data
-    ITPData user_data{};
+    ITPData ITPdata {};
 };
 
 
