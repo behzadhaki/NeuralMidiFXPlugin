@@ -12,25 +12,20 @@ bool InputTensorPreparatorThread::deploy(
 
     bool SHOULD_SEND_TO_MODEL_FOR_GENERATION_ = false;
 
-    // =================================================================================
-    // ===         ACCESSING INFORMATION (EVENTS) RECEIVED FROM
-    //                Mannually Drag-Dropped Midi Files
-    // Refer to:
-    // https://neuralmidifx.github.io/datatypes/MidiFileEvent
-    // =================================================================================
-    // check if there is a new midi file event
-    if (new_midi_event_dragdrop.has_value()) {
+    // check that the deploy() method was called because of a new midi event
+    if (new_event_from_host.has_value()) {
+        SHOULD_SEND_TO_MODEL_FOR_GENERATION_ = true;
 
-        if (new_midi_event_dragdrop->isFirstMessage()) {
+        if (new_event_from_host->isFirstBufferEvent()) {
             // clear hits, velocities, offsets
             ITPdata.hits = torch::zeros({1, 32, 1}, torch::kFloat32);
             ITPdata.velocities = torch::zeros({1, 32, 1}, torch::kFloat32);
             ITPdata.offsets = torch::zeros({1, 32, 1}, torch::kFloat32);
         }
 
-        if (new_midi_event_dragdrop->isNoteOnEvent()) {
-            auto ppq  = new_midi_event_dragdrop->Time(); // time in ppq
-            auto velocity = new_midi_event_dragdrop->getVelocity(); // velocity
+        if (new_event_from_host->isNoteOnEvent()) {
+            auto ppq  = new_event_from_host->Time().inQuarterNotes(); // time in ppq
+            auto velocity = new_event_from_host->getVelocity(); // velocity
             auto div = round(ppq / .25f);
             auto offset = (ppq - (div * .25f)) / 0.125 * 0.5 ;
             auto grid_index = (long long) fmod(div, 32);
@@ -46,15 +41,6 @@ bool InputTensorPreparatorThread::deploy(
                 ITPdata.velocities[0][grid_index][0] = velocity;
                 ITPdata.offsets[0][grid_index][0] = offset;
             }
-        }
-
-        // if all messages have been received, send to model for generation
-        if (new_midi_event_dragdrop->isLastMessage()) {
-
-            model_input.hvo = torch::concat(
-                {ITPdata.hits, ITPdata.velocities, ITPdata.offsets}, 2);
-
-            SHOULD_SEND_TO_MODEL_FOR_GENERATION_ = true;
         }
     }
 

@@ -70,7 +70,6 @@ namespace UIObjects {
                     rotary_tuple{"Crash", 0, 127, 49, "Um", "Ys"},
 
                     rotary_tuple{"Ride", 0, 127, 51, "Lt", "Pz"},
-
                 },
                 button_list
                 {

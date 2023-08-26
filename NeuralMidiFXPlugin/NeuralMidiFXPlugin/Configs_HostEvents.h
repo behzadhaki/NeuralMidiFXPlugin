@@ -49,15 +49,15 @@
  */
 namespace event_communication_settings {
     // set to true, if you need to send the metadata for a new buffer to the ITP thread
-    constexpr bool SendEventAtBeginningOfNewBuffers_FLAG{true};
-    constexpr bool SendEventForNewBufferIfMetadataChanged_FLAG{true};     // only sends if metadata changes
+    constexpr bool SendEventAtBeginningOfNewBuffers_FLAG{false};
+    constexpr bool SendEventForNewBufferIfMetadataChanged_FLAG{false};     // only sends if metadata changes
 
     // set to true if you need to notify the beginning of a new bar
-    constexpr bool SendNewBarEvents_FLAG{true};
+    constexpr bool SendNewBarEvents_FLAG{false};
 
     // set to true EventFromHost for every time_shift_event ratio of quarter notes
-    constexpr bool SendTimeShiftEvents_FLAG{false};
-    constexpr double delta_TimeShiftEventRatioOfQuarterNote{0.5}; // sends a time shift event every 8th note
+    constexpr bool SendTimeShiftEvents_FLAG{true};
+    constexpr double delta_TimeShiftEventRatioOfQuarterNote{2}; // sends a time shift event every 8th note
 
     // Filter Note On Events if you don't need them
     constexpr bool FilterNoteOnEvents_FLAG{false};
