@@ -14,7 +14,9 @@ bool InputTensorPreparatorThread::deploy(
 
     // check that the deploy() method was called because of a new midi event
     if (new_event_from_host.has_value()) {
-        SHOULD_SEND_TO_MODEL_FOR_GENERATION_ = true;
+        if (new_event_from_host->isNewTimeShiftEvent()) {
+            SHOULD_SEND_TO_MODEL_FOR_GENERATION_ = true;
+        }
 
         if (new_event_from_host->isFirstBufferEvent()) {
             // clear hits, velocities, offsets
