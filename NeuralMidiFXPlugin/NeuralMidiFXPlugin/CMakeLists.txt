@@ -1,6 +1,6 @@
-project(Tutorial3NMFx VERSION 0.0.1)
+project(Tutorial4NMFx VERSION 0.0.1)
 
-set (BaseTargetName Tutorial3NMFx)
+set (BaseTargetName Tutorial4NMFx)
 
 # --------------------------------------------
 #---- Torch Installation ---------------------
@@ -100,9 +100,9 @@ juce_add_plugin("${BaseTargetName}"
         EDITOR_WANTS_KEYBOARD_FOCUS FALSE
         COPY_PLUGIN_AFTER_BUILD TRUE                 # copies the plugin to user plugins folder so as to easily load in DAW
         PLUGIN_MANUFACTURER_CODE Juce                #
-        PLUGIN_CODE AZCM                             # MUST BE UNIQUE!! If similar to other plugins, conflicts will occur
+        PLUGIN_CODE AZCN                             # MUST BE UNIQUE!! If similar to other plugins, conflicts will occur
         FORMATS AU VST3 Standalone
-        PRODUCT_NAME "Tutorial3NMFx")           # Replace with your plugin title
+        PRODUCT_NAME "Tutorial4NMFx")           # Replace with your plugin title
 
 # Include the libtorch setup file
 #include(libtorch_setup.cmake)

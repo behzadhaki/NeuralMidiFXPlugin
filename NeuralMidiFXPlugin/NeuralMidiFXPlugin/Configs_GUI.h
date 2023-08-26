@@ -89,11 +89,11 @@ namespace UIObjects {
         // set following to true
         // If active, the content of the midi file will be visualized in the
         // MidiInVisualizer and also be provided to you in the InputTensorPreparatorThread
-        const bool allowToDragInMidi = true;
+        const bool allowToDragInMidi = false;
 
         // if you want to visualize notes received in real-time from host
         // set following to true
-        const bool visualizeIncomingMidiFromHost = false;
+        const bool visualizeIncomingMidiFromHost = true;
         // if playhead is manually moved backward, do you want to delete all the
         // previously visualized notes received from host?
         const bool deletePreviousIncomingMidiMessagesOnBackwardPlayhead = false;
