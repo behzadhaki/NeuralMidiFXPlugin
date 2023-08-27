@@ -9,7 +9,7 @@
 // ==============================================================================================
 namespace debugging_settings::InputTensorPreparatorThread {
     constexpr bool print_received_gui_params{false};                // print the received gui parameters
-    constexpr bool print_manually_dropped_midi_messages{true};     // print the midi messages received from manually drag-dropped midi file
+    constexpr bool print_manually_dropped_midi_messages{false};     // print the midi messages received from manually drag-dropped midi file
     constexpr bool print_input_events{false};                       // print the input tensor
     constexpr bool print_deploy_method_time{false};                 // print the time taken to deploy the model
     constexpr bool print_timed_consecutive_ModelInputs_pushed{false};   // print the output tensor

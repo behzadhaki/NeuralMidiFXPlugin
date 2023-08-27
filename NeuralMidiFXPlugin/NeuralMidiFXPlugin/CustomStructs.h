@@ -26,13 +26,13 @@
  */
 
 struct ModelInput {
-    torch::Tensor hvo = torch::zeros({1, 32, 3}, torch::kFloat32);
+
+    std::optional<MidiFileEvent> new_midi_event_dragdrop;
+    std::optional<EventFromHost> new_event_from_host;
+
     // ==============================================
     // Don't Change Anything in the following section
     // ==============================================
-    // used to measure the time it takes
-    // for a prepared instance to be
-    // sent to the next thread
     chrono_timer timer{};
 };
 
@@ -51,16 +51,13 @@ struct ModelInput {
  update in CustomStructs.h if necessary
  */
 struct ModelOutput {
-    torch::Tensor hits;
-    torch::Tensor velocities;
-    torch::Tensor offsets;
+
+    std::optional<MidiFileEvent> new_midi_event_dragdrop;
+    std::optional<EventFromHost> new_event_from_host;
 
     // ==============================================
     // Don't Change Anything in the following section
     // ==============================================
-    // used to measure the time it takes
-    // for a prepared instance to be
-    // sent to the next thread
     chrono_timer timer{};
 };
 
@@ -82,9 +79,7 @@ struct ModelOutput {
 // Any Extra Variables You need in ITP can be defined here
 // An instance called 'ITPdata' will be provided to you in Deploy() method
 struct ITPData {
-    torch::Tensor hits = torch::zeros({1, 32, 1}, torch::kFloat32);
-    torch::Tensor velocities = torch::zeros({1, 32, 1}, torch::kFloat32);
-    torch::Tensor offsets = torch::zeros({1, 32, 1}, torch::kFloat32);
+
 };
 
 // Any Extra Variables You need in MDL can be defined here
