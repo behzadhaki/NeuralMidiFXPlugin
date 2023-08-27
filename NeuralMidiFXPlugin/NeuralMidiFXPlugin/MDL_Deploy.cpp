@@ -16,6 +16,7 @@ bool ModelThread::deploy(bool new_model_input_received,
     if (new_model_input_received) {
         model_output.new_event_from_host = model_input.new_event_from_host;
         model_output.new_midi_event_dragdrop = model_input.new_midi_event_dragdrop;
+        
         return true;
     }
 

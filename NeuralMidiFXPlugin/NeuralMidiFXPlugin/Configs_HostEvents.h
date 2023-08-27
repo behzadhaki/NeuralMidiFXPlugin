@@ -56,7 +56,7 @@ namespace event_communication_settings {
     constexpr bool SendNewBarEvents_FLAG{false};
 
     // set to true EventFromHost for every time_shift_event ratio of quarter notes
-    constexpr bool SendTimeShiftEvents_FLAG{true};
+    constexpr bool SendTimeShiftEvents_FLAG{false};
     constexpr double delta_TimeShiftEventRatioOfQuarterNote{2}; // sends a time shift event every 8th note
 
     // Filter Note On Events if you don't need them
@@ -75,11 +75,11 @@ namespace event_communication_settings {
 // ======================================================================================
 namespace thread_configurations::InputTensorPreparator {
     // waittime between iterations in ms
-    constexpr double waitTimeBtnIters{0.5};
+    constexpr double waitTimeBtnIters{0.};
 }
 namespace thread_configurations::Model {
     // waittime between iterations in ms
-    constexpr double waitTimeBtnIters{0.5};
+    constexpr double waitTimeBtnIters{0.};
 }
 namespace thread_configurations::PlaybackPreparator {
     // waittime between iterations in ms
@@ -98,8 +98,8 @@ namespace thread_configurations::APVTSMediatorThread {
  */
 namespace queue_settings {
     constexpr int NMP2ITP_que_size{512};
-    constexpr int ITP2MDL_que_size{512};
-    constexpr int MDL2PPP_que_size{512};
+    constexpr int ITP2MDL_que_size{4098*2};
+    constexpr int MDL2PPP_que_size{4098*2};
     constexpr int PPP2NMP_que_size{512};
     constexpr int APVM_que_size{32};
 }

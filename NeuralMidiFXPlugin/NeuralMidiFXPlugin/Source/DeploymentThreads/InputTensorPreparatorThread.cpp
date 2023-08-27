@@ -146,6 +146,27 @@ void InputTensorPreparatorThread::run() {
             if (print_deploy_method_time && chrono_timed_deploy.isValid()) { // if set in Debugging.h
                 showMessage(*chrono_timed_deploy.getDescription(" deploy() execution time: "));
             }
+
+            // push to next thread if a new input is provided
+            if (ready2send2MDL) {
+                model_input.timer.registerStartTime();
+                ITP2MDL_ModelInput_Que_ptr->push(model_input);
+                inputs_sent_count++;
+                chrono_timed_consecutive_pushes.registerEndTime();
+
+                if (print_timed_consecutive_ModelInputs_pushed && chrono_timed_consecutive_pushes.isValid()) {
+                    if (inputs_sent_count > 1) {
+                        auto text = "Time Duration Between ModelInput #" + std::to_string(inputs_sent_count);
+                        text += " && #" + std::to_string(inputs_sent_count - 1) + ": ";
+                        showMessage(*chrono_timed_consecutive_pushes.getDescription(text));
+                    } else {
+                        auto text = "Time Duration Between Start && First Pushed ModelInput: ";
+                        showMessage(*chrono_timed_consecutive_pushes.getDescription(text));
+                    }
+                }
+                chrono_timed_consecutive_pushes.registerStartTime();
+            }
+
         }
 
         // check if notes received from a manually dropped midi file
@@ -168,29 +189,31 @@ void InputTensorPreparatorThread::run() {
                     new_midi_event_dropped_manually = MidiFileEvent(msg_, isFirst, isLast);
                     new_event_from_DAW = std::nullopt;
                     ready2send2MDL = deploy(new_midi_event_dropped_manually, new_event_from_DAW, false);
+
+                    // push to next thread if a new input is provided
+                    if (ready2send2MDL) {
+                        model_input.timer.registerStartTime();
+                        ITP2MDL_ModelInput_Que_ptr->push(model_input);
+                        inputs_sent_count++;
+                        chrono_timed_consecutive_pushes.registerEndTime();
+
+                        if (print_timed_consecutive_ModelInputs_pushed && chrono_timed_consecutive_pushes.isValid()) {
+                            if (inputs_sent_count > 1) {
+                                auto text = "Time Duration Between ModelInput #" + std::to_string(inputs_sent_count);
+                                text += " && #" + std::to_string(inputs_sent_count - 1) + ": ";
+                                showMessage(*chrono_timed_consecutive_pushes.getDescription(text));
+                            } else {
+                                auto text = "Time Duration Between Start && First Pushed ModelInput: ";
+                                showMessage(*chrono_timed_consecutive_pushes.getDescription(text));
+                            }
+                        }
+                        chrono_timed_consecutive_pushes.registerStartTime();
+                    }
                 }
             }
         }
 
-        // push to next thread if a new input is provided
-        if (ready2send2MDL) {
-            model_input.timer.registerStartTime();
-            ITP2MDL_ModelInput_Que_ptr->push(model_input);
-            inputs_sent_count++;
-            chrono_timed_consecutive_pushes.registerEndTime();
 
-            if (print_timed_consecutive_ModelInputs_pushed && chrono_timed_consecutive_pushes.isValid()) {
-                if (inputs_sent_count > 1) {
-                    auto text = "Time Duration Between ModelInput #" + std::to_string(inputs_sent_count);
-                    text += " && #" + std::to_string(inputs_sent_count - 1) + ": ";
-                    showMessage(*chrono_timed_consecutive_pushes.getDescription(text));
-                } else {
-                    auto text = "Time Duration Between Start && First Pushed ModelInput: ";
-                    showMessage(*chrono_timed_consecutive_pushes.getDescription(text));
-                }
-            }
-            chrono_timed_consecutive_pushes.registerStartTime();
-        }
 
         // update event trackers accordingly if applicable
         if (new_event_from_DAW.has_value()) {
