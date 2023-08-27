@@ -91,5 +91,18 @@ struct MDLData {
 // Any Extra Variables You need in PPP can be defined here
 // An instance called 'PPPdata' will be provided to you in Deploy() method
 struct PPPData {
-    // torch::jit::script::Module model = load_processing_script("drumLoopVAE.pt");
+    // the scripted model to be used for inference
+    torch::jit::script::Module model = load_processing_script("drumLoopVAE.pt");
+
+    // Bar Locations
+    std::vector<double> bar_locations;
+
+    // Time of the last note played
+    double last_note_time = 0.0;
+
+    // Note On Events Since Call Section Started
+    std::vector<EventFromHost> note_on_events_since_call_section_started;
+
+    // Flag to check if in response section
+    bool UserPerformanceIsBeingRecorded_FLAG = true;
 };
