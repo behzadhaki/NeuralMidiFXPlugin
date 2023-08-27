@@ -91,5 +91,5 @@ struct MDLData {
 // Any Extra Variables You need in PPP can be defined here
 // An instance called 'PPPdata' will be provided to you in Deploy() method
 struct PPPData {
-
+    // torch::jit::script::Module model = load_processing_script("drumLoopVAE.pt");
 };
