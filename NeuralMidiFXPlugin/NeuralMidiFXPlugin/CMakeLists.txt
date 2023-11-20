@@ -2,6 +2,8 @@ project(NeuralMidiFXPlugin VERSION 0.0.1)
 
 set (BaseTargetName NeuralMidiFXPlugin)
 
+add_definitions(-DPROJECT_NAME="${BaseTargetName}")
+
 # --------------------------------------------
 #---- Torch Installation ---------------------
 

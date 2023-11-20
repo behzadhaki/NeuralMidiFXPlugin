@@ -179,4 +179,7 @@ private:
     // utility methods
     void PrintMessage(const std::string& input);
 
+    // MidiIO Standalone
+    unique_ptr<MidiOutput> mVirtualMidiOutput;
+
 };

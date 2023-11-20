@@ -121,9 +121,50 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
     {
         DBG("Running as plugin");
     }
+
+    // check if standalone and osx
+    // --------------------------------------------------------------------------------------
+    #if JUCE_MAC
+        if (UIObjects::StandaloneTransportPanel::enable &&
+            UIObjects::StandaloneTransportPanel::NeedVirtualMidiOutCable) {
+            string virtualOutName = string(PROJECT_NAME) + "Generations";
+            vector<string> existingInstanceLabels{};
+
+            // add any midi in device that has (even partially) the same name as the virtual midi out device
+            // NOTE: PREVIOUSLY CREATED MIDIOUTS WILL NOW SHOW UP AS MIDIINS!
+            int count = 0;
+            for (auto device : MidiInput::getAvailableDevices()) {
+                DBG("Found midi out device: " + device.name.toStdString());
+                if (device.name.toStdString().find(virtualOutName) != string::npos) {
+                    DBG("Found existing instance of virtual midi out device: " + device.name.toStdString());
+                    existingInstanceLabels.push_back(device.name.toStdString());
+                    count++;
+                }
+
+                if (existingInstanceLabels.size() >= 1) {
+                    // get longest one
+                    string longestLabel = "";
+                    for (auto label : existingInstanceLabels) {
+                        if (label.length() > longestLabel.length()) {
+                            longestLabel = label;
+                        }
+                    }
+                    virtualOutName = longestLabel + "_" + std::to_string(count);
+                }
+            }
+
+            // create a virtual midi output device
+            mVirtualMidiOutput = juce::MidiOutput::createNewDevice (virtualOutName);
+            mVirtualMidiOutput->startBackgroundThread();
+        }
+    #endif
 }
 
 NeuralMidiFXPluginProcessor::~NeuralMidiFXPluginProcessor() {
+    if (mVirtualMidiOutput) {
+        mVirtualMidiOutput->stopBackgroundThread();
+        mVirtualMidiOutput = nullptr;
+    }
     if (!modelThread->readyToStop) {
         modelThread->prepareToStop();
     }
@@ -340,6 +381,19 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             }
         }
         auto now_in_user_unit = frame_now.getTimeWithUnitType(playbackPolicies.getTimeUnitIndex());
+
+        if (mVirtualMidiOutput)
+        {
+            /*auto randVel = juce::Random::getSystemRandom().nextFloat();
+        auto randPitchInt = juce::Random::getSystemRandom().nextInt(127);
+        tempBuffer.addEvent(MidiMessage::noteOn(1, 36, randVel), 0);
+        tempBuffer.addEvent(MidiMessage::noteOn(1, 12, randVel), 0);
+        tempBuffer.addEvent(MidiMessage::noteOn(1, 24, randVel), 0);
+        tempBuffer.addEvent(MidiMessage::noteOn(1, 48, randVel), 0);
+        tempBuffer.addEvent(MidiMessage::noteOn(1, 60, randVel), 0);*/
+            mVirtualMidiOutput->sendBlockOfMessagesNow(tempBuffer);
+
+        }
 
         midiMessages.swapWith(tempBuffer);
 

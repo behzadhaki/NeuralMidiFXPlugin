@@ -127,5 +127,16 @@ namespace UIObjects {
         const bool allowToDragOutAsMidi = true;
     }
 
+    namespace StandaloneTransportPanel
+    {
+        // if you need the widget used for controlling the standalone transport
+        // set following to true
+        const bool enable = true;
+
+        // if you need to send midi out to a virtual midi cable
+        // set following to true
+        // NOTE: Only works on MacOs
+        const bool NeedVirtualMidiOutCable = false;
+    }
 
 }
