@@ -4,3 +4,7 @@
 - can now be enabled via configs_GUI.h
 - Only OSX supported for this feature
 
+### Standalone Mode
+
+- Now can run in standalone mode
+- Can be enabled via configs_GUI.h
