@@ -85,6 +85,75 @@ public:
 
 };
 
+struct StandAloneParams {
+    float qpm{-1};
+    int is_playing{0};
+    int is_recording{0};
+    int denominator{4};
+    int numerator{4};
+
+    int64_t TimeInSamples{0};
+    double TimeInSeconds{0};
+    double PpqPosition{0};
+
+    juce::AudioProcessorValueTreeState* apvts;
+
+
+    explicit StandAloneParams(juce::AudioProcessorValueTreeState* apvtsPntr) {
+        apvts = apvtsPntr;
+        qpm = *apvts->getRawParameterValue(label2ParamID("TempoStandalone"));
+        is_playing = int(*apvts->getRawParameterValue(label2ParamID("IsPlayingStandalone")));
+        is_recording = int(*apvts->getRawParameterValue(label2ParamID("IsRecordingStandalone")));
+        denominator = int(*apvts->getRawParameterValue(label2ParamID("TimeSigDenominatorStandalone")));
+        numerator = int(*apvts->getRawParameterValue(label2ParamID("TimeSigNumeratorStandalone")));
+    }
+
+    // call update at the beginning of each processBlock
+    bool update() {
+        bool changed = false;
+
+        float new_qpm = *apvts->getRawParameterValue(label2ParamID("TempoStandalone"));
+        if (new_qpm != qpm) {
+            qpm = new_qpm;
+            changed = true;
+        }
+        int new_is_playing = int(*apvts->getRawParameterValue(label2ParamID("IsPlayingStandalone")));
+        if (new_is_playing != is_playing) {
+            is_playing = new_is_playing;
+            changed = true;
+        }
+        int new_is_recording = int(*apvts->getRawParameterValue(label2ParamID("IsRecordingStandalone")));
+        if (new_is_recording != is_recording) {
+            is_recording = new_is_recording;
+            changed = true;
+        }
+        int new_denominator = int(*apvts->getRawParameterValue(label2ParamID("TimeSigDenominatorStandalone")));
+        if (new_denominator != denominator) {
+            denominator = new_denominator;
+            changed = true;
+        }
+        int new_numerator = int(*apvts->getRawParameterValue(label2ParamID("TimeSigNumeratorStandalone")));
+        if (new_numerator != numerator) {
+            numerator = new_numerator;
+            changed = true;
+        }
+        return changed;
+    }
+
+    // call this after setting the PositionInfo data
+    void PreparePlayheadForNextFrame(int64_t buffer_size, double fs) {
+        if (is_playing) {
+            TimeInSamples += buffer_size;
+            TimeInSeconds += buffer_size / fs;
+            PpqPosition += buffer_size / fs * qpm / 60;
+        } else {
+            TimeInSamples = 0;
+            TimeInSeconds = 0;
+            PpqPosition = 0;
+        }
+    }
+};
+
 class NeuralMidiFXPluginProcessor : public PluginHelpers::ProcessorBase {
 
 public:
@@ -143,6 +212,9 @@ public:
     mutex playbckAnchorMutex;
     time_ TimeAnchor;
     bool shouldSendTimeAnchorToGUI{false};
+
+    // standalone
+    unique_ptr<StandAloneParams> standAloneParams;
 
 private:
     // =========  Queues for communicating Between the main threads in processor  ===============

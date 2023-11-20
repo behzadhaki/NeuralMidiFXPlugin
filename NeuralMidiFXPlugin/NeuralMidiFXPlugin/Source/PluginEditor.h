@@ -33,6 +33,20 @@ public:
     unique_ptr<InputMidiPianoRollComponent> inputPianoRoll{nullptr};
     unique_ptr<OutputMidiPianoRollComponent> outputPianoRoll{nullptr};
 
+    // standalone controls Play Button, Record Button, Tempo Rotary, and Loop Button (with attachments)
+    // add a juce button amd attachment
+    juce::TextButton playButton;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> playButtonAttachment;
+    juce::TextButton recordButton;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> recordButtonAttachment;
+    juce::Slider tempoSlider;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> tempoSliderAttachment;
+    juce::Slider numeratorSlider;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> numeratorSliderAttachment;
+    juce::Slider denominatorSlider;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> denominatorSliderAttachment;
+
+
 
 
 private:

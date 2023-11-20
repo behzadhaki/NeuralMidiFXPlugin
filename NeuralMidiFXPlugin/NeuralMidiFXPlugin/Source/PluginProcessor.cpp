@@ -115,18 +115,19 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
         APVM2MDL_GuiParams_Que.get(),
         APVM2PPP_GuiParams_Que.get());
 
+    /*
     if (JUCEApplicationBase::isStandaloneApp()) {
         DBG("Running as standalone");
     } else
     {
         DBG("Running as plugin");
     }
+    */
 
     // check if standalone and osx
     // --------------------------------------------------------------------------------------
     #if JUCE_MAC
-        if (UIObjects::StandaloneTransportPanel::enable &&
-            UIObjects::StandaloneTransportPanel::NeedVirtualMidiOutCable) {
+        if (UIObjects::StandaloneTransportPanel::NeedVirtualMidiOutCable) {
             string virtualOutName = string(PROJECT_NAME) + "Generations";
             vector<string> existingInstanceLabels{};
 
@@ -158,6 +159,10 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
             mVirtualMidiOutput->startBackgroundThread();
         }
     #endif
+
+    if (UIObjects::StandaloneTransportPanel::enable) {
+        standAloneParams = make_unique<StandAloneParams>(&apvts);
+    }
 }
 
 NeuralMidiFXPluginProcessor::~NeuralMidiFXPluginProcessor() {
@@ -206,6 +211,26 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     auto Pinfo = playhead->getPosition();
     auto fs = getSampleRate();
     auto buffSize = buffer.getNumSamples();
+
+    // check if standalone mode
+    if (UIObjects::StandaloneTransportPanel::enable) {
+        bool updated = standAloneParams->update();
+        Pinfo->setTimeInSamples(standAloneParams->TimeInSamples);
+        Pinfo->setTimeInSeconds(standAloneParams->TimeInSeconds);
+        Pinfo->setPpqPosition(standAloneParams->PpqPosition);
+        Pinfo->setBpm(standAloneParams->qpm);
+        Pinfo->setIsPlaying(standAloneParams->is_playing);
+        Pinfo->setIsLooping(false);
+        Pinfo->setIsRecording(standAloneParams->is_recording);
+        AudioPlayHead::TimeSignature timeSig;
+        timeSig.numerator = standAloneParams->numerator;
+        timeSig.denominator = standAloneParams->denominator;
+        Pinfo->setTimeSignature(timeSig);
+
+        // prepare playhead for next frame
+        standAloneParams->PreparePlayheadForNextFrame(buffSize, fs);
+
+    }
 
     std::optional<GenerationEvent> event;
     realtimePlaybackInfo->setValues(
@@ -729,6 +754,36 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
             juce::ParameterID paramID = juce::ParameterID(paramIDstr, version_hint);
             layout.add (std::make_unique<juce::AudioParameterInt> (paramID, name, 0, 1, 0));
         }
+    }
+
+    // check if standalone mode enabled
+    if (UIObjects::StandaloneTransportPanel::enable) {
+        // add standalone only parameters
+        layout.add(
+            std::make_unique<juce::AudioParameterInt>(
+                juce::ParameterID(label2ParamID("IsPlayingStandalone"), version_hint),
+                "IsPlayingStandalone", 0, 1, 0));
+
+        layout.add(
+            std::make_unique<juce::AudioParameterInt>(
+                juce::ParameterID(label2ParamID("IsRecordingStandalone"), version_hint),
+                "IsRecordingStandalone", 0, 1, 0));
+
+        layout.add(
+            std::make_unique<juce::AudioParameterInt>(
+                juce::ParameterID(label2ParamID("TempoStandalone"), version_hint),
+                "TempoStandalone", 20, 300, 100));
+
+        layout.add(
+            std::make_unique<juce::AudioParameterInt>(
+                juce::ParameterID(label2ParamID("TimeSigNumeratorStandalone"), version_hint),
+                "TimeSigNumeratorStandalone", 1, 32, 4));
+
+        layout.add(
+            std::make_unique<juce::AudioParameterInt>(
+                juce::ParameterID(label2ParamID("TimeSigDenominatorStandalone"), version_hint),
+                "TimeSigDenominatorStandalone", 1, 32, 4));
+
     }
 
     return layout;

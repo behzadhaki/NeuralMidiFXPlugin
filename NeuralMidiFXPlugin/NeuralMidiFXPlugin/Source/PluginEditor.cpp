@@ -18,6 +18,13 @@ inline double mapToLoopRange(double value, double loopStart, double loopEnd) {
     return mappedValue;
 }
 
+static string label2ParamID_(const string &label) {
+    // capitalize label
+    string paramID = label;
+    std::transform(paramID.begin(), paramID.end(), paramID.begin(), ::toupper);
+    return paramID;
+}
+
 NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& NeuralMidiFXPluginProcessorPointer)
     : AudioProcessorEditor(&NeuralMidiFXPluginProcessorPointer),
     tabs (juce::TabbedButtonBar::Orientation::TabsAtTop)
@@ -27,6 +34,51 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
     // Set window size
     setResizable (true, true);
     setSize (800, 600);
+
+    // if standalone, add play, record, tempo, meter controls to the top
+    if (UIObjects::StandaloneTransportPanel::enable) {
+        playButton.setButtonText("Play/Stop");
+        playButtonAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
+            NeuralMidiFXPluginProcessorPointer.apvts, label2ParamID_("IsPlayingStandalone"), playButton);
+        playButton.setClickingTogglesState(true);
+        playButton.setColour(juce::TextButton::ColourIds::buttonOnColourId, juce::Colours::lightblue);
+        playButton.setColour(juce::TextButton::ColourIds::textColourOnId, juce::Colours::black);
+        addAndMakeVisible(playButton);
+
+        recordButton.setButtonText("Record");
+        recordButtonAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
+            NeuralMidiFXPluginProcessorPointer.apvts, label2ParamID_("IsRecordingStandalone"), recordButton);
+        recordButton.setClickingTogglesState(true);
+        recordButton.setColour(juce::TextButton::ColourIds::buttonOnColourId, juce::Colours::red);
+        recordButton.setColour(juce::TextButton::ColourIds::textColourOnId, juce::Colours::black);
+        addAndMakeVisible(recordButton);
+
+        tempoSlider.setSliderStyle(juce::Slider::SliderStyle::Rotary);
+        tempoSlider.setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
+                                    tempoSlider.getTextBoxWidth(), tempoSlider.getHeight()*.3);
+        tempoSliderAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+            NeuralMidiFXPluginProcessorPointer.apvts, label2ParamID_("TempoStandalone"), tempoSlider);
+        tempoSlider.setTextValueSuffix(juce::String("Tempo"));
+        addAndMakeVisible(tempoSlider);
+
+        numeratorSlider.setSliderStyle(juce::Slider::SliderStyle::Rotary);
+        numeratorSlider.setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
+                                        numeratorSlider.getTextBoxWidth(), numeratorSlider.getHeight()*.3);
+        numeratorSliderAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+            NeuralMidiFXPluginProcessorPointer.apvts, label2ParamID_("TimeSigNumeratorStandalone"), numeratorSlider);
+        numeratorSlider.setTextValueSuffix(juce::String("Num"));
+        addAndMakeVisible(numeratorSlider);
+
+        denominatorSlider.setSliderStyle(juce::Slider::SliderStyle::Rotary);
+        denominatorSlider.setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
+                                          denominatorSlider.getTextBoxWidth(), denominatorSlider.getHeight()*.3);
+        denominatorSliderAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+            NeuralMidiFXPluginProcessorPointer.apvts, label2ParamID_("TimeSigDenominatorStandalone"), denominatorSlider);
+        denominatorSlider.setTextValueSuffix(juce::String("Den"));
+        addAndMakeVisible(denominatorSlider);
+
+    }
+
 
     // Iteratively generate tabs. For each tab, a parent UI component of  will be created.
     for (int i = 0; i < numTabs; i++)
@@ -102,8 +154,34 @@ void NeuralMidiFXPluginEditor::resized()
     auto area = getLocalBounds();
     setBounds(area);
 
-    auto proll_height = int(area.getHeight() * .1);
-    auto gap = int(area.getHeight() * .03);
+    int standalone_control_height;
+    int proll_height;
+    int gap;
+
+    // check if standalone
+    if (UIObjects::StandaloneTransportPanel::enable) {
+        standalone_control_height = int(area.getHeight() * .1);
+        proll_height = int(area.getHeight() * .1);
+        gap = int(area.getHeight() * .03);
+    } else {
+        standalone_control_height = 0;
+        proll_height = int(area.getHeight() * .1);
+        gap = int(area.getHeight() * .03);
+    }
+
+    if (UIObjects::StandaloneTransportPanel::enable) {
+        auto controlArea = area.removeFromTop(standalone_control_height);
+        int width = int(controlArea.getWidth() * .2);
+
+        playButton.setBounds(controlArea.removeFromLeft(width));
+        recordButton.setBounds(controlArea.removeFromLeft(width));
+        tempoSlider.setBounds(controlArea.removeFromLeft(width));
+        numeratorSlider.setBounds(controlArea.removeFromLeft(width));
+        denominatorSlider.setBounds(controlArea.removeFromLeft(width));
+
+    }
+
+
 
     if (outputPianoRoll != nullptr){
         outputPianoRoll->setBounds(area.removeFromBottom(proll_height));
