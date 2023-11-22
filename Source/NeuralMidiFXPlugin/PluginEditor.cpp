@@ -1,6 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-#include "Includes/Configs_Parser.h"
+#include "../Includes/Configs_Parser.h"
 
 inline double mapToLoopRange(double value, double loopStart, double loopEnd) {
 

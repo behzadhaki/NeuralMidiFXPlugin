@@ -1,7 +1,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-#include "Includes/GenerationEvent.h"
-#include "Includes/APVTSMediatorThread.h"
+#include "../Includes/GenerationEvent.h"
+#include "../Includes/APVTSMediatorThread.h"
 
 using namespace std;
 using namespace debugging_settings::ProcessorThread;
@@ -67,53 +67,84 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
 
     //       Make_unique pointers for Queues
     // --------------------------------------------------------------------------------------
-    NMP2ITP_Event_Que = make_unique<LockFreeQueue<EventFromHost, queue_settings::NMP2ITP_que_size>>();
-    ITP2MDL_ModelInput_Que = make_unique<LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size>>();
-    MDL2PPP_ModelOutput_Que = make_unique<LockFreeQueue<ModelOutput, queue_settings::MDL2PPP_que_size>>();
-    PPP2NMP_GenerationEvent_Que = make_unique<LockFreeQueue<GenerationEvent, queue_settings::PPP2NMP_que_size>>();
+    if (PROJECT_NAME == "NMFx_ThreeThreads")
+    {
+        NMP2ITP_Event_Que =
+            make_unique<LockFreeQueue<EventFromHost, queue_settings::NMP2ITP_que_size>>();
+        ITP2MDL_ModelInput_Que =
+            make_unique<LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size>>();
+        MDL2PPP_ModelOutput_Que =
+            make_unique<LockFreeQueue<ModelOutput, queue_settings::MDL2PPP_que_size>>();
+        PPP2NMP_GenerationEvent_Que = make_unique<
+            LockFreeQueue<GenerationEvent, queue_settings::PPP2NMP_que_size>>();
+    }
 
     //     Make_unique pointers for APVM Queues
     // --------------------------------------------------------------------------------------
-    APVM2ITP_GuiParams_Que = make_unique<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>>();
-    APVM2MDL_GuiParams_Que = make_unique<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>>();
-    APVM2PPP_GuiParams_Que = make_unique<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>>();
+    if (PROJECT_NAME == "NMFx_ThreeThreads") {
+        APVM2ITP_GuiParams_Que = make_unique<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>>();
+        APVM2MDL_GuiParams_Que = make_unique<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>>();
+        APVM2PPP_GuiParams_Que = make_unique<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>>();
+    }
 
     // Drag/Drop Midi Queues
-    GUI2ITP_DroppedMidiFile_Que = make_unique<LockFreeQueue<juce::MidiFile, 4>>();
-    PPP2GUI_GenerationMidiFile_Que = make_unique<LockFreeQueue<juce::MidiFile, 4>>();
+    if (PROJECT_NAME == "NMFx_ThreeThreads")
+    {
+        GUI2ITP_DroppedMidiFile_Que = make_unique<LockFreeQueue<juce::MidiFile, 4>>();
+        PPP2GUI_GenerationMidiFile_Que = make_unique<LockFreeQueue<juce::MidiFile, 4>>();
+    }
     NMP2GUI_IncomingMessageSequence = make_unique<LockFreeQueue<juce::MidiMessageSequence, 32>>() ;
 
-    //       Create shared pointers for Threads (shared with APVTSMediator)
+    //       Create shared pointers for Three Threads if PROJECT_NAME is NMFx_ThreeThreads
     // --------------------------------------------------------------------------------------
-    inputTensorPreparatorThread = make_shared<InputTensorPreparatorThread>();
-    modelThread = make_shared<ModelThread>();
-    playbackPreparatorThread = make_shared<PlaybackPreparatorThread>();
+    if (PROJECT_NAME == "NMFx_ThreeThreads")
+    {
+        inputTensorPreparatorThread = make_shared<InputTensorPreparatorThread>();
+        modelThread = make_shared<ModelThread>();
+        playbackPreparatorThread = make_shared<PlaybackPreparatorThread>();
+    }
+
+    //      Create shared pointers for APVTSMediator
+    // --------------------------------------------------------------------------------------
     apvtsMediatorThread = make_unique<APVTSMediatorThread>();
 
     //       give access to resources && run threads
     // --------------------------------------------------------------------------------------
-    inputTensorPreparatorThread->startThreadUsingProvidedResources(
-        NMP2ITP_Event_Que.get(),
-        ITP2MDL_ModelInput_Que.get(),
-        APVM2ITP_GuiParams_Que.get(),
-        GUI2ITP_DroppedMidiFile_Que.get(),
-        realtimePlaybackInfo.get());
-    modelThread->startThreadUsingProvidedResources(
-        ITP2MDL_ModelInput_Que.get(),
-        MDL2PPP_ModelOutput_Que.get(),
-        APVM2MDL_GuiParams_Que.get(),
-        realtimePlaybackInfo.get());
-    playbackPreparatorThread->startThreadUsingProvidedResources(
-        MDL2PPP_ModelOutput_Que.get(),
-        PPP2NMP_GenerationEvent_Que.get(),
-        APVM2PPP_GuiParams_Que.get(),
-        PPP2GUI_GenerationMidiFile_Que.get(),
-        realtimePlaybackInfo.get());
-    apvtsMediatorThread->startThreadUsingProvidedResources(
-        &apvts,
-        APVM2ITP_GuiParams_Que.get(),
-        APVM2MDL_GuiParams_Que.get(),
-        APVM2PPP_GuiParams_Que.get());
+    if (PROJECT_NAME == "NMFx_ThreeThreads")
+    {
+        inputTensorPreparatorThread->startThreadUsingProvidedResources(
+            NMP2ITP_Event_Que.get(),
+            ITP2MDL_ModelInput_Que.get(),
+            APVM2ITP_GuiParams_Que.get(),
+            GUI2ITP_DroppedMidiFile_Que.get(),
+            realtimePlaybackInfo.get());
+        modelThread->startThreadUsingProvidedResources(ITP2MDL_ModelInput_Que.get(),
+                                                       MDL2PPP_ModelOutput_Que.get(),
+                                                       APVM2MDL_GuiParams_Que.get(),
+                                                       realtimePlaybackInfo.get());
+        playbackPreparatorThread->startThreadUsingProvidedResources(
+            MDL2PPP_ModelOutput_Que.get(),
+            PPP2NMP_GenerationEvent_Que.get(),
+            APVM2PPP_GuiParams_Que.get(),
+            PPP2GUI_GenerationMidiFile_Que.get(),
+            realtimePlaybackInfo.get());
+    }
+    // check if PROJECT_NAME is NMFx_ThreeThreads
+    if (PROJECT_NAME == "NMFx_ThreeThreads") {
+        // give access to resources && run threads
+        apvtsMediatorThread->startThreadUsingProvidedResources(
+            &apvts,
+            APVM2ITP_GuiParams_Que.get(),
+            APVM2MDL_GuiParams_Que.get(),
+            APVM2PPP_GuiParams_Que.get());
+    } else {
+        // give access to resources && run threads
+        apvtsMediatorThread->startThreadUsingProvidedResources(
+            &apvts,
+            nullptr,
+            nullptr,
+            nullptr);
+    }
 
     /*
     if (JUCEApplicationBase::isStandaloneApp()) {

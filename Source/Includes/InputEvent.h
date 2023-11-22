@@ -7,7 +7,7 @@
 #include "shared_plugin_helpers/shared_plugin_helpers.h"
 #include "GuiParameters.h"
 #include "chrono_timer.h"
-#include "../../Configs_HostEvents.h"
+#include "../../NeuralMidiFXPlugin/NeuralMidiFXPlugin_ThreeThreads/Configs_HostEvents.h"
 #include <utility>
 #include <mutex>
 

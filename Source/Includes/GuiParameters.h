@@ -5,7 +5,7 @@
 
 // #include <utility>
 
-#include "../../Configs_HostEvents.h"
+#include "../../NeuralMidiFXPlugin/NeuralMidiFXPlugin_ThreeThreads/Configs_HostEvents.h"
 #include "Configs_Parser.h"
 #include "chrono_timer.h"
 #include <torch/script.h> // One-stop header.

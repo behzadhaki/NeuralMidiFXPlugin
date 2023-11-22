@@ -1,6 +1,6 @@
-project(NeuralMidiFXPlugin VERSION 0.0.1)
+project(NMFx_ThreeThreads VERSION 0.0.1)
 
-set (BaseTargetName NeuralMidiFXPlugin)
+set (BaseTargetName NMFx_ThreeThreads)
 
 add_definitions(-DPROJECT_NAME="${BaseTargetName}")
 
@@ -104,21 +104,21 @@ juce_add_plugin("${BaseTargetName}"
         PLUGIN_MANUFACTURER_CODE Juce                #
         PLUGIN_CODE NMFx                             # MUST BE UNIQUE!! If similar to other plugins, conflicts will occur
         FORMATS AU VST3 Standalone
-        PRODUCT_NAME "NeuralMidiFXPlugin")           # Replace with your plugin title
+        PRODUCT_NAME "NMFx_ThreeThreads")           # Replace with your plugin title
 
 # Include the libtorch setup file
 #include(libtorch_setup.cmake)
 
 target_sources(${BaseTargetName} PRIVATE
-        Source/PluginProcessor.cpp
-        Source/PluginEditor.cpp
-        Source/DeploymentThreads/InputTensorPreparatorThread.cpp
+        ../../Source/NeuralMidiFXPlugin/PluginProcessor.cpp
+        ../../Source/NeuralMidiFXPlugin/PluginEditor.cpp
+        ../../Source/DeploymentThreads/InputTensorPreparatorThread.cpp
         ITP_Deploy.cpp
-        Source/DeploymentThreads/ModelThread.cpp
+        ../../Source/DeploymentThreads/ModelThread.cpp
         MDL_Deploy.cpp
-        Source/DeploymentThreads/PlaybackPreparatorThread.cpp
+        ../../Source/DeploymentThreads/PlaybackPreparatorThread.cpp
         PPP_Deploy.cpp
-        Source/Includes/colored_cout.cpp
+        ../../Source/Includes/colored_cout.cpp
         )
 
 target_compile_definitions(${BaseTargetName}
@@ -160,12 +160,11 @@ elseif(APPLE)
     file(COPY "${CMAKE_SOURCE_DIR}/TorchScripts" DESTINATION "${TARGET_DIR}")
     add_definitions(-DDEFAULT_MODEL_DIR="${TARGET_DIR}/TorchScripts/Models")
     add_definitions(-DDEFAULT_PROCESSING_SCRIPTS_DIR="${TARGET_DIR}/TorchScripts/ProcessingScripts")
-
 endif()
 
 # Provide a path to settings.json file
 # Define DEFAULT_SETTINGS_FILE_PATH
-set(DEFAULT_SETTINGS_PATH "${CMAKE_SOURCE_DIR}/NeuralMidiFXPlugin/NeuralMidiFXPlugin/settings.json")
+set(DEFAULT_SETTINGS_PATH "${CMAKE_SOURCE_DIR}/NeuralMidiFxPlugin/NeuralMidiFxPlugin_ThreeThreads/settings.json")
 
 # No need for platform-specific path formatting
 add_definitions(-DDEFAULT_SETTINGS_FILE_PATH="${DEFAULT_SETTINGS_PATH}")

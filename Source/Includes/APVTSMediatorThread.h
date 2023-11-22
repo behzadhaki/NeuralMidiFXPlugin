@@ -5,7 +5,7 @@
 #pragma once
 
 #include "shared_plugin_helpers/shared_plugin_helpers.h"
-#include "../../Configs_HostEvents.h"
+#include "../../NeuralMidiFXPlugin/NeuralMidiFXPlugin_ThreeThreads/Configs_HostEvents.h"
 #include "GuiParameters.h"
 #include "LockFreeQueue.h"
 
@@ -78,9 +78,15 @@ public:
             if (APVTSPntr != nullptr) {
                 if (guiParamsPntr->update(APVTSPntr)) {
                     // guiParamsPntr->print();
-                    APVM2ITP_GuiParams_QuePntr->push(*guiParamsPntr);
-                    APVM2MDL_GuiParams_QuePntr->push(*guiParamsPntr);
-                    APVM2PPP_GuiParams_QuePntr->push(*guiParamsPntr);
+                    if (APVM2ITP_GuiParams_QuePntr != nullptr) {
+                        APVM2ITP_GuiParams_QuePntr->push(*guiParamsPntr);
+                    }
+                    if (APVM2MDL_GuiParams_QuePntr != nullptr) {
+                        APVM2MDL_GuiParams_QuePntr->push(*guiParamsPntr);
+                    }
+                    if (APVM2PPP_GuiParams_QuePntr != nullptr) {
+                        APVM2PPP_GuiParams_QuePntr->push(*guiParamsPntr);
+                    }
                 }
 
                 bExit = threadShouldExit();

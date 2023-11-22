@@ -2,21 +2,21 @@
 // Created by Behzad Haki on 2022-12-13.
 //
 
-#ifndef JUCECMAKEREPO_PLAYBACKPREPARATORTHREAD_H
-#define JUCECMAKEREPO_PLAYBACKPREPARATORTHREAD_H
+#ifndef JUCECMAKEREPO_INPUTTENSORPREPARATORTHREAD_H
+#define JUCECMAKEREPO_INPUTTENSORPREPARATORTHREAD_H
+
 
 #include "shared_plugin_helpers/shared_plugin_helpers.h"
 #include "../Includes/GuiParameters.h"
-#include "../Includes/GenerationEvent.h"
+#include "../Includes/InputEvent.h"
 #include "../Includes/LockFreeQueue.h"
-#include "../../Configs_HostEvents.h"
-#include "Configs_Model.h"
+#include "../../NeuralMidiFXPlugin/NeuralMidiFXPlugin_ThreeThreads/Configs_HostEvents.h"
+#include "../Includes/Configs_Model.h"
 #include "../Includes/colored_cout.h"
 #include "../Includes/chrono_timer.h"
-#include "../../Configs_Debugging.h"
+#include "../../NeuralMidiFXPlugin/NeuralMidiFXPlugin_ThreeThreads/Configs_Debugging.h"
 
-
-class PlaybackPreparatorThread : public juce::Thread {
+class InputTensorPreparatorThread : public juce::Thread {
 public:
     // ============================================================================================================
     // ===          Preparing Thread for Running
@@ -24,59 +24,64 @@ public:
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 1 . Construct
     // ------------------------------------------------------------------------------------------------------------
-    PlaybackPreparatorThread();
+    InputTensorPreparatorThread();
 
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 2 . give access to resources needed to communicate with other threads
     // ------------------------------------------------------------------------------------------------------------
     void startThreadUsingProvidedResources(
-        LockFreeQueue<ModelOutput, queue_settings::MDL2PPP_que_size> *MDL2PPP_ModelOutput_Que_ptr_,
-        LockFreeQueue<GenerationEvent, queue_settings::PPP2NMP_que_size> *PPP2NMP_GenerationEvent_Que_ptr_,
-        LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2PPP_Parameters_Queu_ptr_,
-        LockFreeQueue<juce::MidiFile, 4> *PPP2GUI_GenerationMidiFile_Que_ptr_,
+        LockFreeQueue<EventFromHost, queue_settings::NMP2ITP_que_size> *NMP2ITP_Event_Que_ptr_,
+        LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size> *ITP2MDL_ModelInput_Que_ptr_,
+        LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2ITP_Parameters_Queu_ptr_,
+        LockFreeQueue<juce::MidiFile, 4> *GUI2ITP_DroppedMidiFile_Que_ptr_,
         RealTimePlaybackInfo *realtimePlaybackInfo_ptr_);
 
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 3 . start run() thread by calling startThread().
     // ---                  !!DO NOT!! Call run() directly. startThread() internally makes a call to run().
-    // ---                  (Implement what the thread does inside the run() method
     // ------------------------------------------------------------------------------------------------------------
     void run() override;
 
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 4 . Implement Deploy Method -----> DO NOT MODIFY ANY PART EXCEPT THE BODY OF THE METHOD
     // ------------------------------------------------------------------------------------------------------------
-    std::pair<bool, bool> deploy(bool new_model_output_received, bool did_any_gui_params_change);
-
+    bool deploy(std::optional<MidiFileEvent> & new_midi_event_dragdrop,
+                std::optional<EventFromHost> & new_event_from_host, bool did_any_gui_params_change);
     // ============================================================================================================
 
     // ============================================================================================================
     // ===          Preparing Thread for Stopping
     // ============================================================================================================
     void prepareToStop();     // run this in destructor destructing object
-    ~PlaybackPreparatorThread() override;
+    ~InputTensorPreparatorThread() override;
     bool readyToStop{false}; // Used to check if thread is ready to be stopped or externally stopped
     // ============================================================================================================
 
 private:
     // ============================================================================================================
-    // ===          I/O Queues for Receiving/Sending Data
-    // ============================================================================================================
-    LockFreeQueue<ModelOutput, queue_settings::MDL2PPP_que_size> *MDL2PPP_ModelOutput_Que_ptr{};
-    LockFreeQueue<GenerationEvent, queue_settings::PPP2NMP_que_size> *PPP2NMP_GenerationEvent_Que_ptr{};
-    LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2PPP_Parameters_Queu_ptr{};
-    LockFreeQueue<juce::MidiFile, 4> *PPP2GUI_GenerationMidiFile_Que_ptr{};
-    RealTimePlaybackInfo *realtimePlaybackInfo{};
-    // ============================================================================================================
-
-    // ============================================================================================================
     // ===          Deployment Data
     // ===        (If you need additional data for input processing, add them here)
+    // ===  NOTE: All data needed by the model MUST be wrapped as ModelInput struct (modifiable in ModelInput.h)
     // ============================================================================================================
-    ModelOutput model_output;
-    PlaybackPolicies playbackPolicy;
-    PlaybackSequence playbackSequence;
-    double PlaybackDelaySlider{-1};
+    ModelInput model_input{};
+
+    /* Some data are pre-implemented for easier access */
+    EventFromHost last_event{};
+    EventFromHost first_frame_metadata_event{};                      // keeps metadata of the first frame
+    EventFromHost frame_metadata_event{};                            // keeps metadata of the next frame
+    EventFromHost last_bar_event{};                                  // keeps metadata of the last bar passed
+    EventFromHost
+        last_complete_note_duration_event{};               // keeps metadata of the last beat passed
+
+    // ============================================================================================================
+    // ===          I/O Queues for Receiving/Sending Data
+    // ============================================================================================================
+    LockFreeQueue<EventFromHost, queue_settings::NMP2ITP_que_size> *NMP2ITP_Event_Que_ptr{};
+    LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size> *ITP2MDL_ModelInput_Que_ptr{};
+    LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2ITP_Parameters_Queu_ptr{};
+    LockFreeQueue<juce::MidiFile, 4>* GUI2ITP_DroppedMidiFile_Que_ptr{};
+    RealTimePlaybackInfo *realtimePlaybackInfo{};
+    // ============================================================================================================
 
     // ============================================================================================================
     // ===          GuiParameters
@@ -86,14 +91,16 @@ private:
     // ============================================================================================================
     // ===          Debugging Methods
     // ============================================================================================================
+    static void DisplayEvent(const EventFromHost&event, bool compact_mode, double event_count);
     static void PrintMessage(const std::string &input);
 
     // ============================================================================================================
     // ===          User Customizable Struct
     // ============================================================================================================
 
-    // You can update the PPPData struct in CustomStructs.h if you need any additional data
-    PPPData PPPdata{};
+    // You can update the ITPData struct in CustomStructs.h if you need any additional data
+    ITPData ITPdata {};
 };
 
-#endif //JUCECMAKEREPO_PLAYBACKPREPARATORTHREAD_H
+
+#endif //JUCECMAKEREPO_INPUTTENSORPREPARATORTHREAD_H
