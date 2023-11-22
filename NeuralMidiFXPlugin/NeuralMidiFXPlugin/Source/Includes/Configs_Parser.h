@@ -5,7 +5,7 @@
 #pragma once
 
 #include <torch/script.h> // One-stop header.
-#include "Source/Includes/json.hpp"
+#include "json.hpp"
 
 using json = nlohmann::json;
 

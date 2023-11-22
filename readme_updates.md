@@ -8,3 +8,7 @@
 
 - Now can run in standalone mode
 - Can be enabled via configs_GUI.h
+
+### MAJOR UPDATE
+
+- Settings are now saved in a file called "settings.json" rather than the settings Configs_GUI.h file

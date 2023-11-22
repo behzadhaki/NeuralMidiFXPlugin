@@ -4,7 +4,7 @@
 
 #pragma once
 #include "GuiParameters.h"
-#include "../../Configs_GUI.h"
+#include "Configs_Parser.h"
 
 using namespace std;
 
