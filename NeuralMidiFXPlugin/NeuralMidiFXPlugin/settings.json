@@ -53,8 +53,7 @@
                             "max": 1.0,
                             "defaultVal": 0.0,
                             "topLeftCorner": "Aa",
-                            "bottomRightCorner": "Ff",
-
+                            "bottomRightCorner": "Ff"
                         },
                         {
                             "label": "Gibberish",
@@ -88,8 +87,7 @@
                             "label": "ToggleButton 1",
                             "isToggle": true,
                             "topLeftCorner": "Tt",
-                            "bottomRightCorner": "Zz",
-                            "horizontal": true
+                            "bottomRightCorner": "Zz"
                         }
                     ]
                 },
@@ -102,7 +100,9 @@
                             "max": 10.0,
                             "defaultVal": 0.0,
                             "topLeftCorner": "Aa",
-                            "bottomRightCorner": "Zz"
+                            "bottomRightCorner": "Zz",
+                            "horizontal": true
+
                         }
                     ]
                 }

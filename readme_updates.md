@@ -12,3 +12,7 @@
 ### MAJOR UPDATE
 
 - Settings are now saved in a file called "settings.json" rather than the settings Configs_GUI.h file
+
+### New UI Elements 
+
+- Sliders can now be vertical or horizontal using the "horizontal" property in the JSON

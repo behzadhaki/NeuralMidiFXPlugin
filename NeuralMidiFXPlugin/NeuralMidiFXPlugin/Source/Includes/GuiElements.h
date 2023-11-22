@@ -21,9 +21,8 @@ public:
         slidersList = std::get<1>(tabTuple);
         rotariesList = std::get<2>(tabTuple);
         buttonsList = std::get<3>(tabTuple);
+        vslidersList = std::get<4>(tabTuple);
 
-        numSliders = slidersList.size();
-        numRotaries = rotariesList.size();
         numButtons = buttonsList.size();
     }
 
@@ -36,6 +35,7 @@ public:
         std::vector<std::string> sliderParamIDS;
         std::vector<std::string> rotaryParamIDS;
         std::vector<std::string> buttonParamIDS;
+        std::vector<std::string> vsliderParamIDS;
 
         for (const auto &sliderTuple: slidersList) {
             juce::Slider *newSlider = generateSlider(sliderTuple);
@@ -79,6 +79,17 @@ public:
             buttonTopLeftCorners.emplace_back(std::get<2>(buttonTuple));
             buttonBottomRightCorners.emplace_back(std::get<3>(buttonTuple));
             addAndMakeVisible(textButton);
+        }
+
+        for (const auto &vsliderTuple: vslidersList) {
+            juce::Slider *newSlider = generateSlider(vsliderTuple, true);
+            auto paramID = label2ParamID(std::get<0>(vsliderTuple));
+            sliderAttachmentArray.push_back(std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+                *apvtsPointer, paramID, *newSlider));
+            sliderArray.add(newSlider);
+            sliderTopLeftCorners.emplace_back(std::get<4>(vsliderTuple));
+            sliderBottomRightCorners.emplace_back(std::get<5>(vsliderTuple));
+            addAndMakeVisible(newSlider);
         }
     }
 
@@ -225,18 +236,21 @@ private:
     slider_list slidersList;
     rotary_list rotariesList;
     button_list buttonsList;
+    vslider_list vslidersList;
 
-    size_t numSliders;
-    size_t numRotaries;
     size_t numButtons;
 
     juce::Rectangle<int> areaWithBleed;
     int deltaX{};
     int deltaY{};
 
-    juce::Slider *generateSlider(slider_tuple sliderTuple) {
+    juce::Slider *generateSlider(slider_tuple sliderTuple, bool isHorizontal = false) {
         auto *newSlider = new juce::Slider;
-        newSlider->setSliderStyle(juce::Slider::SliderStyle::LinearVertical);
+        if (isHorizontal) {
+            newSlider->setSliderStyle(juce::Slider::SliderStyle::LinearHorizontal);
+        } else {
+            newSlider->setSliderStyle(juce::Slider::SliderStyle::LinearVertical);
+        }
         newSlider->setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
                                    newSlider->getTextBoxWidth(), newSlider->getHeight()*.2);
 

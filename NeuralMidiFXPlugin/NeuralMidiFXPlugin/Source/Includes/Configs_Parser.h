@@ -26,12 +26,15 @@ inline std::string settings_json_path = TOSTRING(DEFAULT_SETTINGS_FILE_PATH);
 using slider_tuple = std::tuple<std::string, double, double, double, std::string, std::string>;
 using rotary_tuple = std::tuple<std::string, double, double, double, std::string, std::string>;
 using button_tuple = std::tuple<std::string, bool, std::string, std::string>;
+using vslider_tuple = std::tuple<std::string, double, double, double, std::string, std::string>;
+
 
 using slider_list = std::vector<slider_tuple>;
 using rotary_list = std::vector<rotary_tuple>;
 using button_list = std::vector<button_tuple>;
+using vslider_list = std::vector<vslider_tuple>;
 
-using tab_tuple = std::tuple<std::string, slider_list, rotary_list, button_list>;
+using tab_tuple = std::tuple<std::string, slider_list, rotary_list, button_list, vslider_list>;
 
 inline json load_settings_json() {
 
@@ -70,18 +73,32 @@ inline std::vector<tab_tuple> parse_to_tabList() {
         slider_list tabSliders;
         rotary_list tabRotaries;
         button_list tabButtons;
+        vslider_list tabVSliders;
 
         // check if sliders exist
         if (tabJson.contains("sliders")) {
             for (const auto& sliderJson: tabJson["sliders"]) {
-                std::string sliderLabel = sliderJson["label"].get<std::string>();
-                double sliderMin = sliderJson["min"];
-                double sliderMax = sliderJson["max"];
-                double sliderDefaultVal = sliderJson["defaultVal"];
-                std::string sliderTopLeftCorner = sliderJson["topLeftCorner"].get<std::string>();
-                std::string sliderBottomRightCorner = sliderJson["bottomRightCorner"].get<std::string>();
-                slider_tuple sliderTuple = {sliderLabel, sliderMin, sliderMax, sliderDefaultVal, sliderTopLeftCorner, sliderBottomRightCorner};
-                tabSliders.push_back(sliderTuple);
+                // check if slider is vertical or horizontal
+                // vertical if it has no "horizontal" key or if it is false
+                if (!sliderJson.contains("horizontal") || !sliderJson["horizontal"].get<bool>()) {
+                    std::string sliderLabel = sliderJson["label"].get<std::string>();
+                    double sliderMin = sliderJson["min"];
+                    double sliderMax = sliderJson["max"];
+                    double sliderDefaultVal = sliderJson["defaultVal"];
+                    std::string sliderTopLeftCorner = sliderJson["topLeftCorner"].get<std::string>();
+                    std::string sliderBottomRightCorner = sliderJson["bottomRightCorner"].get<std::string>();
+                    slider_tuple sliderTuple = {sliderLabel, sliderMin, sliderMax, sliderDefaultVal, sliderTopLeftCorner, sliderBottomRightCorner};
+                    tabSliders.push_back(sliderTuple);
+                } else {
+                    std::string sliderLabel = sliderJson["label"].get<std::string>();
+                    double sliderMin = sliderJson["min"];
+                    double sliderMax = sliderJson["max"];
+                    double sliderDefaultVal = sliderJson["defaultVal"];
+                    std::string sliderTopLeftCorner = sliderJson["topLeftCorner"].get<std::string>();
+                    std::string sliderBottomRightCorner = sliderJson["bottomRightCorner"].get<std::string>();
+                    vslider_tuple sliderTuple = {sliderLabel, sliderMin, sliderMax, sliderDefaultVal, sliderTopLeftCorner, sliderBottomRightCorner};
+                    tabVSliders.push_back(sliderTuple);
+                }
             }
         }
 
@@ -112,7 +129,7 @@ inline std::vector<tab_tuple> parse_to_tabList() {
             }
         }
 
-        tab_tuple tabTuple = {tabName, tabSliders, tabRotaries, tabButtons};
+        tab_tuple tabTuple = {tabName, tabSliders, tabRotaries, tabButtons, tabVSliders};
         tabList.push_back(tabTuple);
 
     }
