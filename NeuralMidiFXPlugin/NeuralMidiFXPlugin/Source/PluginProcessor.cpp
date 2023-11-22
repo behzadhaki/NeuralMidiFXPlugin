@@ -701,19 +701,19 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
     size_t numSliders;
     size_t numRotaries;
     size_t numButtons;
-    size_t numVSliders;
+    size_t numhsliders;
 
     tab_tuple tabTuple;
 
     slider_list sliderList;
     rotary_list rotaryList;
     button_list buttonList;
-    vslider_list vsliderList;
+    hslider_list hsliderList;
 
     slider_tuple sliderTuple;
     rotary_tuple rotaryTuple;
     button_tuple buttonTuple;
-    vslider_tuple vsliderTuple;
+    hslider_tuple hsliderTuple;
 
 
     for (size_t j = 0; j < numTabs; j++) {
@@ -722,12 +722,12 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
         sliderList = std::get<1>(tabTuple);
         rotaryList = std::get<2>(tabTuple);
         buttonList = std::get<3>(tabTuple);
-        vsliderList = std::get<4>(tabTuple);
+        hsliderList = std::get<4>(tabTuple);
 
         numSliders = sliderList.size();
         numRotaries = rotaryList.size();
         numButtons = buttonList.size();
-        numVSliders = vsliderList.size();
+        numhsliders = hsliderList.size();
 
         // Sliders
         for (size_t i = 0; i < numSliders; ++i) {
@@ -761,9 +761,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
         }
 
         // Vertical Sliders
-        for (size_t i = 0; i < numVSliders; ++i) {
-            vsliderTuple = vsliderList[i];
-            std::tie(name, minValue, maxValue, initValue, topleftCorner, bottomrightCorner) = vsliderTuple;
+        for (size_t i = 0; i < numhsliders; ++i) {
+            hsliderTuple = hsliderList[i];
+            std::tie(name, minValue, maxValue, initValue, topleftCorner, bottomrightCorner) = hsliderTuple;
 
             auto paramIDstr = label2ParamID(name);
             juce::ParameterID paramID = juce::ParameterID(paramIDstr, version_hint);

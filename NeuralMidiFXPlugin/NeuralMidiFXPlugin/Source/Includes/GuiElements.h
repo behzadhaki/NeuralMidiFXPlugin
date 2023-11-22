@@ -21,7 +21,7 @@ public:
         slidersList = std::get<1>(tabTuple);
         rotariesList = std::get<2>(tabTuple);
         buttonsList = std::get<3>(tabTuple);
-        vslidersList = std::get<4>(tabTuple);
+        hslidersList = std::get<4>(tabTuple);
 
         numButtons = buttonsList.size();
     }
@@ -35,7 +35,7 @@ public:
         std::vector<std::string> sliderParamIDS;
         std::vector<std::string> rotaryParamIDS;
         std::vector<std::string> buttonParamIDS;
-        std::vector<std::string> vsliderParamIDS;
+        std::vector<std::string> hsliderParamIDS;
 
         for (const auto &sliderTuple: slidersList) {
             juce::Slider *newSlider = generateSlider(sliderTuple);
@@ -81,14 +81,14 @@ public:
             addAndMakeVisible(textButton);
         }
 
-        for (const auto &vsliderTuple: vslidersList) {
-            juce::Slider *newSlider = generateSlider(vsliderTuple, true);
-            auto paramID = label2ParamID(std::get<0>(vsliderTuple));
+        for (const auto &hsliderTuple: hslidersList) {
+            juce::Slider *newSlider = generateSlider(hsliderTuple, true);
+            auto paramID = label2ParamID(std::get<0>(hsliderTuple));
             sliderAttachmentArray.push_back(std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
                 *apvtsPointer, paramID, *newSlider));
             sliderArray.add(newSlider);
-            sliderTopLeftCorners.emplace_back(std::get<4>(vsliderTuple));
-            sliderBottomRightCorners.emplace_back(std::get<5>(vsliderTuple));
+            sliderTopLeftCorners.emplace_back(std::get<4>(hsliderTuple));
+            sliderBottomRightCorners.emplace_back(std::get<5>(hsliderTuple));
             addAndMakeVisible(newSlider);
         }
     }
@@ -236,7 +236,7 @@ private:
     slider_list slidersList;
     rotary_list rotariesList;
     button_list buttonsList;
-    vslider_list vslidersList;
+    hslider_list hslidersList;
 
     size_t numButtons;
 
