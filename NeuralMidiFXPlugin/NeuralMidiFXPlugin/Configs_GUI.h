@@ -5,112 +5,152 @@
 #pragma once
 
 #include <torch/script.h> // One-stop header.
+#include "Source/Includes/json.hpp"
+
+using json = nlohmann::json;
+
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+
+// -----------------  DO NOT CHANGE THE FOLLOWING -----------------
+#if defined(_WIN32) || defined(_WIN64)
+inline std::string settings_json_path = TOSTRING(DEFAULT_SETTINGS_FILE_PATH);
+#else
+inline std::string settings_json_path = TOSTRING(DEFAULT_SETTINGS_FILE_PATH);
+#endif
+
 // ======================================================================================
 // ==================     UI Settings                      ==============================
 // ======================================================================================
 
+using slider_tuple = std::tuple<std::string, double, double, double, std::string, std::string>;
+using rotary_tuple = std::tuple<std::string, double, double, double, std::string, std::string>;
+using button_tuple = std::tuple<std::string, bool, std::string, std::string>;
+
+using slider_list = std::vector<slider_tuple>;
+using rotary_list = std::vector<rotary_tuple>;
+using button_list = std::vector<button_tuple>;
+
+using tab_tuple = std::tuple<std::string, slider_list, rotary_list, button_list>;
+
+inline json load_settings_json() {
+
+    std::string filePath = DEFAULT_SETTINGS_FILE_PATH;  // Use the predefined macro
+
+     std::ifstream file(filePath);
+     if (!file.is_open()) {
+         std::cerr << "Error opening JSON file: " << filePath << std::endl;
+         throw std::runtime_error("Failed to open JSON file");
+     }
+
+     json j;
+     try {
+         file >> j;
+     } catch (const std::exception& e) {
+         std::cerr << "Error parsing JSON file: " << e.what() << std::endl;
+         throw;
+     }
+
+     return j;
+}
+
+inline json loaded_json = load_settings_json();
+
+// ---------------------------------------------------------------------------------
+inline std::vector<tab_tuple> parse_to_tabList() {
+
+    std::vector<tab_tuple> tabList;
+
+    // check if tabList exists
+    auto tabs_json = loaded_json["UI"]["Tabs"];
+
+
+    for (const auto& tabJson: tabs_json["tabList"]) {
+         std::string tabName = tabJson["name"].get<std::string>();
+        slider_list tabSliders;
+        rotary_list tabRotaries;
+        button_list tabButtons;
+
+        // check if sliders exist
+        if (tabJson.contains("sliders")) {
+            for (const auto& sliderJson: tabJson["sliders"]) {
+                std::string sliderLabel = sliderJson["label"].get<std::string>();
+                double sliderMin = sliderJson["min"];
+                double sliderMax = sliderJson["max"];
+                double sliderDefaultVal = sliderJson["defaultVal"];
+                std::string sliderTopLeftCorner = sliderJson["topLeftCorner"].get<std::string>();
+                std::string sliderBottomRightCorner = sliderJson["bottomRightCorner"].get<std::string>();
+                slider_tuple sliderTuple = {sliderLabel, sliderMin, sliderMax, sliderDefaultVal, sliderTopLeftCorner, sliderBottomRightCorner};
+                tabSliders.push_back(sliderTuple);
+            }
+        }
+
+        // check if rotaries exist
+        if (tabJson.contains("rotaries")) {
+            for (const auto& rotaryJson: tabJson["rotaries"]) {
+                std::string rotaryLabel = rotaryJson["label"].get<std::string>();
+                double rotaryMin = rotaryJson["min"];
+                double rotaryMax = rotaryJson["max"];
+                double rotaryDefaultVal = rotaryJson["defaultVal"];
+                std::string rotaryTopLeftCorner = rotaryJson["topLeftCorner"].get<std::string>();
+                std::string rotaryBottomRightCorner = rotaryJson["bottomRightCorner"].get<std::string>();
+
+                rotary_tuple rotaryTuple = {rotaryLabel, rotaryMin, rotaryMax, rotaryDefaultVal, rotaryTopLeftCorner, rotaryBottomRightCorner};
+                tabRotaries.push_back(rotaryTuple);
+            }
+        }
+
+        // check if buttons exist
+        if (tabJson.contains("buttons")) {
+            for (const auto& buttonJson: tabJson["buttons"]) {
+                std::string buttonLabel = buttonJson["label"].get<std::string>();
+                bool buttonIsToggle = buttonJson["isToggle"];
+                std::string buttonTopLeftCorner = buttonJson["topLeftCorner"].get<std::string>();
+                std::string buttonBottomRightCorner =  buttonJson["bottomRightCorner"];
+                button_tuple buttonTuple = {buttonLabel, buttonIsToggle, buttonTopLeftCorner, buttonBottomRightCorner};
+                tabButtons.push_back(buttonTuple);
+            }
+        }
+
+        tab_tuple tabTuple = {tabName, tabSliders, tabRotaries, tabButtons};
+        tabList.push_back(tabTuple);
+
+    }
+
+    return tabList;
+}
 
 // GUI settings
 namespace UIObjects {
 
-    // ---------------------------------------------------------------------------------
-    // Don't Modify the following
-    // ---------------------------------------------------------------------------------
-
-    // slider_tuple = {label, min, max, defaultVal, topLeftCorner, bottomRightCorner}
-    // topLeftCorner and bottomRightCorner are coordinates on the grid ("Aa" to "Zz")
-    using slider_tuple = std::tuple<const char *, double, double, double, const char *, const char *>;
-    using rotary_tuple = std::tuple<const char *, double, double, double, const char *, const char *>;
-    using button_tuple = std::tuple<const char *, bool, const char *, const char *>;
-
-    using slider_list = std::vector<slider_tuple>;
-    using rotary_list = std::vector<rotary_tuple>;
-    using button_list = std::vector<button_tuple>;
-
-    using tab_tuple = std::tuple<const char *, slider_list, rotary_list, button_list>;
-    // ---------------------------------------------------------------------------------
-
-    // ---------------------------------------------------------------------------------
-    // Feel Free to Modify the following
-    // ---------------------------------------------------------------------------------
     namespace Tabs {
-        const bool show_grid = true;
-        const bool draw_borders_for_components = true;
-        const std::vector<tab_tuple> tabList{
-            tab_tuple
-            {
-                "Tab 1", // use any name you want for the tab
-                slider_list
-                {
-                    slider_tuple{"Slider 1", 0.0, 1.0, 0.0, "Cc", "Ek"}
-                },
-                rotary_list
-                {
-                    rotary_tuple{"Rotary 1", 0.0, 1.0, 0.5, "Vc", "Xk"},
-                    rotary_tuple{"Rotary 2", 0.0, 4.0, 1.5, "Ij", "Qr"}
-                },
-                button_list
-                {
-                    button_tuple{"TriggerButton 1", false, "Wv", "Zz"}
-                }
-            },
-            tab_tuple{
-                "Tab 2",
-                slider_list
-                {
-                    slider_tuple{"Test 1", 0.0, 1.0, 0.0, "Aa", "Ff"},
-                    slider_tuple{"Gibberish", 0.0, 25.0, 11.0, "Ff", "Ll"}
-                },
-                rotary_list
-                {
-                    rotary_tuple{"Rotary 1B", 0.0, 1.0, 0.5, "Ll", "Pp"},
-                    rotary_tuple{"Test 2B", 0.0, 4.0, 1.5, "Pp", "Tt"}
-                },
-                button_list
-                {
-                    button_tuple{"ToggleButton 1", true, "Tt", "Zz"}
-                }
-            },
-
-            tab_tuple{
-                "Tab 3",
-                slider_list
-                {
-                    slider_tuple{"Generation Playback Delay", 0.0, 10.0, 0.0, "Aa", "Zz"}
-                },
-                rotary_list
-                {
-
-                },
-                button_list
-                {
-
-                }
-            }
-        };
+        const bool show_grid = loaded_json["UI"]["Tabs"]["show_grid"];
+        const bool draw_borders_for_components = loaded_json["UI"]["Tabs"]["draw_borders_for_components"];
+        const std::vector<tab_tuple> tabList = parse_to_tabList();
     }
 
 
     namespace MidiInVisualizer {
         // if you need the widget used for visualizing midi notes coming from host
         // set following to true
-        const bool enable = true;
+        const bool enable = loaded_json["UI"]["MidiInVisualizer"]["enable"];
 
         // if you want to allow user to drag/drop midi files into the plugin
         // set following to true
         // If active, the content of the midi file will be visualized in the
         // MidiInVisualizer and also be provided to you in the InputTensorPreparatorThread
-        const bool allowToDragInMidi = true;
+        const bool allowToDragInMidi = loaded_json["UI"]["MidiInVisualizer"]["allowToDragInMidi"];
 
         // if you want to visualize notes received in real-time from host
         // set following to true
-        const bool visualizeIncomingMidiFromHost = true;
+        const bool visualizeIncomingMidiFromHost = loaded_json["UI"]["MidiInVisualizer"]["visualizeIncomingMidiFromHost"];
         // if playhead is manually moved backward, do you want to delete all the
         // previously visualized notes received from host?
-        const bool deletePreviousIncomingMidiMessagesOnBackwardPlayhead = true;
+        const bool deletePreviousIncomingMidiMessagesOnBackwardPlayhead = loaded_json["UI"]["MidiInVisualizer"]["deletePreviousIncomingMidiMessagesOnBackwardPlayhead"];
         // if playback is stopped, do you want to delete all the previously
         // visualized notes received from host?
-        const bool deletePreviousIncomingMidiMessagesOnRestart = true;
+        const bool deletePreviousIncomingMidiMessagesOnRestart = loaded_json["UI"]["MidiInVisualizer"]["deletePreviousIncomingMidiMessagesOnRestart"];
+
     }
 
     namespace GeneratedContentVisualizer
@@ -120,23 +160,25 @@ namespace UIObjects {
         // The content here visualizes the playbackSequence as it is at any given time
         // (remember that playbackSequence can be changed by the user within the
         // PlaybackPreparatorThread)
-        const bool enable = true;
+        const bool enable = loaded_json["UI"]["GeneratedContentVisualizer"]["enable"];
 
         // if you want to allow the user to drag out the visualized content,
         // set following to true
-        const bool allowToDragOutAsMidi = true;
+        const bool allowToDragOutAsMidi = loaded_json["UI"]["GeneratedContentVisualizer"]["allowToDragOutAsMidi"];
     }
 
     namespace StandaloneTransportPanel
     {
         // if you need the widget used for controlling the standalone transport
         // set following to true
-        const bool enable = true;
+        const bool enable = loaded_json["StandaloneTransportPanel"]["enable"];
 
         // if you need to send midi out to a virtual midi cable
         // set following to true
         // NOTE: Only works on MacOs
-        const bool NeedVirtualMidiOutCable = false;
+        const bool NeedVirtualMidiOutCable = loaded_json["VirtualMidiOut"]["enable"];
     }
 
+
 }
+

@@ -15,7 +15,7 @@ class ParameterComponent : public juce::Button::Listener,
                            public juce::Component {
 public:
 
-    explicit ParameterComponent(UIObjects::tab_tuple tabTuple) {
+    explicit ParameterComponent(tab_tuple tabTuple) {
         // Separate the larger tuple into a separate tuple for each category of UI elements
         tabName = std::get<0>(tabTuple);
         slidersList = std::get<1>(tabTuple);
@@ -181,9 +181,9 @@ public:
 
 private:
 
-    const char *name{};
+    std::string name{};
     double minValue{}, maxValue{}, initValue{};
-    const char *topleftCorner{}, *bottomrightCorner{};
+    std::string topleftCorner{}, bottomrightCorner{};
 
     // In Runtime, APVTS used only for untoggleable buttons
     juce::AudioProcessorValueTreeState *apvtsPointer{nullptr};
@@ -218,13 +218,13 @@ private:
     float cellHeight;
 
     // Tuple of the current tab with all objects
-    UIObjects::tab_tuple currentTab;
+    tab_tuple currentTab;
     std::string tabName;
 
     // Meta tuples of all objects of each element type
-    UIObjects::slider_list slidersList;
-    UIObjects::rotary_list rotariesList;
-    UIObjects::button_list buttonsList;
+    slider_list slidersList;
+    rotary_list rotariesList;
+    button_list buttonsList;
 
     size_t numSliders;
     size_t numRotaries;
@@ -234,7 +234,7 @@ private:
     int deltaX{};
     int deltaY{};
 
-    juce::Slider *generateSlider(UIObjects::slider_tuple sliderTuple) {
+    juce::Slider *generateSlider(slider_tuple sliderTuple) {
         auto *newSlider = new juce::Slider;
         newSlider->setSliderStyle(juce::Slider::SliderStyle::LinearVertical);
         newSlider->setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
@@ -260,7 +260,7 @@ private:
     }
 
 
-    juce::Slider *generateRotary(UIObjects::rotary_tuple rotaryTuple) {
+    juce::Slider *generateRotary(rotary_tuple rotaryTuple) {
         auto *newRotary = new juce::Slider;
         newRotary->setSliderStyle(juce::Slider::SliderStyle::RotaryHorizontalVerticalDrag);
 
@@ -287,7 +287,7 @@ private:
         return newRotary;
     }
 
-    static juce::TextButton *generateButton(UIObjects::button_tuple buttonTuple) {
+    static juce::TextButton *generateButton(button_tuple buttonTuple) {
         auto *newButton = new juce::TextButton;
 
         // Obtain button info including text
@@ -408,6 +408,7 @@ private:
     std::pair<float, float> coordinatesFromString(const std::string &coordinate) {
         if (coordinate.size() != 2) {
             cout << "Invalid coordinate format - select from Aa to Zz" << endl;
+            cout << "coordinate: " << coordinate << endl;
             throw std::runtime_error("Invalid coordinate format - select from Aa to Zz");
         }
         const int gridSize = 26; // Number of cells in each direction

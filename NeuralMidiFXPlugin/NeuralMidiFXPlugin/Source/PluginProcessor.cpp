@@ -691,26 +691,26 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
 
     int version_hint = 1;
 
-    const char* name;
+    std::string name;
     bool isToggleable;
     double minValue, maxValue, initValue;
-    const char *topleftCorner{};
-    const char *bottomrightCorner{};
+    std::string topleftCorner{};
+    std::string bottomrightCorner{};
 
     size_t numTabs = UIObjects::Tabs::tabList.size();
     size_t numSliders;
     size_t numRotaries;
     size_t numButtons;
 
-    UIObjects::tab_tuple tabTuple;
+    tab_tuple tabTuple;
 
-    UIObjects::slider_list sliderList;
-    UIObjects::rotary_list rotaryList;
-    UIObjects::button_list buttonList;
+    slider_list sliderList;
+    rotary_list rotaryList;
+    button_list buttonList;
 
-    UIObjects::slider_tuple sliderTuple;
-    UIObjects::rotary_tuple rotaryTuple;
-    UIObjects::button_tuple buttonTuple;
+    slider_tuple sliderTuple;
+    rotary_tuple rotaryTuple;
+    button_tuple buttonTuple;
 
 
     for (size_t j = 0; j < numTabs; j++) {

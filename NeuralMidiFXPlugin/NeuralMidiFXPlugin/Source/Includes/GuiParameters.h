@@ -40,7 +40,7 @@ struct param {
     bool isToggle{false};           // for buttons
     bool isChanged{false};
 
-    using slider_or_rotary_tuple = std::tuple<const char *, double, double, double, const char *, const char *>;
+    using slider_or_rotary_tuple = std::tuple<std::string, double, double, double, std::string, std::string>;
 
     param() = default;
 
@@ -58,7 +58,7 @@ struct param {
         isChanged = true;   // first time update is always true
     }
 
-    explicit param(UIObjects::button_tuple button_tuple) {
+    explicit param(button_tuple button_tuple) {
         label = std::get<0>(button_tuple);
         value = 0;
         paramID = label2ParamID(label);

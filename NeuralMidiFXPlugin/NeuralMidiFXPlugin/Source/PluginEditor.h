@@ -46,12 +46,9 @@ public:
     juce::Slider denominatorSlider;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> denominatorSliderAttachment;
 
-
-
-
 private:
     NeuralMidiFXPluginProcessor* NeuralMidiFXPluginProcessorPointer_;
-    UIObjects::tab_tuple currentTab;
+    tab_tuple currentTab;
     std::string tabName;
     double fs;
     double qpm;

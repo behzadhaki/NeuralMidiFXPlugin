@@ -162,3 +162,10 @@ elseif(APPLE)
     add_definitions(-DDEFAULT_PROCESSING_SCRIPTS_DIR="${TARGET_DIR}/TorchScripts/ProcessingScripts")
 
 endif()
+
+# Provide a path to settings.json file
+# Define DEFAULT_SETTINGS_FILE_PATH
+set(DEFAULT_SETTINGS_PATH "${CMAKE_SOURCE_DIR}/NeuralMidiFXPlugin/NeuralMidiFXPlugin/settings.json")
+
+# No need for platform-specific path formatting
+add_definitions(-DDEFAULT_SETTINGS_FILE_PATH="${DEFAULT_SETTINGS_PATH}")
