@@ -19,3 +19,16 @@
 - comboboxes:
   - getComboBoxSelectionText() of gui_params
   - add in JSON using "comboBoxes" property
+
+-----
+
+-----
+
+_______
+
+
+#### TODOS
+
+- Single MIDI_PROCESSOR Thread Implementation
+- Single AUDIO_PROCESSOR Thread Implementation
+- AUDIO VISUALIZER GUI ELEMENT
