@@ -702,6 +702,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
     size_t numRotaries;
     size_t numButtons;
     size_t numhsliders;
+    size_t numComboBoxes;
 
     tab_tuple tabTuple;
 
@@ -709,11 +710,13 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
     rotary_list rotaryList;
     button_list buttonList;
     hslider_list hsliderList;
+    comboBox_list comboboxList;
 
     slider_tuple sliderTuple;
     rotary_tuple rotaryTuple;
     button_tuple buttonTuple;
     hslider_tuple hsliderTuple;
+    comboBox_tuple comboboxTuple;
 
 
     for (size_t j = 0; j < numTabs; j++) {
@@ -723,11 +726,13 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
         rotaryList = std::get<2>(tabTuple);
         buttonList = std::get<3>(tabTuple);
         hsliderList = std::get<4>(tabTuple);
+        comboboxList = std::get<5>(tabTuple);
 
         numSliders = sliderList.size();
         numRotaries = rotaryList.size();
         numButtons = buttonList.size();
         numhsliders = hsliderList.size();
+        numComboBoxes = comboboxList.size();
 
         // Sliders
         for (size_t i = 0; i < numSliders; ++i) {
@@ -770,6 +775,19 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
 
             layout.add (std::make_unique<juce::AudioParameterFloat> (paramID, name, minValue, maxValue, initValue));
         }
+
+        // Combo Boxes
+        for (size_t i = 0; i < numComboBoxes; ++i) {
+            comboboxTuple = comboboxList[i];
+            std::vector<std::string> items;
+
+            std::tie(name, items, topleftCorner, bottomrightCorner) = comboboxTuple;
+
+            auto paramIDstr = label2ParamID(name);
+            juce::ParameterID paramID = juce::ParameterID(paramIDstr, version_hint);
+            layout.add (std::make_unique<juce::AudioParameterInt> (paramID, name, 0, items.size() - 1, 0));
+        }
+
     }
 
     // check if standalone mode enabled

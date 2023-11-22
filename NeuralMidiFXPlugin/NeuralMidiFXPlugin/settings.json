@@ -100,9 +100,21 @@
                             "max": 10.0,
                             "defaultVal": 0.0,
                             "topLeftCorner": "Aa",
-                            "bottomRightCorner": "Zz",
+                            "bottomRightCorner": "Zk",
                             "horizontal": true
 
+                        }
+                    ],
+                    "comboBoxes": [
+                        {
+                            "label": "ComboBox 1",
+                            "options": [
+                                "Item 1",
+                                "Item 2",
+                                "Item 3"
+                            ],
+                            "topLeftCorner": "Av",
+                            "bottomRightCorner": "Zz"
                         }
                     ]
                 }

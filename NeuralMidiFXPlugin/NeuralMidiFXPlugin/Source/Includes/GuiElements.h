@@ -22,6 +22,7 @@ public:
         rotariesList = std::get<2>(tabTuple);
         buttonsList = std::get<3>(tabTuple);
         hslidersList = std::get<4>(tabTuple);
+        comboBoxesList = std::get<5>(tabTuple);
 
         numButtons = buttonsList.size();
     }
@@ -91,6 +92,26 @@ public:
             sliderBottomRightCorners.emplace_back(std::get<5>(hsliderTuple));
             addAndMakeVisible(newSlider);
         }
+
+        for (const auto &comboBoxTuple: comboBoxesList) {
+            juce::ComboBox *newComboBox = generateComboBox(comboBoxTuple);
+            auto paramID = label2ParamID(std::get<0>(comboBoxTuple));
+            comboBoxAttachmentArray.push_back(std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
+                *apvtsPointer, paramID, *newComboBox));
+            comboBoxArray.add(newComboBox);
+            comboBoxLabelArray.add(new juce::Label);
+            comboBoxLabelArray.getLast()->setText(std::get<0>(comboBoxTuple), juce::dontSendNotification);
+            // set text justification
+            comboBoxLabelArray.getLast()->setJustificationType(juce::Justification::centred);
+            // set text color to black
+            comboBoxLabelArray.getLast()->setColour(juce::Label::textColourId, juce::Colours::black);
+            // comboBoxOptionsArray.push_back(std::get<1>(comboBoxTuple));
+            comboBoxTopLeftCorners.emplace_back(std::get<2>(comboBoxTuple));
+            comboBoxBottomRightCorners.emplace_back(std::get<3>(comboBoxTuple));
+            addAndMakeVisible(newComboBox);
+            addAndMakeVisible(comboBoxLabelArray.getLast());
+        }
+
     }
 
     void resizeGuiElements(juce::Rectangle<int> area) {
@@ -116,6 +137,9 @@ public:
 
         // Buttons
          resizeButtons();
+
+         // ComboBoxes
+         resizeComboBoxes();
 
          repaint();
     }
@@ -204,9 +228,13 @@ private:
     juce::OwnedArray<juce::Button> buttonArray;
     std::vector<juce::String> buttonParameterIDs;
 
+    juce::OwnedArray<juce::ComboBox> comboBoxArray;
+    juce::OwnedArray<juce::Label> comboBoxLabelArray;
+
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>> sliderAttachmentArray;
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>> rotaryAttachmentArray;
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment>> buttonAttachmentArray;
+    std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment>> comboBoxAttachmentArray;
 
 
     std::vector<std::string> sliderTopLeftCorners;
@@ -215,6 +243,9 @@ private:
     std::vector<std::string> rotaryBottomRightCorners;
     std::vector<std::string> buttonTopLeftCorners;
     std::vector<std::string> buttonBottomRightCorners;
+    std::vector<std::string> comboBoxTopLeftCorners;
+    std::vector<std::string> comboBoxBottomRightCorners;
+
     std::vector<std::tuple<float, float, float, float, string, string>> componentBorders;
 
     int gridSize = 26; // Number of cells in each direction
@@ -237,6 +268,7 @@ private:
     rotary_list rotariesList;
     button_list buttonsList;
     hslider_list hslidersList;
+    comboBox_list comboBoxesList;
 
     size_t numButtons;
 
@@ -272,7 +304,6 @@ private:
 
         return newSlider;
     }
-
 
     juce::Slider *generateRotary(rotary_tuple rotaryTuple) {
         auto *newRotary = new juce::Slider;
@@ -320,6 +351,24 @@ private:
         return newButton;
     }
 
+    juce::ComboBox *generateComboBox(comboBox_tuple comboBoxTuple) {
+        auto *newComboBox = new juce::ComboBox;
+
+        // Obtain comboBox info including text
+        juce::String comboBoxText = juce::String(" ") + juce::String(std::get<0>(comboBoxTuple));
+        newComboBox->setTextWhenNothingSelected(comboBoxText);
+
+        // Obtain comboBox options
+        std::vector<std::string> comboBoxOptions = std::get<1>(comboBoxTuple);
+        int c_ = 1;
+        for (auto &option : comboBoxOptions) {
+            newComboBox->addItem(option, c_);
+            c_++;
+        }
+
+        return newComboBox;
+    }
+
     void resizeSliders() {
         int slider_ix = 0;
         componentBorders.clear();
@@ -337,8 +386,6 @@ private:
             auto y = topLeftY - 2.0f;
             auto width = (bottomRightX - topLeftX) + 4.0f;
             auto height = (bottomRightY - topLeftY) + 4.0f;
-
-            cout << "Slider " << slider_ix << " : " << x << ", " << y << ", " << width << ", " << height << endl;
 
             comp->setBounds(x, y, width, height);
 
@@ -373,9 +420,6 @@ private:
             auto width = (bottomRightX - topLeftX) + 4.0f;
             auto height = (bottomRightY - topLeftY) + 4.0f;
 
-            cout << "Rotary " << rotary_ix << " : " << x << ", " << y << ", " << width
-                 << ", " << height << endl;
-
             comp->setBounds(x, y, width, height);
 
             if (UIObjects::Tabs::draw_borders_for_components) {
@@ -403,8 +447,6 @@ private:
             auto width = (bottomRightX - topLeftX) + 4.0f;
             auto height = (bottomRightY - topLeftY) + 4.0f;
 
-            cout << "Button " << button_ix << " : " << x << ", " << y << ", " << width << ", " << height << endl;
-
             comp->setBounds(x, y, width, height);
 
             if (UIObjects::Tabs::draw_borders_for_components) {
@@ -416,6 +458,39 @@ private:
             }
 
             button_ix++;
+        }
+    }
+
+    void resizeComboBoxes() {
+        int comboBox_ix = 0;
+        for (auto *comp: comboBoxArray) {
+            // place the label on the left of the comboBox
+            auto [topLeftX, topLeftY] = coordinatesFromString(comboBoxTopLeftCorners[comboBox_ix]);
+            auto [bottomRightX, bottomRightY] = coordinatesFromString(comboBoxBottomRightCorners[comboBox_ix]);
+
+            auto area = getLocalBounds();
+
+            auto x = topLeftX - 2.0f;
+            auto y = topLeftY - 2.0f;
+            auto width = (bottomRightX - topLeftX) + 4.0f;
+            auto height = (bottomRightY - topLeftY) + 4.0f;
+
+            // get the label for the comboBox
+            auto label = comboBoxLabelArray[comboBox_ix];
+            label->setBounds(x, y, width/5, height); // 1/4 of the width of the comboBox
+
+            // get the comboBox
+            comp->setBounds(x + width/5, y, 4*width/5, height); // 4/5 of the width of the comboBox
+
+            if (UIObjects::Tabs::draw_borders_for_components) {
+                string tl_label = comboBoxTopLeftCorners[comboBox_ix];
+                string br_label = comboBoxBottomRightCorners[comboBox_ix];
+                auto border = std::tuple<float, float, float, float, string, string>(
+                    x, y, width, height, tl_label, br_label);
+                componentBorders.emplace_back(border);
+            }
+
+            comboBox_ix++;
         }
     }
 

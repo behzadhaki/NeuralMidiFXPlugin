@@ -39,6 +39,8 @@ struct param {
     bool isButton{false};
     bool isToggle{false};           // for buttons
     bool isChanged{false};
+    bool isComboBox{false};         // for comboBoxes
+    vector<string> comboBoxOptions{};
 
     using slider_or_rotary_tuple = std::tuple<std::string, double, double, double, std::string, std::string>;
 
@@ -72,6 +74,23 @@ struct param {
         isChanged = true; // first time update is always true
     }
 
+    explicit param(comboBox_tuple comboBox_tuple) {
+        label = std::get<0>(comboBox_tuple);
+        value = 1;
+        paramID = label2ParamID(label);
+        min = 1;
+        max = std::get<1>(comboBox_tuple).size();
+        defaultVal = 1;
+        isSlider = false;
+        isRotary = false;
+        isButton = false;
+        isToggle = false;
+        isComboBox = true;
+        isChanged = true; // first time update is always true
+
+        comboBoxOptions = std::get<1>(comboBox_tuple);
+    }
+
     bool update(juce::AudioProcessorValueTreeState *apvts) {
         auto new_val_ptr = apvts->getRawParameterValue(paramID);
 
@@ -88,7 +107,7 @@ struct param {
     void assertIfSameLabelOrID(const string& new_string) const {
         if (label == new_string) {
             std::stringstream ss;
-            DBG("Duplicate label found: " << label) ;
+            std::cout << "Duplicate label found: " << label << std::endl;
             assert(false && "Duplicate label found");
         }
 
@@ -199,6 +218,18 @@ struct GuiParams {
         return false;
     }
 
+    string getComboBoxSelectionText(const string &label) {
+        for (auto &parameter: Parameters) {
+            if (parameter.paramID == label2ParamID(label)) {
+                if (parameter.isComboBox) {
+                    return parameter.comboBoxOptions[parameter.value];
+                }
+            }
+        }
+        cout << "Label: " << label << " not found";
+        return "";
+    }
+
     string getDescriptionOfUpdatedParams() {
         std::stringstream ss;
         for (auto &parameter: Parameters) {
@@ -211,6 +242,9 @@ struct GuiParams {
             }
             if (parameter.isChanged && parameter.isButton && !parameter.isToggle) {
                 ss << " | Trigger Button:  `" << parameter.label << "` was clicked";
+            }
+            if (parameter.isChanged && parameter.isComboBox) {
+                ss << " | ComboBox:  `" << parameter.label << "` :" << parameter.value << " (" << getComboBoxSelectionText(parameter.label) << ")";
             }
         }
         if (chrono_timed.isValid()) {
@@ -250,11 +284,19 @@ private:
             auto slidersList = std::get<1>(tab_list);
             auto rotariesList = std::get<2>(tab_list);
             auto buttonsList = std::get<3>(tab_list);
+            auto vslidersList = std::get<4>(tab_list);
+            auto comboBoxesList = std::get<5>(tab_list);
 
             for (const auto &slider_tuple: slidersList) {
                 auto label = std::get<0>(slider_tuple);
                 assertLabelIsUnique(label);
                 Parameters.emplace_back(slider_tuple, true);
+            }
+
+            for (const auto &vslider_tuple: vslidersList) {
+                auto label = std::get<0>(vslider_tuple);
+                assertLabelIsUnique(label);
+                Parameters.emplace_back(vslider_tuple, true);
             }
 
             for (const auto &rotary_tuple: rotariesList) {
@@ -263,11 +305,16 @@ private:
                 Parameters.emplace_back(rotary_tuple, false);
             }
 
-
             for (const auto &button_tuple: buttonsList) {
                 std::string label = std::get<0>(button_tuple);
                 assertLabelIsUnique(label);
                 Parameters.emplace_back(button_tuple);
+            }
+
+            for (const auto &comboBox_tuple: comboBoxesList) {
+                std::string label = std::get<0>(comboBox_tuple);
+                assertLabelIsUnique(label);
+                Parameters.emplace_back(comboBox_tuple);
             }
         }
     }

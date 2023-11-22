@@ -16,3 +16,6 @@
 ### New UI Elements 
 
 - Sliders can now be vertical or horizontal using the "horizontal" property in the JSON
+- comboboxes:
+  - getComboBoxSelectionText() of gui_params
+  - add in JSON using "comboBoxes" property

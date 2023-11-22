@@ -33,10 +33,6 @@ class APVTSMediatorThread: public juce::Thread
 public:
     juce::StringArray paths;
 
-    // I want to declare these as private, but if I do it lower down it doesn't work..
-    size_t numSliders{};
-    size_t numRotaries{};
-
 
     // ============================================================================================================
     // ===          Preparing Thread for Running

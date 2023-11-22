@@ -27,14 +27,15 @@ using slider_tuple = std::tuple<std::string, double, double, double, std::string
 using rotary_tuple = std::tuple<std::string, double, double, double, std::string, std::string>;
 using button_tuple = std::tuple<std::string, bool, std::string, std::string>;
 using hslider_tuple = std::tuple<std::string, double, double, double, std::string, std::string>;
-
+using comboBox_tuple = std::tuple<std::string, std::vector<std::string>, std::string, std::string>;
 
 using slider_list = std::vector<slider_tuple>;
 using rotary_list = std::vector<rotary_tuple>;
 using button_list = std::vector<button_tuple>;
 using hslider_list = std::vector<hslider_tuple>;
+using comboBox_list = std::vector<comboBox_tuple>;
 
-using tab_tuple = std::tuple<std::string, slider_list, rotary_list, button_list, hslider_list>;
+using tab_tuple = std::tuple<std::string, slider_list, rotary_list, button_list, hslider_list, comboBox_list>;
 
 inline json load_settings_json() {
 
@@ -74,6 +75,7 @@ inline std::vector<tab_tuple> parse_to_tabList() {
         rotary_list tabRotaries;
         button_list tabButtons;
         hslider_list tabhsliders;
+        comboBox_list tabComboBoxes;
 
         // check if sliders exist
         if (tabJson.contains("sliders")) {
@@ -129,7 +131,19 @@ inline std::vector<tab_tuple> parse_to_tabList() {
             }
         }
 
-        tab_tuple tabTuple = {tabName, tabSliders, tabRotaries, tabButtons, tabhsliders};
+        // check if comboBoxes exist
+        if (tabJson.contains("comboBoxes")) {
+            for (const auto& comboBoxJson: tabJson["comboBoxes"]) {
+                std::string comboBoxLabel = comboBoxJson["label"].get<std::string>();
+                std::vector<std::string> comboBoxOptions = comboBoxJson["options"].get<std::vector<std::string>>();
+                std::string comboBoxTopLeftCorner = comboBoxJson["topLeftCorner"].get<std::string>();
+                std::string comboBoxBottomRightCorner =  comboBoxJson["bottomRightCorner"];
+                comboBox_tuple comboBoxTuple = {comboBoxLabel, comboBoxOptions, comboBoxTopLeftCorner, comboBoxBottomRightCorner};
+                tabComboBoxes.push_back(comboBoxTuple);
+            }
+        }
+
+        tab_tuple tabTuple = {tabName, tabSliders, tabRotaries, tabButtons, tabhsliders, tabComboBoxes};
         tabList.push_back(tabTuple);
 
     }
