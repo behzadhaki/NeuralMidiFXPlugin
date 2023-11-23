@@ -5,8 +5,8 @@
 #pragma once
 
 #include <torch/script.h> // One-stop header.
-#include "../Source/Includes/chrono_timer.h"
-#include "../Source/Includes/ProcessingScriptsLoader.h"
+#include "../../Source/Includes/chrono_timer.h"
+#include "../../Source/Includes/ProcessingScriptsLoader.h"
 
 // ======================================================================================
 // ==================       Structure For Sending Data       ============================

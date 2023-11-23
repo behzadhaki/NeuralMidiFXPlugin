@@ -77,6 +77,13 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
             make_unique<LockFreeQueue<ModelOutput, queue_settings::MDL2PPP_que_size>>();
         PPP2NMP_GenerationEvent_Que = make_unique<
             LockFreeQueue<GenerationEvent, queue_settings::PPP2NMP_que_size>>();
+    } else { // single thread mode
+        // used for NMP2SMD_Event_Que
+        NMP2ITP_Event_Que =
+            make_unique<LockFreeQueue<EventFromHost, queue_settings::NMP2ITP_que_size>>();
+        // used for SMD2NMP_GenerationEvent_Que
+        PPP2NMP_GenerationEvent_Que = make_unique<
+            LockFreeQueue<GenerationEvent, queue_settings::PPP2NMP_que_size>>();
     }
 
     //     Make_unique pointers for APVM Queues
@@ -85,14 +92,14 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
         APVM2ITP_GuiParams_Que = make_unique<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>>();
         APVM2MDL_GuiParams_Que = make_unique<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>>();
         APVM2PPP_GuiParams_Que = make_unique<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>>();
+    } else { // single thread mode
+        // used for APVM2SMD_Parameters_Que
+        APVM2ITP_GuiParams_Que = make_unique<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>>();
     }
 
-    // Drag/Drop Midi Queues
-    if (PROJECT_NAME == "NMFx_ThreeThreads")
-    {
-        GUI2ITP_DroppedMidiFile_Que = make_unique<LockFreeQueue<juce::MidiFile, 4>>();
-        PPP2GUI_GenerationMidiFile_Que = make_unique<LockFreeQueue<juce::MidiFile, 4>>();
-    }
+    // Queues used in both single and three thread mode
+    GUI2ITP_DroppedMidiFile_Que = make_unique<LockFreeQueue<juce::MidiFile, 4>>();
+    PPP2GUI_GenerationMidiFile_Que = make_unique<LockFreeQueue<juce::MidiFile, 4>>();
     NMP2GUI_IncomingMessageSequence = make_unique<LockFreeQueue<juce::MidiMessageSequence, 32>>() ;
 
     //       Create shared pointers for Three Threads if PROJECT_NAME is NMFx_ThreeThreads
@@ -102,6 +109,8 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
         inputTensorPreparatorThread = make_shared<InputTensorPreparatorThread>();
         modelThread = make_shared<ModelThread>();
         playbackPreparatorThread = make_shared<PlaybackPreparatorThread>();
+    } else { // single thread mode
+        singleMidiThread = make_shared<SingleMidiThread>();
     }
 
     //      Create shared pointers for APVTSMediator
@@ -128,6 +137,14 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
             APVM2PPP_GuiParams_Que.get(),
             PPP2GUI_GenerationMidiFile_Que.get(),
             realtimePlaybackInfo.get());
+    } else {
+        singleMidiThread->startThreadUsingProvidedResources(
+            NMP2ITP_Event_Que.get(),
+            APVM2ITP_GuiParams_Que.get(),
+            PPP2NMP_GenerationEvent_Que.get(),
+            GUI2ITP_DroppedMidiFile_Que.get(),
+            PPP2GUI_GenerationMidiFile_Que.get(),
+            realtimePlaybackInfo.get());
     }
     // check if PROJECT_NAME is NMFx_ThreeThreads
     if (PROJECT_NAME == "NMFx_ThreeThreads") {
@@ -141,7 +158,7 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
         // give access to resources && run threads
         apvtsMediatorThread->startThreadUsingProvidedResources(
             &apvts,
-            nullptr,
+            APVM2ITP_GuiParams_Que.get(),
             nullptr,
             nullptr);
     }
@@ -201,14 +218,22 @@ NeuralMidiFXPluginProcessor::~NeuralMidiFXPluginProcessor() {
         mVirtualMidiOutput->stopBackgroundThread();
         mVirtualMidiOutput = nullptr;
     }
-    if (!modelThread->readyToStop) {
-        modelThread->prepareToStop();
-    }
-    if (!inputTensorPreparatorThread->readyToStop) {
-        inputTensorPreparatorThread->prepareToStop();
-    }
-    if (!playbackPreparatorThread->readyToStop) {
-        playbackPreparatorThread->prepareToStop();
+
+    if (PROJECT_NAME == "NMFx_ThreeThreads")
+    {
+        if (!modelThread->readyToStop) {
+                modelThread->prepareToStop();
+        }
+        if (!inputTensorPreparatorThread->readyToStop) {
+                inputTensorPreparatorThread->prepareToStop();
+        }
+        if (!playbackPreparatorThread->readyToStop) {
+                playbackPreparatorThread->prepareToStop();
+        }
+    } else {
+        if (!singleMidiThread->readyToStop) {
+                singleMidiThread->prepareToStop();
+        }
     }
 }
 

@@ -7,6 +7,7 @@
 #include "../DeploymentThreads/InputTensorPreparatorThread.h"
 #include "../DeploymentThreads/ModelThread.h"
 #include "../DeploymentThreads/PlaybackPreparatorThread.h"
+#include "../DeploymentThreads/SingleMidiThread.h"
 #include "../Includes/APVTSMediatorThread.h"
 #include "../Includes/LockFreeQueue.h"
 #include "../Includes/GenerationEvent.h"
@@ -177,6 +178,12 @@ public:
     unique_ptr<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>> APVM2ITP_GuiParams_Que;
     unique_ptr<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>> APVM2MDL_GuiParams_Que;
     unique_ptr<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>> APVM2PPP_GuiParams_Que;
+    LockFreeQueue<EventFromHost, queue_settings::NMP2ITP_que_size> *NMP2SMD_Event_Que_ptr{};
+    LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size> *ITP2MDL_ModelInput_Que_ptr{};
+    LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2ITP_Parameters_Queu_ptr{};
+    LockFreeQueue<GenerationEvent, queue_settings::PPP2NMP_que_size> *SMD2NMP_GenerationEvent_Que_ptr{};
+    LockFreeQueue<juce::MidiFile, 4>* GUI2SMD_DroppedMidiFile_Que_ptr{};
+    LockFreeQueue<juce::MidiFile, 4>* SMD2GUI_GenerationMidiFile_Que_ptr{};
 
     // Drag/Drop Midi Queues
     unique_ptr<LockFreeQueue<juce::MidiFile, 4>> GUI2ITP_DroppedMidiFile_Que;
@@ -186,6 +193,7 @@ public:
     shared_ptr<InputTensorPreparatorThread> inputTensorPreparatorThread;
     shared_ptr<ModelThread> modelThread;
     shared_ptr<PlaybackPreparatorThread> playbackPreparatorThread;
+    shared_ptr<SingleMidiThread> singleMidiThread;
 
 
     // APVTS

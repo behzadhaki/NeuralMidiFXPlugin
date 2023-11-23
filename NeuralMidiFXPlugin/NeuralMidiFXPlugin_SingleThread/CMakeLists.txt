@@ -1,6 +1,6 @@
-project(NMFx_ThreeThreads VERSION 0.0.1)
+project(NMFx_SingleThread VERSION 0.0.1)
 
-set (BaseTargetName NMFx_ThreeThreads)
+set (BaseTargetName NMFx_SingleThread)
 
 add_definitions(-DPROJECT_NAME="${BaseTargetName}")
 
@@ -104,7 +104,7 @@ juce_add_plugin("${BaseTargetName}"
         PLUGIN_MANUFACTURER_CODE Juce                #
         PLUGIN_CODE NMFx                             # MUST BE UNIQUE!! If similar to other plugins, conflicts will occur
         FORMATS AU VST3 Standalone
-        PRODUCT_NAME "NMFx_ThreeThreads")           # Replace with your plugin title
+        PRODUCT_NAME "NMFx_SingleThread")           # Replace with your plugin title
 
 # Include the libtorch setup file
 #include(libtorch_setup.cmake)
@@ -116,11 +116,11 @@ target_sources(${BaseTargetName} PRIVATE
         ../../Source/DeploymentThreads/PlaybackPreparatorThread.cpp
         ../../Source/DeploymentThreads/ModelThread.cpp
         ../../Source/DeploymentThreads/SingleMidiThread.cpp
-        ITP_Deploy.cpp
-        MDL_Deploy.cpp
-        PPP_Deploy.cpp
-        ../NeuralMidiFXPlugin_SingleThread/SMD_Deploy.cpp
         ../../Source/Includes/colored_cout.cpp
+        ../NeuralMidiFXPlugin_ThreeThreads/ITP_Deploy.cpp
+        ../NeuralMidiFXPlugin_ThreeThreads/MDL_Deploy.cpp
+        ../NeuralMidiFXPlugin_ThreeThreads/PPP_Deploy.cpp
+        SMD_Deploy.cpp
         )
 
 target_compile_definitions(${BaseTargetName}

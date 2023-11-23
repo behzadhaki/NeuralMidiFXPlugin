@@ -8,11 +8,11 @@
 #include "shared_plugin_helpers/shared_plugin_helpers.h"
 #include "../Includes/GuiParameters.h"
 #include "../Includes/LockFreeQueue.h"
-#include "../../NeuralMidiFXPlugin/NeuralMidiFXPlugin_ThreeThreads/Configs_HostEvents.h"
+#include "../../NeuralMidiFXPlugin/Configs_HostEvents.h"
 #include "../Includes/Configs_Model.h"
 #include "../Includes/colored_cout.h"
 #include "../Includes/chrono_timer.h"
-#include "../../NeuralMidiFXPlugin/NeuralMidiFXPlugin_ThreeThreads/Configs_Debugging.h"
+#include "../../NeuralMidiFXPlugin/Configs_Debugging.h"
 
 class ModelThread : public juce::Thread {
 public:

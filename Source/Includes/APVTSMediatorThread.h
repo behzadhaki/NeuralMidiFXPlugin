@@ -5,7 +5,7 @@
 #pragma once
 
 #include "shared_plugin_helpers/shared_plugin_helpers.h"
-#include "../../NeuralMidiFXPlugin/NeuralMidiFXPlugin_ThreeThreads/Configs_HostEvents.h"
+#include "../../NeuralMidiFXPlugin/Configs_HostEvents.h"
 #include "GuiParameters.h"
 #include "LockFreeQueue.h"
 

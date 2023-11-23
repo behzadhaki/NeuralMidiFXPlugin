@@ -73,10 +73,16 @@ namespace event_communication_settings {
 // ======================================================================================
 // ==================       Thread  Settings                  ============================
 // ======================================================================================
+namespace thread_configurations::SingleMidiThread {
+// waittime between iterations in ms
+constexpr double waitTimeBtnIters{0.5};
+}
+
 namespace thread_configurations::InputTensorPreparator {
     // waittime between iterations in ms
     constexpr double waitTimeBtnIters{0.5};
 }
+
 namespace thread_configurations::Model {
     // waittime between iterations in ms
     constexpr double waitTimeBtnIters{0.5};
@@ -97,10 +103,10 @@ namespace thread_configurations::APVTSMediatorThread {
  *  if the queue is full, the producer thread will overwrite the oldest element
  */
 namespace queue_settings {
-    constexpr int NMP2ITP_que_size{512};
+    constexpr int NMP2ITP_que_size{512};    // same as NMP2SMD que size
     constexpr int ITP2MDL_que_size{512};
     constexpr int MDL2PPP_que_size{512};
-    constexpr int PPP2NMP_que_size{512};
+    constexpr int PPP2NMP_que_size{512};    // same as SMD2NMP que size
     constexpr int APVM_que_size{32};
 }
 
