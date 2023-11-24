@@ -30,7 +30,7 @@ public:
     void startThreadUsingProvidedResources(
         LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size> *ITP2MDL_ModelInput_Que_ptr_,
         LockFreeQueue<ModelOutput, queue_settings::MDL2PPP_que_size> *MDL2PPP_ModelOutput_Que_ptr_,
-        LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2MDL_Parameters_Queu_ptr_,
+        LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2MDL_Parameters_Queue_ptr_,
         RealTimePlaybackInfo *realtimePlaybackInfo_ptr_);
 
     // ------------------------------------------------------------------------------------------------------------
@@ -65,7 +65,7 @@ private:
     ModelOutput model_output{};
     torch::jit::script::Module model;
     bool isModelLoaded{false};
-    bool load(std::string model_name_);
+    bool load(const std::string& model_name_);
     std::string model_path;
 
     // ============================================================================================================
@@ -73,7 +73,7 @@ private:
     // ============================================================================================================
     LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size> *ITP2MDL_ModelInput_Que_ptr{};
     LockFreeQueue<ModelOutput, queue_settings::MDL2PPP_que_size> *MDL2PPP_ModelOutput_Que_ptr{};
-    LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2MDL_Parameters_Queu_ptr{};
+    LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2MDL_Parameters_Queue_ptr{};
     RealTimePlaybackInfo *realtimePlaybackInfo{};
     // ============================================================================================================
 
@@ -85,7 +85,7 @@ private:
     // ============================================================================================================
     // ===          Debugging Methods
     // ============================================================================================================
-    static void DisplayTensor(const torch::Tensor &tensor, const string Label);
+    static void DisplayTensor(const torch::Tensor &tensor, const string& Label);
     static void PrintMessage(const std::string &input);
 
     // ============================================================================================================

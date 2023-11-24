@@ -1,48 +1,8 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-#include "../Includes/GenerationEvent.h"
-#include "../Includes/APVTSMediatorThread.h"
 
 using namespace std;
 using namespace debugging_settings::ProcessorThread;
-
-inline bool messageExistsInSequence(const MidiMessageSequence& sequence, const MidiMessage& targetMessage)
-{
-    for (int i = 0; i < sequence.getNumEvents(); ++i)
-    {
-        const MidiMessage& message = sequence.getEventPointer(i)->message;
-
-        // check if messages are equal
-        if (message.isNoteOn() && targetMessage.isNoteOn())
-        {
-            if (message.getNoteNumber() == targetMessage.getNoteNumber() &&
-                message.getVelocity() == targetMessage.getVelocity() &&
-                message.getTimeStamp() == targetMessage.getTimeStamp())
-            {
-                return true;
-            }
-        }
-        else if (message.isNoteOff() && targetMessage.isNoteOff())
-        {
-            if (message.getNoteNumber() == targetMessage.getNoteNumber() &&
-                message.getVelocity() == targetMessage.getVelocity() &&
-                message.getTimeStamp() == targetMessage.getTimeStamp())
-            {
-                return true;
-            }
-        }
-        else if (message.isController() && targetMessage.isController())
-        {
-            if (message.getControllerNumber() == targetMessage.getControllerNumber() &&
-                message.getControllerValue() == targetMessage.getControllerValue() &&
-                message.getTimeStamp() == targetMessage.getTimeStamp())
-            {
-                return true;
-            }
-        }
-    }
-    return false;
-}
 
 inline double mapToLoopRange(double value, double loopStart, double loopEnd) {
 
@@ -61,13 +21,14 @@ inline double mapToLoopRange(double value, double loopStart, double loopEnd) {
 }
 
 NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
-        *this, nullptr, "PARAMETERS", createParameterLayout()) {
+        *this, nullptr, "PARAMETERS",
+        createParameterLayout()) {
 
     realtimePlaybackInfo = make_unique<RealTimePlaybackInfo>();
 
     //       Make_unique pointers for Queues
-    // --------------------------------------------------------------------------------------
-    if (PROJECT_NAME == "NMFx_ThreeThreads")
+    // ----------------------------------------------------------------------------------
+    if (std::strcmp(PROJECT_NAME, "NMFx_ThreeThreads") == 0)
     {
         NMP2ITP_Event_Que =
             make_unique<LockFreeQueue<EventFromHost, queue_settings::NMP2ITP_que_size>>();
@@ -78,64 +39,70 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
         PPP2NMP_GenerationEvent_Que = make_unique<
             LockFreeQueue<GenerationEvent, queue_settings::PPP2NMP_que_size>>();
     } else { // single thread mode
-        // used for NMP2SMD_Event_Que
+        // used for NMP2DPL_Event_Que
         NMP2ITP_Event_Que =
             make_unique<LockFreeQueue<EventFromHost, queue_settings::NMP2ITP_que_size>>();
-        // used for SMD2NMP_GenerationEvent_Que
+        // used for DPL2NMP_GenerationEvent_Que
         PPP2NMP_GenerationEvent_Que = make_unique<
             LockFreeQueue<GenerationEvent, queue_settings::PPP2NMP_que_size>>();
     }
 
     //     Make_unique pointers for APVM Queues
-    // --------------------------------------------------------------------------------------
-    if (PROJECT_NAME == "NMFx_ThreeThreads") {
-        APVM2ITP_GuiParams_Que = make_unique<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>>();
-        APVM2MDL_GuiParams_Que = make_unique<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>>();
-        APVM2PPP_GuiParams_Que = make_unique<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>>();
+    // ----------------------------------------------------------------------------------
+    if (std::strcmp(PROJECT_NAME, "NMFx_ThreeThreads") == 0) {
+        APVM2ITP_GuiParams_Que =
+            make_unique<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>>();
+        APVM2MDL_GuiParams_Que =
+            make_unique<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>>();
+        APVM2PPP_GuiParams_Que =
+            make_unique<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>>();
     } else { // single thread mode
-        // used for APVM2SMD_Parameters_Que
-        APVM2ITP_GuiParams_Que = make_unique<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>>();
+        // used for APVM2DPL_Parameters_Que
+        APVM2ITP_GuiParams_Que =
+            make_unique<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>>();
     }
 
     // Queues used in both single and three thread mode
-    GUI2ITP_DroppedMidiFile_Que = make_unique<LockFreeQueue<juce::MidiFile, 4>>();
-    PPP2GUI_GenerationMidiFile_Que = make_unique<LockFreeQueue<juce::MidiFile, 4>>();
-    NMP2GUI_IncomingMessageSequence = make_unique<LockFreeQueue<juce::MidiMessageSequence, 32>>() ;
+    GUI2ITP_DroppedMidiFile_Que =
+        make_unique<LockFreeQueue<juce::MidiFile, 4>>();
+    PPP2GUI_GenerationMidiFile_Que =
+        make_unique<LockFreeQueue<juce::MidiFile, 4>>();
+    NMP2GUI_IncomingMessageSequence =
+        make_unique<LockFreeQueue<juce::MidiMessageSequence, 32>>() ;
 
     //       Create shared pointers for Three Threads if PROJECT_NAME is NMFx_ThreeThreads
-    // --------------------------------------------------------------------------------------
-    if (PROJECT_NAME == "NMFx_ThreeThreads")
-    {
+    // ----------------------------------------------------------------------------------
+    if (std::strcmp(PROJECT_NAME, "NMFx_ThreeThreads") == 0) {
         inputTensorPreparatorThread = make_shared<InputTensorPreparatorThread>();
         modelThread = make_shared<ModelThread>();
         playbackPreparatorThread = make_shared<PlaybackPreparatorThread>();
     } else { // single thread mode
-        singleMidiThread = make_shared<SingleMidiThread>();
+        singleMidiThread = make_shared<DeploymentThread>();
     }
 
     //      Create shared pointers for APVTSMediator
-    // --------------------------------------------------------------------------------------
+    // ----------------------------------------------------------------------------------
     apvtsMediatorThread = make_unique<APVTSMediatorThread>();
 
     //       give access to resources && run threads
-    // --------------------------------------------------------------------------------------
-    if (PROJECT_NAME == "NMFx_ThreeThreads")
-    {
+    // ----------------------------------------------------------------------------------
+    if (std::strcmp(PROJECT_NAME, "NMFx_ThreeThreads") == 0) {
+
         inputTensorPreparatorThread->startThreadUsingProvidedResources(
             NMP2ITP_Event_Que.get(),
             ITP2MDL_ModelInput_Que.get(),
             APVM2ITP_GuiParams_Que.get(),
             GUI2ITP_DroppedMidiFile_Que.get(),
             realtimePlaybackInfo.get());
-        modelThread->startThreadUsingProvidedResources(ITP2MDL_ModelInput_Que.get(),
-                                                       MDL2PPP_ModelOutput_Que.get(),
-                                                       APVM2MDL_GuiParams_Que.get(),
-                                                       realtimePlaybackInfo.get());
+        modelThread->startThreadUsingProvidedResources(
+            ITP2MDL_ModelInput_Que.get(),
+            MDL2PPP_ModelOutput_Que.get(),
+            APVM2MDL_GuiParams_Que.get(),
+            realtimePlaybackInfo.get());
         playbackPreparatorThread->startThreadUsingProvidedResources(
             MDL2PPP_ModelOutput_Que.get(),
             PPP2NMP_GenerationEvent_Que.get(),
             APVM2PPP_GuiParams_Que.get(),
-            PPP2GUI_GenerationMidiFile_Que.get(),
             realtimePlaybackInfo.get());
     } else {
         singleMidiThread->startThreadUsingProvidedResources(
@@ -143,12 +110,12 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
             APVM2ITP_GuiParams_Que.get(),
             PPP2NMP_GenerationEvent_Que.get(),
             GUI2ITP_DroppedMidiFile_Que.get(),
-            PPP2GUI_GenerationMidiFile_Que.get(),
             realtimePlaybackInfo.get());
     }
+
     // check if PROJECT_NAME is NMFx_ThreeThreads
-    if (PROJECT_NAME == "NMFx_ThreeThreads") {
-        // give access to resources && run threads
+    if (std::strcmp(PROJECT_NAME, "NMFx_ThreeThreads") == 0) {
+    // give access to resources && run threads
         apvtsMediatorThread->startThreadUsingProvidedResources(
             &apvts,
             APVM2ITP_GuiParams_Que.get(),
@@ -179,13 +146,15 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
             string virtualOutName = string(PROJECT_NAME) + "Generations";
             vector<string> existingInstanceLabels{};
 
-            // add any midi in device that has (even partially) the same name as the virtual midi out device
+            // add any midi in device that has (even partially)
+            // the same name as the virtual midi out device
             // NOTE: PREVIOUSLY CREATED MIDIOUTS WILL NOW SHOW UP AS MIDIINS!
             int count = 0;
             for (auto device : MidiInput::getAvailableDevices()) {
                 DBG("Found midi out device: " + device.name.toStdString());
                 if (device.name.toStdString().find(virtualOutName) != string::npos) {
-                    DBG("Found existing instance of virtual midi out device: " + device.name.toStdString());
+                    DBG("Found existing instance of virtual midi out device: "
+                    + device.name.toStdString());
                     existingInstanceLabels.push_back(device.name.toStdString());
                     count++;
                 }
@@ -219,8 +188,8 @@ NeuralMidiFXPluginProcessor::~NeuralMidiFXPluginProcessor() {
         mVirtualMidiOutput = nullptr;
     }
 
-    if (PROJECT_NAME == "NMFx_ThreeThreads")
-    {
+    if (std::strcmp(PROJECT_NAME, "NMFx_ThreeThreads") == 0) {
+
         if (!modelThread->readyToStop) {
                 modelThread->prepareToStop();
         }
@@ -250,235 +219,12 @@ void NeuralMidiFXPluginProcessor::PrintMessage(const std::string& input) {
     auto now_c = std::chrono::system_clock::to_time_t(now);
     std::string now_str = std::ctime(&now_c);
     // remove newline
-    now_str.erase(std::remove(now_str.begin(), now_str.end(), '\n'), now_str.end());
+    now_str.erase(std::remove(now_str.begin(), now_str.end(), '\n'),
+                  now_str.end());
 
     while (std::getline(ss, line)) {
-        std::cout << clr::cyan << "[NMP] " << now_str << "|" << line << clr::reset << std::endl;
-    }
-}
-
-void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
-                                               juce::MidiBuffer &midiMessages) {
-    tempBuffer.clear();
-
-
-    // get Playhead info && buffer size && sample rate from host
-    auto playhead = getPlayHead();
-    auto Pinfo = playhead->getPosition();
-    auto fs = getSampleRate();
-    auto buffSize = buffer.getNumSamples();
-
-    // check if standalone mode
-    if (UIObjects::StandaloneTransportPanel::enable) {
-        bool updated = standAloneParams->update();
-        Pinfo->setTimeInSamples(standAloneParams->TimeInSamples);
-        Pinfo->setTimeInSeconds(standAloneParams->TimeInSeconds);
-        Pinfo->setPpqPosition(standAloneParams->PpqPosition);
-        Pinfo->setBpm(standAloneParams->qpm);
-        Pinfo->setIsPlaying(standAloneParams->is_playing);
-        Pinfo->setIsLooping(false);
-        Pinfo->setIsRecording(standAloneParams->is_recording);
-        AudioPlayHead::TimeSignature timeSig;
-        timeSig.numerator = standAloneParams->numerator;
-        timeSig.denominator = standAloneParams->denominator;
-        Pinfo->setTimeSignature(timeSig);
-
-        // prepare playhead for next frame
-        standAloneParams->PreparePlayheadForNextFrame(buffSize, fs);
-
-    }
-
-    std::optional<GenerationEvent> event;
-    realtimePlaybackInfo->setValues(
-        BufferMetaData(
-            Pinfo,
-            fs,
-            buffSize));
-
-    generationsToDisplay.setFs(fs);
-    generationsToDisplay.setQpm(   *Pinfo->getBpm());
-    generationsToDisplay.playhead_pos = *Pinfo->getPpqPosition();
-
-    // check if any events are received from the PPP thread
-    if (PPP2NMP_GenerationEvent_Que->getNumReady() > 0)
-    {
-        event = PPP2NMP_GenerationEvent_Que->pop();
-        generationsToDisplay.policy = playbackPolicies;
-        // update midi message sequence if new one arrived
-        if (event->IsNewPlaybackSequence())
-        {
-            if (print_generation_stream_reception)
-            {
-                PrintMessage(" New Sequence of Generations Received");
-            }
-            double time_adjustment = 0.0;
-            if (playbackPolicies.IsPlaybackPolicy_RelativeToAbsoluteZero()) {
-                time_adjustment = 0.0;
-            } else if (playbackPolicies.IsPlaybackPolicy_RelativeToNow()) {
-                time_adjustment = time_anchor_for_playback.getTimeWithUnitType(playbackPolicies.getTimeUnitIndex());
-            } else if (playbackPolicies.IsPlaybackPolicy_RelativeToPlaybackStart()) {
-                time_adjustment = playhead_start_time.getTimeWithUnitType(playbackPolicies.getTimeUnitIndex());
-            }
-            // update according to policy (clearing already taken care of above)
-            playbackMessageSequence.addSequence(
-                event->getNewPlaybackSequence().getAsJuceMidMessageSequence(),
-                time_adjustment);
-            playbackMessageSequence.updateMatchedPairs();
-            generationsToDisplay.setSequence(playbackMessageSequence);
-        }
-    } else {
-        event = std::nullopt;
-    }
-
-    if (Pinfo.hasValue() && Pinfo->getPpqPosition().hasValue()) {
-        // register current time for later use
-        auto frame_now = time_{*Pinfo->getTimeInSamples(),
-                                *Pinfo->getTimeInSeconds(),
-                                *Pinfo->getPpqPosition()};
-
-        // Send received events from host to ITP thread
-        sendReceivedInputsAsEvents(midiMessages, Pinfo, fs, buffSize);
-
-        // retry sending time anchor to GUI if mutex was locked last time
-        if (shouldSendTimeAnchorToGUI) {
-            if (playbckAnchorMutex.try_lock())
-            {
-                TimeAnchor = time_anchor_for_playback;
-                playbckAnchorMutex.unlock();
-                shouldSendTimeAnchorToGUI = false;
-            }
-        }
-
-        // see if any generations are ready
-        if (event.has_value()) {
-            if (event->IsNewPlaybackPolicyEvent()) {
-                // set anchor time relative to which timing information of generations should be interpreted
-                playbackPolicies = event->getNewPlaybackPolicyEvent();
-                generationsToDisplay.policy = playbackPolicies;
-
-                if (playbackPolicies.shouldForceSendNoteOffs()) {
-                    for (int i = 0; i < 128; i++) {
-                        tempBuffer.addEvent(juce::MidiMessage::noteOff(1, i), 0);
-                    }
-                }
-                if (playbackPolicies.IsPlaybackPolicy_RelativeToNow()) {
-                    time_anchor_for_playback = frame_now;
-                } else if (playbackPolicies.IsPlaybackPolicy_RelativeToAbsoluteZero()) {
-                    time_anchor_for_playback = time_{0, 0.0f, 0.0f};
-                } else if (playbackPolicies.IsPlaybackPolicy_RelativeToPlaybackStart()) {
-                    time_anchor_for_playback = playhead_start_time;
-                }
-
-                // update for editor use for looping mode visualization
-                shouldSendTimeAnchorToGUI = true;
-
-
-                if (print_generation_policy_reception) { PrintMessage(" New Generation Policy Received" ); }
-
-                // check overwrite policy. if
-                if (playbackPolicies.IsOverwritePolicy_DeleteAllEventsInPreviousStreamAndUseNewStream()) {
-                    playbackMessageSequence.clear();
-                } else if (playbackPolicies.IsOverwritePolicy_DeleteAllEventsAfterNow()) {
-                    // print all notes in sequence before deletion
-                    std::stringstream ss;
-                    for (int i = 0; i < playbackMessageSequence.getNumEvents(); i++) {
-                        auto msg = playbackMessageSequence.getEventPointer(i);
-                        ss << ", " << std::to_string(i) << " -> " << msg->message.getTimeStamp() << " " << msg->message.getDescription();
-                    }
-                    PrintMessage("Num messages in sequence: before Delete " + std::to_string(playbackMessageSequence.getNumEvents()) );
-                    //                    PrintMessage(ss2.str());
-                    // temp sequence to hold messages to be kept
-
-                    juce::MidiMessageSequence tempSequence;
-
-                    auto delete_start_time = frame_now.getTimeWithUnitType(playbackPolicies.getTimeUnitIndex());
-                    PrintMessage("Delete Start Time: " + std::to_string(delete_start_time));
-                    for (int i = 0; i < playbackMessageSequence.getNumEvents(); i++) {
-                        PrintMessage("Checking To Delete: " + std::to_string(playbackMessageSequence.getEventPointer(i)->message.getTimeStamp()));
-                        auto msg = playbackMessageSequence.getEventPointer(i);
-                        if (msg->message.getTimeStamp() < delete_start_time) {
-                            // print contents in sequence before deletion
-                            tempSequence.addEvent(msg->message, 0);
-                        }
-                        // check if any of the note ons in the tempSequence don't have a corresponding note off
-                        // if so, add a note off at now
-                        for (int j = 0; j < tempSequence.getNumEvents(); j++) {
-                            auto msg2 = tempSequence.getEventPointer(j);
-                            if (msg2->message.isNoteOn()) {
-                                bool hasCorrespondingNoteOff = false;
-                                for (int k = 0; k < playbackMessageSequence.getNumEvents(); k++) {
-                                    auto msg3 = playbackMessageSequence.getEventPointer(k);
-                                    if (msg3->message.isNoteOff() && msg3->message.getNoteNumber() == msg2->message.getNoteNumber()) {
-                                        hasCorrespondingNoteOff = true;
-                                        break;
-                                    }
-                                }
-                                if (!hasCorrespondingNoteOff) {
-                                    tempSequence.addEvent(juce::MidiMessage::noteOff(1, msg2->message.getNoteNumber()),
-                                                          frame_now.getTimeWithUnitType(playbackPolicies.getTimeUnitIndex()) - msg2->message.getTimeStamp());
-                                }
-                            }
-                        }
-                        // tempSequence.updateMatchedPairs();
-                    }
-
-                    // swap temp sequence with playback sequence
-                    playbackMessageSequence.clear();
-                    playbackMessageSequence.swapWith(tempSequence);
-
-
-                    // print all notes in sequence after deletion
-                    std::stringstream ss2;
-                    for (int i = 0; i < playbackMessageSequence.getNumEvents(); i++) {
-                        auto msg = playbackMessageSequence.getEventPointer(i);
-                        ss2 << ", " << std::to_string(i) << " -> " << msg->message.getTimeStamp() << " " << msg->message.getDescription();
-                    }
-                    PrintMessage("Num messages in sequence: after Delete " + std::to_string(playbackMessageSequence.getNumEvents()) );
-                    // PrintMessage(ss2.str());
-
-
-                } else if (playbackPolicies.IsOverwritePolicy_KeepAllPreviousEvents()) {
-                    /* do nothing */
-                } else {
-                    assert (false && "PlaybackPolicies Overwrite Action Not Specified!");
-                }
-            }
-        }
-
-        // start playback if any
-        if (Pinfo->getIsPlaying()){
-            for (auto &msg: playbackMessageSequence) {
-                // PrintMessage(std::to_string(msg->message.getTimeStamp()));
-                // PrintMessage(std::to_string(playbackPolicies.getTimeUnitIndex()));
-                auto msg_to_play = getMessageIfToBePlayed(
-                    frame_now, msg->message,
-                    buffSize, fs, *Pinfo->getBpm());
-                if (msg_to_play.has_value()) {
-                    std::stringstream ss;
-                    ss << "Playing: " << msg->message.getDescription() << " at time: " << msg->message.getTimeStamp();
-                    PrintMessage(ss.str());
-                    tempBuffer.addEvent(*msg_to_play, 0);
-                }
-            }
-        }
-        auto now_in_user_unit = frame_now.getTimeWithUnitType(playbackPolicies.getTimeUnitIndex());
-
-        if (mVirtualMidiOutput)
-        {
-            /*auto randVel = juce::Random::getSystemRandom().nextFloat();
-        auto randPitchInt = juce::Random::getSystemRandom().nextInt(127);
-        tempBuffer.addEvent(MidiMessage::noteOn(1, 36, randVel), 0);
-        tempBuffer.addEvent(MidiMessage::noteOn(1, 12, randVel), 0);
-        tempBuffer.addEvent(MidiMessage::noteOn(1, 24, randVel), 0);
-        tempBuffer.addEvent(MidiMessage::noteOn(1, 48, randVel), 0);
-        tempBuffer.addEvent(MidiMessage::noteOn(1, 60, randVel), 0);*/
-            mVirtualMidiOutput->sendBlockOfMessagesNow(tempBuffer);
-
-        }
-
-        midiMessages.swapWith(tempBuffer);
-
-        buffer.clear(); // clear buffer
+        std::cout << clr::cyan << "[NMP] " << now_str << "|" <<
+            line << clr::reset << std::endl;
     }
 }
 
@@ -487,7 +233,7 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
 // if not, returns -1
 std::optional<juce::MidiMessage> NeuralMidiFXPluginProcessor::getMessageIfToBePlayed(
     time_ now_, const juce::MidiMessage &msg_, int buffSize, double fs,
-    double qpm) {
+    double qpm) const {
 
     auto msg = juce::MidiMessage(msg_);
     if (msg_.getTimeStamp() <= 0) {
@@ -622,7 +368,7 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
                                 incoming_messages_sequence_temp.addEvent(msg->message, 0);
                             }
                         }
-                        // add all note off at last frame meta data time
+                        // add all note off at last frame metadata time
                         for (int i = 0; i < 128; i++) {
                             incoming_messages_sequence_temp.addEvent(juce::MidiMessage::noteOff(1, i),
                                                                      last_frame_meta_data.Time().inQuarterNotes());
@@ -736,10 +482,6 @@ juce::AudioProcessorEditor *NeuralMidiFXPluginProcessor::createEditor() {
 
 juce::AudioProcessor *JUCE_CALLTYPE createPluginFilter() {
     return new NeuralMidiFXPluginProcessor();
-}
-
-float NeuralMidiFXPluginProcessor::get_playhead_pos() const {
-    return playhead_pos;
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor::createParameterLayout() {
@@ -883,12 +625,97 @@ void NeuralMidiFXPluginProcessor::getStateInformation(juce::MemoryBlock &destDat
     auto state = apvts.copyState();
     std::unique_ptr<juce::XmlElement> xml(state.createXml());
     copyXmlToBinary(*xml, destData);
+
+//    std::vector<torch::Tensor> myTensors = ...; // Your vector of tensors
+    // random tensor
+    std::vector<torch::Tensor> myTensors;
+
+    // Tensor 1: A 1D tensor of floats
+    myTensors.push_back(torch::tensor({1.0, 2.0, 3.0, 4.0}));
+
+    // Tensor 2: A 2D tensor of integers
+    myTensors.push_back(torch::tensor({{1, 2}, {3, 4}}, torch::dtype(torch::kInt32)));
+
+    // Tensor 3: A 3D tensor of bytes
+    myTensors.push_back(torch::tensor({{{1, 2}, {3, 4}}, {{5, 6}, {7, 8}}}, torch::dtype(torch::kUInt8)));
+
+    // Tensor 4: A 2D tensor of doubles
+    myTensors.push_back(torch::tensor({{1.5, 2.5}, {3.5, 4.5}}, torch::dtype(torch::kFloat64)));
+
+
+    size_t numTensors = myTensors.size();
+    destData.append(&numTensors, sizeof(numTensors));
+
+    for (const auto& tensor : myTensors) {
+        // Serialize tensor type
+        torch::ScalarType tensorType = tensor.scalar_type();
+        int tensorTypeId = static_cast<int>(tensorType);
+        destData.append(&tensorTypeId, sizeof(tensorTypeId));
+
+        // Serialize tensor shape
+        auto shape = tensor.sizes();
+        size_t numDims = shape.size();
+        destData.append(&numDims, sizeof(numDims));
+        for (const auto& dim : shape) {
+            int64_t dimSize = dim;
+            destData.append(&dimSize, sizeof(dimSize));
+        }
+
+        // Serialize tensor data
+        size_t tensorSize = tensor.numel() * tensor.element_size();
+        destData.append(tensor.data_ptr(), tensorSize);
+    }
 }
 
 void NeuralMidiFXPluginProcessor::setStateInformation(const void *data, int sizeInBytes) {
-    std::unique_ptr<juce::XmlElement> xmlState(getXmlFromBinary(data, sizeInBytes));
-    if (xmlState != nullptr)
-        if (xmlState->hasTagName(apvts.state.getType()))
-            apvts.replaceState(juce::ValueTree::fromXml(*xmlState));
+    // Extract XML state
+    auto xmlData = static_cast<const char*>(data);
+    std::unique_ptr<juce::XmlElement> xmlState(getXmlFromBinary(xmlData, sizeInBytes));
+    if (xmlState != nullptr && xmlState->hasTagName(apvts.state.getType()))
+        apvts.replaceState(juce::ValueTree::fromXml(*xmlState));
+
+    const char* tensorData = xmlData + sizeInBytes;
+    size_t numTensors;
+    memcpy(&numTensors, tensorData, sizeof(numTensors));
+    tensorData += sizeof(numTensors);
+
+    std::vector<torch::Tensor> myTensors;
+    myTensors.reserve(numTensors);
+
+    for (size_t i = 0; i < numTensors; ++i) {
+        // Deserialize tensor type
+        int tensorTypeId;
+        memcpy(&tensorTypeId, tensorData, sizeof(tensorTypeId));
+        tensorData += sizeof(tensorTypeId);
+        auto tensorType = static_cast<torch::ScalarType>(tensorTypeId);
+
+        // Deserialize tensor shape
+        size_t numDims;
+        memcpy(&numDims, tensorData, sizeof(numDims));
+        tensorData += sizeof(numDims);
+
+        std::vector<int64_t> shape(numDims);
+        for (size_t j = 0; j < numDims; ++j) {
+            int64_t dimSize;
+            memcpy(&dimSize, tensorData, sizeof(dimSize));
+            tensorData += sizeof(dimSize);
+            shape[j] = dimSize;
+        }
+
+        // Deserialize tensor data
+        size_t tensorSize = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<>()) * torch::elementSize(tensorType);
+        torch::Tensor tensor = torch::from_blob((void*)tensorData, shape, tensorType);
+        tensorData += tensorSize;
+
+        myTensors.push_back(tensor);
+    }
+
+    std::cout << "Deserialized tensors:" << std::endl;
+    // print myTensors
+    for (const auto& tensor : myTensors) {
+        std::cout << tensor << std::endl;
+    }
+
 }
+
 

@@ -111,15 +111,16 @@ juce_add_plugin("${BaseTargetName}"
 
 target_sources(${BaseTargetName} PRIVATE
         ../../Source/NeuralMidiFXPlugin/PluginProcessor.cpp
+        ../../Source/NeuralMidiFXPlugin/processBlock.cpp
         ../../Source/NeuralMidiFXPlugin/PluginEditor.cpp
         ../../Source/DeploymentThreads/InputTensorPreparatorThread.cpp
         ../../Source/DeploymentThreads/PlaybackPreparatorThread.cpp
         ../../Source/DeploymentThreads/ModelThread.cpp
-        ../../Source/DeploymentThreads/SingleMidiThread.cpp
+        ../../Source/DeploymentThreads/DeploymentThread.cpp
         ITP_Deploy.cpp
         MDL_Deploy.cpp
         PPP_Deploy.cpp
-        ../NeuralMidiFXPlugin_SingleThread/SMD_Deploy.cpp
+        ../NeuralMidiFXPlugin_SingleThread/Deploy.cpp
         ../../Source/Includes/colored_cout.cpp
         )
 

@@ -13,7 +13,7 @@ class NeuralMidiFXPluginEditor : public juce::AudioProcessorEditor,
 {
 public:
     explicit NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor&);
-    ~NeuralMidiFXPluginEditor() override;
+    ~NeuralMidiFXPluginEditor() override = default;
     void paint(juce::Graphics&) override;
     void resized() override;
     void timerCallback() override;
@@ -25,7 +25,7 @@ public:
 
     juce::TabbedComponent tabs;
 
-    const int numTabs = UIObjects::Tabs::tabList.size();
+    const int numTabs = (int) UIObjects::Tabs::tabList.size();
 
     ParameterComponent* paramComponentPtr;
     std::vector<ParameterComponent*> paramComponentVector;
@@ -50,9 +50,9 @@ private:
     NeuralMidiFXPluginProcessor* NeuralMidiFXPluginProcessorPointer_;
     tab_tuple currentTab;
     std::string tabName;
-    double fs;
-    double qpm;
-    double playhead_pos;
+    double fs{};
+    double qpm{};
+    double playhead_pos{};
     PlaybackPolicies play_policy;
     juce::MidiMessageSequence sequence_to_display;
     LockFreeQueue<juce::MidiMessageSequence, 32>* NMP2GUI_IncomingMessageSequence;

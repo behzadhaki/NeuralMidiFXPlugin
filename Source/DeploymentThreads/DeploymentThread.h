@@ -16,7 +16,7 @@
 #include "../Includes/GenerationEvent.h"
 #include "../../NeuralMidiFXPlugin/NeuralMidiFXPlugin_SingleThread/CustomStructs.h"
 
-class SingleMidiThread : public juce::Thread {
+class DeploymentThread : public juce::Thread {
 public:
     // ============================================================================================================
     // ===          Preparing Thread for Running
@@ -24,17 +24,16 @@ public:
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 1 . Construct
     // ------------------------------------------------------------------------------------------------------------
-    SingleMidiThread();
+    DeploymentThread();
 
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 2 . give access to resources needed to communicate with other threads
     // ------------------------------------------------------------------------------------------------------------
     void startThreadUsingProvidedResources(
-        LockFreeQueue<EventFromHost, queue_settings::NMP2ITP_que_size> *NMP2SMD_Event_Que_ptr_,
+        LockFreeQueue<EventFromHost, queue_settings::NMP2ITP_que_size> *NMP2DPL_Event_Que_ptr_,
         LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2NMD_Parameters_Que_ptr_,
-        LockFreeQueue<GenerationEvent, queue_settings::PPP2NMP_que_size> *SMD2NMP_GenerationEvent_Que_ptr_,
-        LockFreeQueue<juce::MidiFile, 4>* GUI2SMD_DroppedMidiFile_Que_ptr_,
-        LockFreeQueue<juce::MidiFile, 4>* SMD2GUI_GenerationMidiFile_Que_ptr_,
+        LockFreeQueue<GenerationEvent, queue_settings::PPP2NMP_que_size> *DPL2NMP_GenerationEvent_Que_ptr_,
+        LockFreeQueue<juce::MidiFile, 4>* GUI2DPL_DroppedMidiFile_Que_ptr_,
         RealTimePlaybackInfo *realtimePlaybackInfo_ptr_);
 
     // ------------------------------------------------------------------------------------------------------------
@@ -46,7 +45,7 @@ public:
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 4 . Implement Deploy Method -----> DO NOT MODIFY ANY PART EXCEPT THE BODY OF THE METHOD
     // ------------------------------------------------------------------------------------------------------------
-    static std::pair<bool, bool> deploy(std::optional<MidiFileEvent> & new_midi_event_dragdrop,
+    std::pair<bool, bool> deploy(std::optional<MidiFileEvent> & new_midi_event_dragdrop,
                 std::optional<EventFromHost> & new_event_from_host, bool did_any_gui_params_change);
     // ============================================================================================================
 
@@ -54,7 +53,7 @@ public:
     // ===          Preparing Thread for Stopping
     // ============================================================================================================
     void prepareToStop();     // run this in destructor destructing object
-    ~SingleMidiThread() override;
+    ~DeploymentThread() override;
     bool readyToStop{false}; // Used to check if thread is ready to be stopped or externally stopped
     // ============================================================================================================
 
@@ -76,17 +75,15 @@ private:
     // Playback Deployment Data
     PlaybackPolicies playbackPolicy;
     PlaybackSequence playbackSequence;
-    double PlaybackDelaySlider{-1};
 
 
     // ============================================================================================================
     // ===          I/O Queues for Receiving/Sending Data
     // ============================================================================================================
-    LockFreeQueue<EventFromHost, queue_settings::NMP2ITP_que_size> *NMP2SMD_Event_Que_ptr{};
+    LockFreeQueue<EventFromHost, queue_settings::NMP2ITP_que_size> *NMP2DPL_Event_Que_ptr{};
     LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2NMD_Parameters_Que_ptr{};
-    LockFreeQueue<GenerationEvent, queue_settings::PPP2NMP_que_size> *SMD2NMP_GenerationEvent_Que_ptr{};
-    LockFreeQueue<juce::MidiFile, 4>* GUI2SMD_DroppedMidiFile_Que_ptr{};
-    LockFreeQueue<juce::MidiFile, 4>* SMD2GUI_GenerationMidiFile_Que_ptr{};
+    LockFreeQueue<GenerationEvent, queue_settings::PPP2NMP_que_size> *DPL2NMP_GenerationEvent_Que_ptr{};
+    LockFreeQueue<juce::MidiFile, 4>* GUI2DPL_DroppedMidiFile_Que_ptr{};
     RealTimePlaybackInfo *realtimePlaybackInfo{};
     // ============================================================================================================
 
@@ -105,8 +102,8 @@ private:
     // ===          User Customizable Struct
     // ============================================================================================================
 
-    // You can update the SMDdata struct in CustomStructs.h if you need any additional data
-    SMDdata SmDdata {};
+    // You can update the DPLdata struct in CustomStructs.h if you need any additional data
+    DPLdata DPLdata {};
 };
 
 

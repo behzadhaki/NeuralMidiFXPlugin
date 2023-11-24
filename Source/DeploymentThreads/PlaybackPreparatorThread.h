@@ -31,8 +31,7 @@ public:
     void startThreadUsingProvidedResources(
         LockFreeQueue<ModelOutput, queue_settings::MDL2PPP_que_size> *MDL2PPP_ModelOutput_Que_ptr_,
         LockFreeQueue<GenerationEvent, queue_settings::PPP2NMP_que_size> *PPP2NMP_GenerationEvent_Que_ptr_,
-        LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2PPP_Parameters_Queu_ptr_,
-        LockFreeQueue<juce::MidiFile, 4> *PPP2GUI_GenerationMidiFile_Que_ptr_,
+        LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2PPP_Parameters_Queue_ptr_,
         RealTimePlaybackInfo *realtimePlaybackInfo_ptr_);
 
     // ------------------------------------------------------------------------------------------------------------
@@ -63,8 +62,7 @@ private:
     // ============================================================================================================
     LockFreeQueue<ModelOutput, queue_settings::MDL2PPP_que_size> *MDL2PPP_ModelOutput_Que_ptr{};
     LockFreeQueue<GenerationEvent, queue_settings::PPP2NMP_que_size> *PPP2NMP_GenerationEvent_Que_ptr{};
-    LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2PPP_Parameters_Queu_ptr{};
-    LockFreeQueue<juce::MidiFile, 4> *PPP2GUI_GenerationMidiFile_Que_ptr{};
+    LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2PPP_Parameters_Queue_ptr{};
     RealTimePlaybackInfo *realtimePlaybackInfo{};
     // ============================================================================================================
 
@@ -75,7 +73,6 @@ private:
     ModelOutput model_output;
     PlaybackPolicies playbackPolicy;
     PlaybackSequence playbackSequence;
-    double PlaybackDelaySlider{-1};
 
     // ============================================================================================================
     // ===          GuiParameters

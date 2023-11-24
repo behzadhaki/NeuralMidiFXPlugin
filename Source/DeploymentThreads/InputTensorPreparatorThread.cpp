@@ -13,7 +13,7 @@ InputTensorPreparatorThread::InputTensorPreparatorThread() : juce::Thread("Input
 void InputTensorPreparatorThread::startThreadUsingProvidedResources(
     LockFreeQueue<EventFromHost, queue_settings::NMP2ITP_que_size> *NMP2ITP_Event_Que_ptr_,
     LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size> *ITP2MDL_ModelInput_Que_ptr_,
-    LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2ITP_Parameters_Queu_ptr_,
+    LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2ITP_Parameters_Queue_ptr_,
     LockFreeQueue<juce::MidiFile, 4> *GUI2ITP_DroppedMidiFile_Que_ptr_,
     RealTimePlaybackInfo *realtimePlaybackInfo_ptr_) {
 
@@ -21,7 +21,7 @@ void InputTensorPreparatorThread::startThreadUsingProvidedResources(
     // ---------------------------------------------------------------------------------------------
     NMP2ITP_Event_Que_ptr = NMP2ITP_Event_Que_ptr_;
     ITP2MDL_ModelInput_Que_ptr = ITP2MDL_ModelInput_Que_ptr_;
-    APVM2ITP_Parameters_Queu_ptr = APVM2ITP_Parameters_Queu_ptr_;
+    APVM2ITP_Parameters_Queue_ptr = APVM2ITP_Parameters_Queue_ptr_;
     GUI2ITP_DroppedMidiFile_Que_ptr = GUI2ITP_DroppedMidiFile_Que_ptr_;
     realtimePlaybackInfo = realtimePlaybackInfo_ptr_;
 
@@ -40,8 +40,9 @@ void InputTensorPreparatorThread::startThreadUsingProvidedResources(
  *      compared to the previous buffer
  * @param event_count: the number of events that have been received so far
  */
-void InputTensorPreparatorThread::DisplayEvent(
-        const EventFromHost&event, bool compact_mode, double event_count) {
+void InputTensorPreparatorThread::DisplayEvent(const EventFromHost& event,
+                                               bool compact_mode)
+{
 
     auto showMessage = [](const std::string& input) {
         // if input is multiline, split it into lines && print each line separately
@@ -60,11 +61,6 @@ void InputTensorPreparatorThread::DisplayEvent(
         auto dscrptn = event.getDescriptionOfChangedFeatures(event, true).str();
         if (dscrptn.length() > 0) { showMessage(dscrptn); }
     }
-}
-
-static string bool2str(bool b) {
-    std::to_string(b);
-    if (b) { return "true"; } else { return "false"; }
 }
 
 void InputTensorPreparatorThread::PrintMessage(const std::string& input) {
@@ -108,9 +104,9 @@ void InputTensorPreparatorThread::run() {
     while (!bExit) {
 
         if (readyToStop) { break; } // check if thread is ready to be stopped
-        if (APVM2ITP_Parameters_Queu_ptr->getNumReady() > 0) {
+        if (APVM2ITP_Parameters_Queue_ptr->getNumReady() > 0) {
             // print updated values for debugging
-            gui_params = APVM2ITP_Parameters_Queu_ptr->pop(); // pop the latest parameters from the queue
+            gui_params = APVM2ITP_Parameters_Queue_ptr->pop(); // pop the latest parameters from the queue
             gui_params.registerAccess();                      // set the time when the parameters were accessed
 
             if (print_received_gui_params) { // if set in Debugging.h
@@ -129,7 +125,7 @@ void InputTensorPreparatorThread::run() {
             events_received_count++;
 
             if (print_input_events) { // if set in Debugging.h
-                DisplayEvent(*new_event_from_DAW, false, events_received_count);   // display the event
+                DisplayEvent(*new_event_from_DAW, false);   // display the event
             }
 
         } else {
@@ -208,7 +204,7 @@ void InputTensorPreparatorThread::run() {
 
         if (!new_event_from_DAW.has_value() && !gui_params.changed()) {
             // wait for a few ms to avoid burning the CPU if new data is not available
-            sleep(thread_configurations::InputTensorPreparator::waitTimeBtnIters);
+            sleep((int)thread_configurations::InputTensorPreparator::waitTimeBtnIters);
         }
     }
 

@@ -12,6 +12,7 @@
 ### MAJOR UPDATE
 
 - Settings are now saved in a file called "settings.json" rather than the settings Configs_GUI.h file
+- there is now a single thread version of the plugin as well
 
 ### New UI Elements 
 
@@ -32,3 +33,5 @@ _______
 - Single MIDI_PROCESSOR Thread Implementation
 - Single AUDIO_PROCESSOR Thread Implementation
 - AUDIO VISUALIZER GUI ELEMENT
+- Midi Visualizer GUI Element
+- Preset Manager

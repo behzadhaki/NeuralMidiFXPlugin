@@ -16,16 +16,14 @@ PlaybackPreparatorThread::PlaybackPreparatorThread() : juce::Thread("PlaybackPre
 void PlaybackPreparatorThread::startThreadUsingProvidedResources(
     LockFreeQueue<ModelOutput, queue_settings::MDL2PPP_que_size> *MDL2PPP_ModelOutput_Que_ptr_,
     LockFreeQueue<GenerationEvent, queue_settings::PPP2NMP_que_size> *PPP2NMP_GenerationEvent_Que_ptr_,
-    LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2PPP_Parameters_Queu_ptr_,
-    LockFreeQueue<juce::MidiFile, 4> *PPP2GUI_GenerationMidiFile_Que_ptr_,
+    LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2PPP_Parameters_Queue_ptr_,
     RealTimePlaybackInfo *realtimePlaybackInfo_ptr_) {
 
     // Provide access to resources needed to communicate with other threads
     // ---------------------------------------------------------------------------------------------
     MDL2PPP_ModelOutput_Que_ptr = MDL2PPP_ModelOutput_Que_ptr_;
     PPP2NMP_GenerationEvent_Que_ptr = PPP2NMP_GenerationEvent_Que_ptr_;
-    APVM2PPP_Parameters_Queu_ptr = APVM2PPP_Parameters_Queu_ptr_;
-    PPP2GUI_GenerationMidiFile_Que_ptr = PPP2GUI_GenerationMidiFile_Que_ptr_;
+    APVM2PPP_Parameters_Queue_ptr = APVM2PPP_Parameters_Queue_ptr_;
     realtimePlaybackInfo = realtimePlaybackInfo_ptr_;
 
     // Start the thread. This function internally calls run() method. DO NOT CALL run() DIRECTLY.
@@ -67,9 +65,9 @@ void PlaybackPreparatorThread::run() {
 
         if (readyToStop) { break; } // check if thread is ready to be stopped
 
-        if (APVM2PPP_Parameters_Queu_ptr->getNumReady() > 0) {
+        if (APVM2PPP_Parameters_Queue_ptr->getNumReady() > 0) {
             // print updated values for debugging
-            gui_params = APVM2PPP_Parameters_Queu_ptr->pop(); // pop the latest parameters from the queue
+            gui_params = APVM2PPP_Parameters_Queue_ptr->pop(); // pop the latest parameters from the queue
             gui_params.registerAccess();                      // set the time when the parameters were accessed
 
             if (print_received_gui_params) { // if set in Debugging.h
@@ -96,14 +94,14 @@ void PlaybackPreparatorThread::run() {
             auto shouldSendNewPlaybackPolicy = status.first;
             auto shouldSendNewPlaybackSequence = status.second;
             if (shouldSendNewPlaybackPolicy) {
-                // send to the the main thread (NMP)
+                // send to the main thread (NMP)
                 if (playbackPolicy.IsReadyForTransmission()) {
                     PPP2NMP_GenerationEvent_Que_ptr->push(GenerationEvent(playbackPolicy));
                 }
             }
 
             if (shouldSendNewPlaybackSequence) {
-                // send to the the main thread (NMP)
+                // send to the main thread (NMP)
                 PPP2NMP_GenerationEvent_Que_ptr->push(GenerationEvent(playbackSequence));
                 cnt++;
             }
@@ -116,7 +114,7 @@ void PlaybackPreparatorThread::run() {
     }
 
     // wait for a few ms to avoid burning the CPU
-    sleep(thread_configurations::PlaybackPreparator::waitTimeBtnIters);
+    sleep((int)thread_configurations::PlaybackPreparator::waitTimeBtnIters);
 }
 
 void PlaybackPreparatorThread::prepareToStop() {

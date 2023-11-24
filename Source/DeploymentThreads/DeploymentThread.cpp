@@ -2,23 +2,21 @@
 // Created by u153171 on 11/22/2023.
 //
 
-#include "SingleMidiThread.h"
+#include "DeploymentThread.h"
 
-SingleMidiThread::SingleMidiThread(): juce::Thread("BackgroundSMDThread") {}
+DeploymentThread::DeploymentThread(): juce::Thread("BackgroundDPLThread") {}
 
-void SingleMidiThread::startThreadUsingProvidedResources(
-    LockFreeQueue<EventFromHost, queue_settings::NMP2ITP_que_size> *NMP2SMD_Event_Que_ptr_,
+void DeploymentThread::startThreadUsingProvidedResources(
+    LockFreeQueue<EventFromHost, queue_settings::NMP2ITP_que_size> *NMP2DPL_Event_Que_ptr_,
     LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2NMD_Parameters_Que_ptr_,
-    LockFreeQueue<GenerationEvent, queue_settings::PPP2NMP_que_size> *SMD2NMP_GenerationEvent_Que_ptr_,
-    LockFreeQueue<juce::MidiFile, 4>* GUI2SMD_DroppedMidiFile_Que_ptr_,
-    LockFreeQueue<juce::MidiFile, 4>* SMD2GUI_GenerationMidiFile_Que_ptr_,
+    LockFreeQueue<GenerationEvent, queue_settings::PPP2NMP_que_size> *DPL2NMP_GenerationEvent_Que_ptr_,
+    LockFreeQueue<juce::MidiFile, 4>* GUI2DPL_DroppedMidiFile_Que_ptr_,
     RealTimePlaybackInfo *realtimePlaybackInfo_ptr_)
 {
-    NMP2SMD_Event_Que_ptr = NMP2SMD_Event_Que_ptr_;
+    NMP2DPL_Event_Que_ptr = NMP2DPL_Event_Que_ptr_;
     APVM2NMD_Parameters_Que_ptr = APVM2NMD_Parameters_Que_ptr_;
-    SMD2NMP_GenerationEvent_Que_ptr = SMD2NMP_GenerationEvent_Que_ptr_;
-    GUI2SMD_DroppedMidiFile_Que_ptr = GUI2SMD_DroppedMidiFile_Que_ptr_;
-    SMD2GUI_GenerationMidiFile_Que_ptr = SMD2GUI_GenerationMidiFile_Que_ptr_;
+    DPL2NMP_GenerationEvent_Que_ptr = DPL2NMP_GenerationEvent_Que_ptr_;
+    GUI2DPL_DroppedMidiFile_Que_ptr = GUI2DPL_DroppedMidiFile_Que_ptr_;
     realtimePlaybackInfo = realtimePlaybackInfo_ptr_;
 
     // Start the thread. This function internally calls run() method. DO NOT CALL run() DIRECTLY.
@@ -26,7 +24,7 @@ void SingleMidiThread::startThreadUsingProvidedResources(
     startThread();
 }
 
-void SingleMidiThread::run() {
+void DeploymentThread::run() {
 
     // convert showMessage to a lambda function
     auto showMessage = [](const std::string& input) {
@@ -35,7 +33,7 @@ void SingleMidiThread::run() {
         std::string line;
 
         while (std::getline(ss, line)) {
-            std::cout << clr::green << "[SMD] " << line << std::endl;
+            std::cout << clr::green << "[DPL] " << line << std::endl;
         }
     };
 
@@ -72,8 +70,8 @@ void SingleMidiThread::run() {
             gui_params.setChanged(false); // no change in parameters since last check
         }
 
-        if (NMP2SMD_Event_Que_ptr->getNumReady() > 0) {
-            new_event_from_DAW = NMP2SMD_Event_Que_ptr->pop();      // get the next available event
+        if (NMP2DPL_Event_Que_ptr->getNumReady() > 0) {
+            new_event_from_DAW = NMP2DPL_Event_Que_ptr->pop();      // get the next available event
             new_event_from_DAW
                 ->registerAccess();                    // set the time when the event was accessed
 
@@ -103,8 +101,8 @@ void SingleMidiThread::run() {
         }
 
         // check if notes received from a manually dropped midi file
-        if (GUI2SMD_DroppedMidiFile_Que_ptr->getNumReady() > 0){
-            auto midifile = GUI2SMD_DroppedMidiFile_Que_ptr->getLatestOnly();
+        if (GUI2DPL_DroppedMidiFile_Que_ptr->getNumReady() > 0){
+            auto midifile = GUI2DPL_DroppedMidiFile_Que_ptr->getLatestOnly();
 
             if (midifile.getNumTracks() > 0) {
                 auto track = midifile.getTrack(0);
@@ -130,15 +128,15 @@ void SingleMidiThread::run() {
 
         // push to next thread if a new input is provided
         if (shouldSendNewPlaybackPolicy) {
-            // send to the the main thread (NMP)
+            // send to the main thread (NMP)
             if (playbackPolicy.IsReadyForTransmission()) {
-                SMD2NMP_GenerationEvent_Que_ptr->push(GenerationEvent(playbackPolicy));
+                DPL2NMP_GenerationEvent_Que_ptr->push(GenerationEvent(playbackPolicy));
             }
         }
 
         if (shouldSendNewPlaybackSequence) {
-            // send to the the main thread (NMP)
-            SMD2NMP_GenerationEvent_Que_ptr->push(GenerationEvent(playbackSequence));
+            // send to the main thread (NMP)
+            DPL2NMP_GenerationEvent_Que_ptr->push(GenerationEvent(playbackSequence));
             cnt++;
         }
 
@@ -158,14 +156,13 @@ void SingleMidiThread::run() {
 
         if (!new_event_from_DAW.has_value() && !gui_params.changed()) {
             // wait for a few ms to avoid burning the CPU if new data is not available
-            sleep(thread_configurations::SingleMidiThread::waitTimeBtnIters);
+            sleep((int)thread_configurations::SingleMidiThread::waitTimeBtnIters);
         }
     }
 
-
 }
 
-void SingleMidiThread::prepareToStop()
+void DeploymentThread::prepareToStop()
 {
     // Need to wait enough to ensure the run() method is over before killing thread
     this->stopThread(100 * thread_configurations::SingleMidiThread::waitTimeBtnIters);
@@ -173,14 +170,14 @@ void SingleMidiThread::prepareToStop()
     readyToStop = true;
 }
 
-SingleMidiThread::~SingleMidiThread()
+DeploymentThread::~DeploymentThread()
 {
     if (!readyToStop) {
         prepareToStop();
     }
 }
 
-void SingleMidiThread::DisplayEvent(const EventFromHost& event,
+void DeploymentThread::DisplayEvent(const EventFromHost& event,
                                     bool compact_mode,
                                     double event_count)
 {
@@ -190,7 +187,7 @@ void SingleMidiThread::DisplayEvent(const EventFromHost& event,
         std::string line;
 
         while (std::getline(ss, line)) {
-            std::cout << clr::on_red << "[SMD] " << line << std::endl;
+            std::cout << clr::on_red << "[DPL] " << line << std::endl;
         }
     };
 
@@ -203,7 +200,7 @@ void SingleMidiThread::DisplayEvent(const EventFromHost& event,
     }
 }
 
-void SingleMidiThread::PrintMessage(const string& input)
+void DeploymentThread::PrintMessage(const string& input)
 {
     // if input is multiline, split it into lines && print each line separately
     std::stringstream ss(input);

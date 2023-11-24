@@ -1,6 +1,5 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-#include "../Includes/Configs_Parser.h"
 
 inline double mapToLoopRange(double value, double loopStart, double loopEnd) {
 
@@ -31,7 +30,7 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
 {
     NeuralMidiFXPluginProcessorPointer_ = &NeuralMidiFXPluginProcessorPointer;
 
-    // Set window size
+    // Set window sizes
     setResizable (true, true);
     setSize (800, 600);
 
@@ -55,7 +54,7 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
 
         tempoSlider.setSliderStyle(juce::Slider::SliderStyle::Rotary);
         tempoSlider.setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
-                                    tempoSlider.getTextBoxWidth(), tempoSlider.getHeight()*.3);
+                                    tempoSlider.getTextBoxWidth(), int(tempoSlider.getHeight()*.3));
         tempoSliderAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
             NeuralMidiFXPluginProcessorPointer.apvts, label2ParamID_("TempoStandalone"), tempoSlider);
         tempoSlider.setTextValueSuffix(juce::String("Tempo"));
@@ -63,7 +62,7 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
 
         numeratorSlider.setSliderStyle(juce::Slider::SliderStyle::Rotary);
         numeratorSlider.setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
-                                        numeratorSlider.getTextBoxWidth(), numeratorSlider.getHeight()*.3);
+                                        numeratorSlider.getTextBoxWidth(), int(numeratorSlider.getHeight()*.3));
         numeratorSliderAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
             NeuralMidiFXPluginProcessorPointer.apvts, label2ParamID_("TimeSigNumeratorStandalone"), numeratorSlider);
         numeratorSlider.setTextValueSuffix(juce::String("Num"));
@@ -71,7 +70,7 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
 
         denominatorSlider.setSliderStyle(juce::Slider::SliderStyle::Rotary);
         denominatorSlider.setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
-                                          denominatorSlider.getTextBoxWidth(), denominatorSlider.getHeight()*.3);
+                                          denominatorSlider.getTextBoxWidth(), int(denominatorSlider.getHeight()*.3));
         denominatorSliderAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
             NeuralMidiFXPluginProcessorPointer.apvts, label2ParamID_("TimeSigDenominatorStandalone"), denominatorSlider);
         denominatorSlider.setTextValueSuffix(juce::String("Den"));
@@ -139,14 +138,8 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
     setInterceptsMouseClicks(false, true);
 
     startTimer(50);
+
     resized();
-
-}
-
-NeuralMidiFXPluginEditor::~NeuralMidiFXPluginEditor()
-{
-    //ButtonsWidget->removeListener(this);
-    // ModelSelectorWidget->removeListener(this);
 }
 
 void NeuralMidiFXPluginEditor::resized()
@@ -197,9 +190,9 @@ void NeuralMidiFXPluginEditor::resized()
 
     tabs.setBounds(area);
     area.removeFromBottom(gap);
-    for (int i = 0; i < paramComponentVector.size(); i++)
+    for (auto & i : paramComponentVector)
     {
-        paramComponentVector[i]->resizeGuiElements(area);
+        i->resizeGuiElements(area);
     }
 
 }
@@ -238,9 +231,9 @@ void NeuralMidiFXPluginEditor::timerCallback()
         newContent = true;
 
         if (policy_->getLoopDuration() > 0) {
-            NeuralMidiFXPluginProcessorPointer_->playbckAnchorMutex.lock();
+            NeuralMidiFXPluginProcessorPointer_->playbackAnchorMutex.lock();
             LoopStart = NeuralMidiFXPluginProcessorPointer_->TimeAnchor.inQuarterNotes();
-            NeuralMidiFXPluginProcessorPointer_->playbckAnchorMutex.unlock();
+            NeuralMidiFXPluginProcessorPointer_->playbackAnchorMutex.unlock();
             LoopEnd = LoopStart + policy_->getLoopDuration();
             LoopingEnabled = true;
         } else {
@@ -343,11 +336,11 @@ void NeuralMidiFXPluginEditor::timerCallback()
 
 bool NeuralMidiFXPluginEditor::isInterestedInFileDrag (const juce::StringArray& files)
 {
-    for (auto& file : files)
-        if (file.endsWith (".mid") || file.endsWith (".midi"))
-            return true;
+    bool hasMidiFiles = std::any_of(files.begin(), files.end(), [](const auto& file) {
+                                        return file.endsWith(".mid") || file.endsWith(".midi");
+                                    });
 
-    return false;
+    return hasMidiFiles;
 }
 
 void NeuralMidiFXPluginEditor::filesDropped (const juce::StringArray& files, int /*x*/, int /*y*/)

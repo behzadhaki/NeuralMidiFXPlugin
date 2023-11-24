@@ -4,7 +4,6 @@
 
 #include "ModelThread.h"
 
-#include <utility>
 using namespace debugging_settings::ModelThread;
 
 // $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
@@ -16,14 +15,14 @@ ModelThread::ModelThread() : juce::Thread("ModelThread") {}
 void ModelThread::startThreadUsingProvidedResources(
     LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size> *ITP2MDL_ModelInput_Que_ptr_,
     LockFreeQueue<ModelOutput, queue_settings::MDL2PPP_que_size> *MDL2PPP_ModelOutput_Que_ptr_,
-    LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2MDL_Parameters_Queu_ptr_,
+    LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2MDL_Parameters_Queue_ptr_,
     RealTimePlaybackInfo *realtimePlaybackInfo_ptr_){
 
     // Provide access to resources needed to communicate with other threads
     // ---------------------------------------------------------------------------------------------
     ITP2MDL_ModelInput_Que_ptr = ITP2MDL_ModelInput_Que_ptr_;
     MDL2PPP_ModelOutput_Que_ptr = MDL2PPP_ModelOutput_Que_ptr_;
-    APVM2MDL_Parameters_Queu_ptr = APVM2MDL_Parameters_Queu_ptr_;
+    APVM2MDL_Parameters_Queue_ptr = APVM2MDL_Parameters_Queue_ptr_;
     realtimePlaybackInfo = realtimePlaybackInfo_ptr_;
 
     // Start the thread. This function internally calls run() method. DO NOT CALL run() DIRECTLY.
@@ -41,7 +40,7 @@ void ModelThread::PrintMessage(const std::string& input) {
     while (std::getline(ss, line)) { std::cout << clr::blue << "[MDL] " << line << std::endl; }
 }
 
-void ModelThread::DisplayTensor(const torch::Tensor &tensor, const string Label) {
+void ModelThread::DisplayTensor(const torch::Tensor &tensor, const string& Label) {
     if (disable_user_tensor_display_requests) { return; }
     auto showMessage = [](const std::string& input) {
         // if input is multiline, split it into lines and print each line separately
@@ -98,9 +97,9 @@ void ModelThread::run() {
 
         if (readyToStop) { break; } // check if thread is ready to be stopped
 
-        if (APVM2MDL_Parameters_Queu_ptr->getNumReady() > 0) {
+        if (APVM2MDL_Parameters_Queue_ptr->getNumReady() > 0) {
             // print updated values for debugging
-            gui_params = APVM2MDL_Parameters_Queu_ptr->pop(); // pop the latest parameters from the queue
+            gui_params = APVM2MDL_Parameters_Queue_ptr->pop(); // pop the latest parameters from the queue
             gui_params.registerAccess();                      // set the time when the parameters were accessed
 
             if (print_received_gui_params) { // if set in Debugging.h
@@ -143,7 +142,7 @@ void ModelThread::run() {
             // wait for a few ms to avoid burning the CPU
             // do not remove this, for super strict timing requirements
             // adjust the wait time to your needs
-            sleep(thread_configurations::Model::waitTimeBtnIters);
+            sleep((int)thread_configurations::Model::waitTimeBtnIters);
         }
     }
 }
@@ -166,7 +165,7 @@ ModelThread::~ModelThread() {
 //
 // Returns true if the model was loaded successfully, false otherwise.
 // If a path was already tried, it won't try loading the model again.
-bool ModelThread::load(std::string model_name_)
+bool ModelThread::load(const std::string& model_name_)
 {
 
     // Creates the path depending on the OS

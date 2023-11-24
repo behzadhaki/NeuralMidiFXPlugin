@@ -1,11 +1,12 @@
-#include "../Source/DeploymentThreads/SingleMidiThread.h"
+#include "../Source/DeploymentThreads/DeploymentThread.h"
 
 // ===================================================================================
 // ===         Refer to:
 // https://neuralmidifx.github.io/DeploymentStages/????
 // ===================================================================================
 
-std::pair<bool, bool> SingleMidiThread::deploy(
+std::pair<bool, bool>
+    DeploymentThread::deploy(
     std::optional<MidiFileEvent> & new_midi_event_dragdrop,
     std::optional<EventFromHost> & new_event_from_host,
     bool gui_params_changed_since_last_call) {

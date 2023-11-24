@@ -7,7 +7,7 @@
 #include "../DeploymentThreads/InputTensorPreparatorThread.h"
 #include "../DeploymentThreads/ModelThread.h"
 #include "../DeploymentThreads/PlaybackPreparatorThread.h"
-#include "../DeploymentThreads/SingleMidiThread.h"
+#include "../DeploymentThreads/DeploymentThread.h"
 #include "../Includes/APVTSMediatorThread.h"
 #include "../Includes/LockFreeQueue.h"
 #include "../Includes/GenerationEvent.h"
@@ -145,8 +145,8 @@ struct StandAloneParams {
     void PreparePlayheadForNextFrame(int64_t buffer_size, double fs) {
         if (is_playing) {
             TimeInSamples += buffer_size;
-            TimeInSeconds += buffer_size / fs;
-            PpqPosition += buffer_size / fs * qpm / 60;
+            TimeInSeconds += (double) buffer_size / fs;
+            PpqPosition += (double) buffer_size / fs * qpm / 60;
         } else {
             TimeInSamples = 0;
             TimeInSeconds = 0;
@@ -178,12 +178,6 @@ public:
     unique_ptr<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>> APVM2ITP_GuiParams_Que;
     unique_ptr<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>> APVM2MDL_GuiParams_Que;
     unique_ptr<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>> APVM2PPP_GuiParams_Que;
-    LockFreeQueue<EventFromHost, queue_settings::NMP2ITP_que_size> *NMP2SMD_Event_Que_ptr{};
-    LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size> *ITP2MDL_ModelInput_Que_ptr{};
-    LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2ITP_Parameters_Queu_ptr{};
-    LockFreeQueue<GenerationEvent, queue_settings::PPP2NMP_que_size> *SMD2NMP_GenerationEvent_Que_ptr{};
-    LockFreeQueue<juce::MidiFile, 4>* GUI2SMD_DroppedMidiFile_Que_ptr{};
-    LockFreeQueue<juce::MidiFile, 4>* SMD2GUI_GenerationMidiFile_Que_ptr{};
 
     // Drag/Drop Midi Queues
     unique_ptr<LockFreeQueue<juce::MidiFile, 4>> GUI2ITP_DroppedMidiFile_Que;
@@ -193,7 +187,7 @@ public:
     shared_ptr<InputTensorPreparatorThread> inputTensorPreparatorThread;
     shared_ptr<ModelThread> modelThread;
     shared_ptr<PlaybackPreparatorThread> playbackPreparatorThread;
-    shared_ptr<SingleMidiThread> singleMidiThread;
+    shared_ptr<DeploymentThread> singleMidiThread;
 
 
     // APVTS
@@ -203,21 +197,17 @@ public:
     void getStateInformation(juce::MemoryBlock &destData) override;
     void setStateInformation(const void *data, int sizeInBytes) override;
 
-    // Getters
-    float get_playhead_pos() const;
-
     // realtime playback info
     unique_ptr<RealTimePlaybackInfo> realtimePlaybackInfo{};
 
     // Playback Data
     PlaybackPolicies playbackPolicies{};
     juce::MidiMessageSequence playbackMessageSequence{};
-    BufferMetaData phead_at_start_of_new_stream{};
     time_ time_anchor_for_playback{};
 
     // mutex protected structures for interacting with the GUI
     GenerationsToDisplay generationsToDisplay{};
-    mutex playbckAnchorMutex;
+    mutex playbackAnchorMutex;
     time_ TimeAnchor;
     bool shouldSendTimeAnchorToGUI{false};
 
@@ -228,11 +218,10 @@ private:
     // =========  Queues for communicating Between the main threads in processor  ===============
 
     // holds the playhead position for displaying on GUI
-    float playhead_pos{-1.0f};
     time_ playhead_start_time{};
     std::optional<juce::MidiMessage> getMessageIfToBePlayed(
             time_ now_, const juce::MidiMessage &msg,
-            int buffSize, double fs, double qpm);
+            int buffSize, double fs, double qpm) const;
 
     //  midiBuffer to fill up with generated data
     juce::MidiBuffer tempBuffer;
@@ -240,7 +229,7 @@ private:
     // Parameter Layout for apvts
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
-    // EventFromHost Place Holders for cross buffer events
+    // EventFromHost Placeholders for cross buffer events
     EventFromHost last_frame_meta_data{};
     std::optional<EventFromHost> NewBarEvent;
     std::optional<EventFromHost> NewTimeShiftEvent;
@@ -257,7 +246,7 @@ private:
 
 
     // utility methods
-    void PrintMessage(const std::string& input);
+    static void PrintMessage(const std::string& input);
 
     // MidiIO Standalone
     unique_ptr<MidiOutput> mVirtualMidiOutput;

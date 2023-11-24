@@ -32,7 +32,7 @@ public:
     void startThreadUsingProvidedResources(
         LockFreeQueue<EventFromHost, queue_settings::NMP2ITP_que_size> *NMP2ITP_Event_Que_ptr_,
         LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size> *ITP2MDL_ModelInput_Que_ptr_,
-        LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2ITP_Parameters_Queu_ptr_,
+        LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2ITP_Parameters_Queue_ptr_,
         LockFreeQueue<juce::MidiFile, 4> *GUI2ITP_DroppedMidiFile_Que_ptr_,
         RealTimePlaybackInfo *realtimePlaybackInfo_ptr_);
 
@@ -78,7 +78,7 @@ private:
     // ============================================================================================================
     LockFreeQueue<EventFromHost, queue_settings::NMP2ITP_que_size> *NMP2ITP_Event_Que_ptr{};
     LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size> *ITP2MDL_ModelInput_Que_ptr{};
-    LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2ITP_Parameters_Queu_ptr{};
+    LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2ITP_Parameters_Queue_ptr{};
     LockFreeQueue<juce::MidiFile, 4>* GUI2ITP_DroppedMidiFile_Que_ptr{};
     RealTimePlaybackInfo *realtimePlaybackInfo{};
     // ============================================================================================================
@@ -91,7 +91,7 @@ private:
     // ============================================================================================================
     // ===          Debugging Methods
     // ============================================================================================================
-    static void DisplayEvent(const EventFromHost&event, bool compact_mode, double event_count);
+    static void DisplayEvent(const EventFromHost& event, bool compact_mode);
     static void PrintMessage(const std::string &input);
 
     // ============================================================================================================
