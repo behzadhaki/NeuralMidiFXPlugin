@@ -161,14 +161,16 @@ void NeuralMidiFXPluginEditor::resized()
     auto area = getLocalBounds();
     setBounds(area);
 
-    int preset_manager_width = int(area.getHeight() * .1);
+    int preset_manager_width = int(area.getWidth() * .17);
 
     int standalone_control_height;
     int proll_height;
     int gap;
 
     // place preset manager at the top
+    area.removeFromLeft(int(area.getWidth() * .02));
     presetManagerWidget.setBounds(area.removeFromLeft(preset_manager_width));
+    area.removeFromLeft(int(area.getWidth() * .02));
 
     // check if standalone
     if (UIObjects::StandaloneTransportPanel::enable) {
