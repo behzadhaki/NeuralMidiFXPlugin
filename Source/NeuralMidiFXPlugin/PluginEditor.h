@@ -3,6 +3,7 @@
 #include "PluginProcessor.h"
 #include "../Includes/GuiElements.h"
 #include "../Includes/MidiDisplayWidget.h"
+#include "../Includes/PresetManagerWidget.h"
 
 using namespace std;
 
@@ -45,6 +46,7 @@ public:
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> numeratorSliderAttachment;
     juce::Slider denominatorSlider;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> denominatorSliderAttachment;
+    PresetTableComponent presetManagerWidget;
 
 private:
     NeuralMidiFXPluginProcessor* NeuralMidiFXPluginProcessorPointer_;

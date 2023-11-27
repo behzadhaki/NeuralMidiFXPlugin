@@ -48,7 +48,7 @@ void DeploymentThread::run() {
     std::optional<EventFromHost> new_event_from_DAW {};
     std::optional<MidiFileEvent> new_midi_event_dropped_manually {};
     std::optional<ModelInput> ModelInput2send2MDL;
-
+    bool newPresetLoaded{false};
     bool shouldSendNewPlaybackPolicy{false};
     bool shouldSendNewPlaybackSequence{false};
 
@@ -85,12 +85,33 @@ void DeploymentThread::run() {
             new_event_from_DAW = std::nullopt;
         }
 
-        if (new_event_from_DAW.has_value() || gui_params.changed()) {
+        // scope lock mutex singleMidiThread->preset_loaded_mutex
+        // try to lock mutex, if not possible, skip the rest of the loop
+        bool newPresAvail = false;
+        if (preset_loaded_mutex.try_lock()) {
+            newPresAvail = newPresetLoaded;
+            preset_loaded_mutex.unlock();
+        }
+
+        if (new_event_from_DAW.has_value() || gui_params.changed() || newPresAvail) {
             new_midi_event_dropped_manually = std::nullopt;
             chrono_timed_deploy.registerStartTime();
-            auto status = deploy(new_midi_event_dropped_manually, new_event_from_DAW, gui_params.changed());
+            auto status = deploy(new_midi_event_dropped_manually, new_event_from_DAW, gui_params.changed(), newPresAvail);
             shouldSendNewPlaybackPolicy = status.first;
             shouldSendNewPlaybackSequence = status.second;
+            // push to next thread if a new input is provided
+            if (shouldSendNewPlaybackPolicy) {
+                // send to the main thread (NMP)
+                if (playbackPolicy.IsReadyForTransmission()) {
+                    DPL2NMP_GenerationEvent_Que_ptr->push(GenerationEvent(playbackPolicy));
+                }
+            }
+
+            if (shouldSendNewPlaybackSequence) {
+                // send to the main thread (NMP)
+                DPL2NMP_GenerationEvent_Que_ptr->push(GenerationEvent(playbackSequence));
+                cnt++;
+            }
 
             chrono_timed_deploy.registerEndTime();
 
@@ -119,26 +140,29 @@ void DeploymentThread::run() {
                     auto isLast = (i == track->getNumEvents() - 1);
                     new_midi_event_dropped_manually = MidiFileEvent(msg_, isFirst, isLast);
                     new_event_from_DAW = std::nullopt;
-                    auto status =  deploy(new_midi_event_dropped_manually, new_event_from_DAW, false);
+                    auto status =  deploy(new_midi_event_dropped_manually, new_event_from_DAW, false, false);
                     shouldSendNewPlaybackPolicy = status.first;
                     shouldSendNewPlaybackSequence = status.second;
+
+                    // push to next thread if a new input is provided
+                    if (shouldSendNewPlaybackPolicy) {
+                        // send to the main thread (NMP)
+                        if (playbackPolicy.IsReadyForTransmission()) {
+                            DPL2NMP_GenerationEvent_Que_ptr->push(GenerationEvent(playbackPolicy));
+                        }
+                    }
+
+                    if (shouldSendNewPlaybackSequence) {
+                        // send to the main thread (NMP)
+                        DPL2NMP_GenerationEvent_Que_ptr->push(GenerationEvent(playbackSequence));
+                        cnt++;
+                    }
+
                 }
             }
         }
 
-        // push to next thread if a new input is provided
-        if (shouldSendNewPlaybackPolicy) {
-            // send to the main thread (NMP)
-            if (playbackPolicy.IsReadyForTransmission()) {
-                DPL2NMP_GenerationEvent_Que_ptr->push(GenerationEvent(playbackPolicy));
-            }
-        }
 
-        if (shouldSendNewPlaybackSequence) {
-            // send to the main thread (NMP)
-            DPL2NMP_GenerationEvent_Que_ptr->push(GenerationEvent(playbackSequence));
-            cnt++;
-        }
 
         // update event trackers accordingly if applicable
         if (new_event_from_DAW.has_value()) {

@@ -21,6 +21,10 @@
   - getComboBoxSelectionText() of gui_params
   - add in JSON using "comboBoxes" property
 
+### Preset Management
+ - new flag added to deploy() to specify new_preset_loaded_since_last_call
+ - preset data (defined as map<string, tensor>) is now accessible and updatable via TensorPresetTracker
+
 -----
 
 -----

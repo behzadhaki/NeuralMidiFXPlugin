@@ -26,7 +26,6 @@ static string label2ParamID(const string &label) {
     return paramID;
 }
 
-
 struct param {
     string label{};
     double value{};

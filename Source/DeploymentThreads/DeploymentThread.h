@@ -46,7 +46,8 @@ public:
     // ---         Step 4 . Implement Deploy Method -----> DO NOT MODIFY ANY PART EXCEPT THE BODY OF THE METHOD
     // ------------------------------------------------------------------------------------------------------------
     std::pair<bool, bool> deploy(std::optional<MidiFileEvent> & new_midi_event_dragdrop,
-                std::optional<EventFromHost> & new_event_from_host, bool did_any_gui_params_change);
+                std::optional<EventFromHost> & new_event_from_host, bool did_any_gui_params_change,
+                                 bool new_preset_loaded_since_last_call);
     // ============================================================================================================
 
     // ============================================================================================================
@@ -56,6 +57,13 @@ public:
     ~DeploymentThread() override;
     bool readyToStop{false}; // Used to check if thread is ready to be stopped or externally stopped
     // ============================================================================================================
+
+    // ============================================================================================================
+    // ===          User Customizable Struct
+    // ============================================================================================================
+    TensorMap TensorPresetTracker; // data stored here will be saved automatically when the plugin is saved/loaded/preset changed
+    mutable std::mutex  preset_loaded_mutex;
+    bool newPresetLoaded{false};
 
 private:
     // ============================================================================================================
@@ -104,6 +112,7 @@ private:
 
     // You can update the DPLdata struct in CustomStructs.h if you need any additional data
     DPLdata DPLdata {};
+
 };
 
 

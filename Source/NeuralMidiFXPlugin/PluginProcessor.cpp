@@ -484,6 +484,7 @@ juce::AudioProcessor *JUCE_CALLTYPE createPluginFilter() {
     return new NeuralMidiFXPluginProcessor();
 }
 
+
 juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor::createParameterLayout() {
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
@@ -618,104 +619,75 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
 
     }
 
+    // add preset parameter
+    layout.add(
+        std::make_unique<juce::AudioParameterInt>(
+            juce::ParameterID("presetParam", version_hint),
+            "Preset", 0, 100, 0));
+
+
     return layout;
+}
+
+inline std::string generateTempFileName() {
+    std::time_t t = std::time(nullptr);
+    std::tm tm = *std::localtime(&t);
+    std::ostringstream oss;
+
+    oss << std::put_time(&tm, "%Y-%m-%d-%H-%M-%S");
+    auto time_str = oss.str();
+    auto temp_file_name = time_str + ".preset";
+
+    return temp_file_name;
 }
 
 void NeuralMidiFXPluginProcessor::getStateInformation(juce::MemoryBlock &destData) {
     auto state = apvts.copyState();
     std::unique_ptr<juce::XmlElement> xml(state.createXml());
+
+    // Generate and save the file path
+    auto filePath = generateTempFileName();
+    xml->setAttribute("filePath", filePath); // Add the file path as an attribute
+    cout << "Saving preset to: " << filePath << endl;
     copyXmlToBinary(*xml, destData);
 
-//    std::vector<torch::Tensor> myTensors = ...; // Your vector of tensors
-    // random tensor
-    std::vector<torch::Tensor> myTensors;
+    // generate and save the temp tensor
+    auto tempTensor = singleMidiThread->TensorPresetTracker.getTensorMap();
 
-    // Tensor 1: A 1D tensor of floats
-    myTensors.push_back(torch::tensor({1.0, 2.0, 3.0, 4.0}));
-
-    // Tensor 2: A 2D tensor of integers
-    myTensors.push_back(torch::tensor({{1, 2}, {3, 4}}, torch::dtype(torch::kInt32)));
-
-    // Tensor 3: A 3D tensor of bytes
-    myTensors.push_back(torch::tensor({{{1, 2}, {3, 4}}, {{5, 6}, {7, 8}}}, torch::dtype(torch::kUInt8)));
-
-    // Tensor 4: A 2D tensor of doubles
-    myTensors.push_back(torch::tensor({{1.5, 2.5}, {3.5, 4.5}}, torch::dtype(torch::kFloat64)));
-
-
-    size_t numTensors = myTensors.size();
-    destData.append(&numTensors, sizeof(numTensors));
-
-    for (const auto& tensor : myTensors) {
-        // Serialize tensor type
-        torch::ScalarType tensorType = tensor.scalar_type();
-        int tensorTypeId = static_cast<int>(tensorType);
-        destData.append(&tensorTypeId, sizeof(tensorTypeId));
-
-        // Serialize tensor shape
-        auto shape = tensor.sizes();
-        size_t numDims = shape.size();
-        destData.append(&numDims, sizeof(numDims));
-        for (const auto& dim : shape) {
-            int64_t dimSize = dim;
-            destData.append(&dimSize, sizeof(dimSize));
-        }
-
-        // Serialize tensor data
-        size_t tensorSize = tensor.numel() * tensor.element_size();
-        destData.append(tensor.data_ptr(), tensorSize);
-    }
+    // save the tensor map
+    cout << "Saving tensor map: " << endl;
+    singleMidiThread->TensorPresetTracker.printTensorMap();
+    save_tensor_map(tempTensor, filePath);
 }
 
 void NeuralMidiFXPluginProcessor::setStateInformation(const void *data, int sizeInBytes) {
-    // Extract XML state
-    auto xmlData = static_cast<const char*>(data);
-    std::unique_ptr<juce::XmlElement> xmlState(getXmlFromBinary(xmlData, sizeInBytes));
-    if (xmlState != nullptr && xmlState->hasTagName(apvts.state.getType()))
-        apvts.replaceState(juce::ValueTree::fromXml(*xmlState));
 
-    const char* tensorData = xmlData + sizeInBytes;
-    size_t numTensors;
-    memcpy(&numTensors, tensorData, sizeof(numTensors));
-    tensorData += sizeof(numTensors);
+    std::unique_ptr<juce::XmlElement> xmlState(getXmlFromBinary(data, sizeInBytes));
+    if (xmlState != nullptr) {
+        if (xmlState->hasTagName(apvts.state.getType())) {
+            apvts.replaceState(juce::ValueTree::fromXml(*xmlState));
 
-    std::vector<torch::Tensor> myTensors;
-    myTensors.reserve(numTensors);
+            // Retrieve and handle the file path
+             auto filePath = xmlState->getStringAttribute("filePath");
+            // Handle the file path as needed
 
-    for (size_t i = 0; i < numTensors; ++i) {
-        // Deserialize tensor type
-        int tensorTypeId;
-        memcpy(&tensorTypeId, tensorData, sizeof(tensorTypeId));
-        tensorData += sizeof(tensorTypeId);
-        auto tensorType = static_cast<torch::ScalarType>(tensorTypeId);
+            cout << "Loading preset from: " << filePath << endl;
+            auto tensormap = load_tensor_map(filePath.toStdString());
 
-        // Deserialize tensor shape
-        size_t numDims;
-        memcpy(&numDims, tensorData, sizeof(numDims));
-        tensorData += sizeof(numDims);
+            singleMidiThread->TensorPresetTracker.updateTensorMap(tensormap);
 
-        std::vector<int64_t> shape(numDims);
-        for (size_t j = 0; j < numDims; ++j) {
-            int64_t dimSize;
-            memcpy(&dimSize, tensorData, sizeof(dimSize));
-            tensorData += sizeof(dimSize);
-            shape[j] = dimSize;
+            cout << "Loaded tensor map: " << endl;
+            singleMidiThread->TensorPresetTracker.printTensorMap();
+
+
         }
 
-        // Deserialize tensor data
-        size_t tensorSize = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<>()) * torch::elementSize(tensorType);
-        torch::Tensor tensor = torch::from_blob((void*)tensorData, shape, tensorType);
-        tensorData += tensorSize;
-
-        myTensors.push_back(tensor);
-    }
-
-    std::cout << "Deserialized tensors:" << std::endl;
-    // print myTensors
-    for (const auto& tensor : myTensors) {
-        std::cout << tensor << std::endl;
+        // scope lock mutex singleMidiThread->preset_loaded_mutex
+        std::lock_guard<std::mutex> lock(singleMidiThread->preset_loaded_mutex);
+        singleMidiThread->newPresetLoaded = true;
     }
 
 }
+
 
 

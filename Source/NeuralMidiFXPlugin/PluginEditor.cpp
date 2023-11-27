@@ -97,6 +97,12 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
                     paramComponentPtr, true);
     }
 
+    // add preset manager tab
+    addAndMakeVisible(presetManagerWidget);
+//    tabs.addTab("Preset Manager", juce::Colours::lightgrey,
+//                &presetManagerWidget, true);
+
+
     addAndMakeVisible(tabs);
 
     NMP2GUI_IncomingMessageSequence = NeuralMidiFXPluginProcessorPointer.NMP2GUI_IncomingMessageSequence.get();
@@ -139,6 +145,14 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
 
     startTimer(50);
 
+    // iterate through all the tabs and set the tabbed component to the first tab
+    for (int i = 0; i < (numTabs+1); i++)
+    {
+        tabs.setCurrentTabIndex(i);
+        tabs.resized();
+    }
+    tabs.setCurrentTabIndex(0);
+
     resized();
 }
 
@@ -147,9 +161,14 @@ void NeuralMidiFXPluginEditor::resized()
     auto area = getLocalBounds();
     setBounds(area);
 
+    int preset_manager_width = int(area.getHeight() * .1);
+
     int standalone_control_height;
     int proll_height;
     int gap;
+
+    // place preset manager at the top
+    presetManagerWidget.setBounds(area.removeFromLeft(preset_manager_width));
 
     // check if standalone
     if (UIObjects::StandaloneTransportPanel::enable) {
