@@ -5,16 +5,21 @@
 
 #pragma once
 
-class PresetTableComponent : public juce::Component, public juce::TableListBoxModel
+class PresetTableComponent : public juce::Component,
+                             public juce::TableListBoxModel,
+                             private juce::Slider::Listener
 {
 public:
-    PresetTableComponent()
+    explicit PresetTableComponent(juce::AudioProcessorValueTreeState& apvts_) : apvts(apvts_)
     {
         // Initialize the tables
         for (auto& table : presetTables) {
             initializeTable(table);
             addAndMakeVisible(table);
         }
+        currentPresetSlider.setValue(0);
+        currentPresetSliderAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+            apvts, label2ParamID("presetParam"), currentPresetSlider);
 
         // Add and configure Save and Rename buttons
         saveButton.setButtonText("Save");
@@ -38,6 +43,8 @@ public:
 
         renameButton.onClick = [this] { renamePreset(); };
 
+        // attach the slider listener
+        currentPresetSlider.addListener(this);
     }
 
     void paint(juce::Graphics& g) override
@@ -74,7 +81,11 @@ public:
         cout << "Selected row changed to " << lastRowSelected << endl;
         if (lastRowSelected >= 0 && lastRowSelected < presetNames.size())
         {
+            if (lastRowSelected != (currentPresetSlider.getValue() - 1)) {
+                currentPresetSlider.setValue(lastRowSelected);
+            }
             presetNameEditor.setText(presetNames[lastRowSelected], juce::dontSendNotification);
+            currentPresetSlider.setValue(lastRowSelected + 1);
         }
 
         savePresetNames();
@@ -144,9 +155,9 @@ public:
         // Implement the logic to save the selected preset
     }
 
-    void getSelectedPreset()
-    {
+    void getSelectedPreset() {
         // Implement the logic to get the selected preset
+
     }
 
     void renamePreset()
@@ -160,12 +171,31 @@ public:
             }
         }
     }
+
+    // listen to slider changes
+    void sliderValueChanged(juce::Slider* slider) override {
+        if (slider == &currentPresetSlider) {
+            cout << "currentPresetSlider value changed from " << currentPresetSlider.getValue() -1 << " to " << slider->getValue() << endl;
+            auto selectedRow = (int) currentPresetSlider.getValue() -1 ;
+            if (true) {
+                presetNameEditor.setText(presetNames[selectedRow], juce::dontSendNotification);
+                for (auto& table : presetTables) {
+                    selectedRowsChanged(selectedRow);
+                    table.selectRow(selectedRow);
+                }
+            }
+        }
+    }
+
 private:
     std::array<juce::TableListBox, 1> presetTables;
     juce::StringArray presetNames;
     juce::TextButton saveButton;
     juce::TextButton renameButton;
     juce::TextEditor presetNameEditor; // Added text editor for preset names
+    juce::AudioProcessorValueTreeState& apvts;
+    juce::Slider currentPresetSlider;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> currentPresetSliderAttachment;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PresetTableComponent)
 };

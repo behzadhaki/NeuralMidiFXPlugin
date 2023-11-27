@@ -623,7 +623,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
     layout.add(
         std::make_unique<juce::AudioParameterInt>(
             juce::ParameterID(label2ParamID("presetParam"), version_hint),
-            "Preset", 0, 100, 0));
+            "Preset", 1, 100, 0));
 
     return layout;
 }

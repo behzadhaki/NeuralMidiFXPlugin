@@ -46,7 +46,7 @@ public:
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> numeratorSliderAttachment;
     juce::Slider denominatorSlider;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> denominatorSliderAttachment;
-    PresetTableComponent presetManagerWidget;
+    unique_ptr<PresetTableComponent> presetManagerWidget;
 
 private:
     NeuralMidiFXPluginProcessor* NeuralMidiFXPluginProcessorPointer_;

@@ -29,6 +29,7 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
     tabs (juce::TabbedButtonBar::Orientation::TabsAtTop)
 {
     NeuralMidiFXPluginProcessorPointer_ = &NeuralMidiFXPluginProcessorPointer;
+    presetManagerWidget = std::make_unique<PresetTableComponent>(NeuralMidiFXPluginProcessorPointer.apvts);
 
     // Set window sizes
     setResizable (true, true);
@@ -98,7 +99,7 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
     }
 
     // add preset manager tab
-    addAndMakeVisible(presetManagerWidget);
+    addAndMakeVisible(*presetManagerWidget);
 //    tabs.addTab("Preset Manager", juce::Colours::lightgrey,
 //                &presetManagerWidget, true);
 
@@ -169,7 +170,7 @@ void NeuralMidiFXPluginEditor::resized()
 
     // place preset manager at the top
     area.removeFromLeft(int(area.getWidth() * .02));
-    presetManagerWidget.setBounds(area.removeFromLeft(preset_manager_width));
+    presetManagerWidget->setBounds(area.removeFromLeft(preset_manager_width));
     area.removeFromLeft(int(area.getWidth() * .02));
 
     // check if standalone
