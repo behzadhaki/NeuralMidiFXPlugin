@@ -53,7 +53,7 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
         recordButton.setColour(juce::TextButton::ColourIds::textColourOnId, juce::Colours::black);
         addAndMakeVisible(recordButton);
 
-        tempoSlider.setSliderStyle(juce::Slider::SliderStyle::Rotary);
+        tempoSlider.setSliderStyle(juce::Slider::SliderStyle::LinearHorizontal);
         tempoSlider.setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
                                     tempoSlider.getTextBoxWidth(), int(tempoSlider.getHeight()*.3));
         tempoSliderAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
@@ -61,7 +61,7 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
         tempoSlider.setTextValueSuffix(juce::String("Tempo"));
         addAndMakeVisible(tempoSlider);
 
-        numeratorSlider.setSliderStyle(juce::Slider::SliderStyle::Rotary);
+        numeratorSlider.setSliderStyle(juce::Slider::SliderStyle::LinearHorizontal);
         numeratorSlider.setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
                                         numeratorSlider.getTextBoxWidth(), int(numeratorSlider.getHeight()*.3));
         numeratorSliderAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
@@ -69,7 +69,7 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
         numeratorSlider.setTextValueSuffix(juce::String("Num"));
         addAndMakeVisible(numeratorSlider);
 
-        denominatorSlider.setSliderStyle(juce::Slider::SliderStyle::Rotary);
+        denominatorSlider.setSliderStyle(juce::Slider::SliderStyle::LinearHorizontal);
         denominatorSlider.setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
                                           denominatorSlider.getTextBoxWidth(), int(denominatorSlider.getHeight()*.3));
         denominatorSliderAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
@@ -186,8 +186,14 @@ void NeuralMidiFXPluginEditor::resized()
 
     if (UIObjects::StandaloneTransportPanel::enable) {
         auto controlArea = area.removeFromTop(standalone_control_height);
+        auto cAreaGap = controlArea.getHeight() * .05;
         int width = int(controlArea.getWidth() * .2);
 
+        // leave a gap above and below the standalone controls
+        area.removeFromTop((int) cAreaGap);
+        area.removeFromBottom((int) cAreaGap);
+
+        // layout the standalone controls
         playButton.setBounds(controlArea.removeFromLeft(width));
         recordButton.setBounds(controlArea.removeFromLeft(width));
         tempoSlider.setBounds(controlArea.removeFromLeft(width));

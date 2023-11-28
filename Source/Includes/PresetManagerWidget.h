@@ -26,9 +26,6 @@ public:
         saveButton.onClick = [this] { savePreset(); };
         addAndMakeVisible(saveButton);
 
-        renameButton.setButtonText("Rename");
-        renameButton.onClick = [this] { renamePreset(); };
-        addAndMakeVisible(renameButton);
 
         // Add and configure the Text Editor
         presetNameEditor.setMultiLine(false);
@@ -41,7 +38,7 @@ public:
 
         loadPresetNames();
 
-        renameButton.onClick = [this] { renamePreset(); };
+        saveButton.onClick = [this] { renamePreset(); savePreset(); };
 
         // attach the slider listener
         currentPresetSlider.addListener(this);
@@ -69,8 +66,7 @@ public:
         }
         area.removeFromTop(gap);
         presetNameEditor.setBounds(area.removeFromTop(proportionOfHeight(0.05f)));
-        saveButton.setBounds(area.removeFromBottom(proportionOfHeight(0.05f)));
-        renameButton.setBounds(area.removeFromTop(proportionOfHeight(0.05f)));
+        saveButton.setBounds(area.removeFromBottom(proportionOfHeight(0.1f)));
         area.removeFromTop(gap);
 
     }
@@ -87,8 +83,6 @@ public:
             presetNameEditor.setText(presetNames[lastRowSelected], juce::dontSendNotification);
             currentPresetSlider.setValue(lastRowSelected + 1);
         }
-
-        savePresetNames();
 
     }
 
@@ -170,6 +164,8 @@ public:
                 break;
             }
         }
+
+        savePresetNames();
     }
 
     // listen to slider changes
@@ -191,7 +187,6 @@ private:
     std::array<juce::TableListBox, 1> presetTables;
     juce::StringArray presetNames;
     juce::TextButton saveButton;
-    juce::TextButton renameButton;
     juce::TextEditor presetNameEditor; // Added text editor for preset names
     juce::AudioProcessorValueTreeState& apvts;
     juce::Slider currentPresetSlider;
