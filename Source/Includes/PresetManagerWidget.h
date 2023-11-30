@@ -25,9 +25,6 @@ public:
         currentPresetSliderAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
             apvts, label2ParamID("Preset"), currentPresetSlider);
 
-//        presetTables[0].selectRow(int(currentPresetSlider.getValue() - 1) );
-//        selectedRowsChanged(int(currentPresetSlider.getValue()- 1));
-
         // Add and configure Save and Rename buttons
         saveButton.setButtonText("Save");
         saveButton.onClick = [this] { renamePreset(); savePreset(); };
@@ -44,8 +41,6 @@ public:
         addAndMakeVisible(presetNameEditor);
 
         loadPresetNames();
-
-
 
     }
 
@@ -144,7 +139,7 @@ public:
 
         // Populate the table with presets
         for (int i = 0; i < 100; ++i) {
-            presetNames.add("Preset " + juce::String(i + 1));
+            presetNames.add("---");
         }
     }
 
@@ -153,8 +148,6 @@ public:
     {
         return presetNames.size();
     }
-
-
 
     void savePreset()
     {
@@ -180,6 +173,15 @@ public:
     void renamePreset()
     {
         for (auto& table : presetTables) {
+
+            // if text has --- in it, replace it with the "Preset " + preset number
+            if (presetNameEditor.getText().contains("---")) {
+                auto selectedRow = table.getSelectedRow();
+                presetNames.set(selectedRow, "Preset " + juce::String(selectedRow + 1));
+                table.updateContent();
+                break;
+            }
+
             if (table.getSelectedRow() >= 0) {
                 auto selectedRow = table.getSelectedRow();
                 presetNames.set(selectedRow, presetNameEditor.getText());
