@@ -31,7 +31,7 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
     NeuralMidiFXPluginProcessorPointer_ = &NeuralMidiFXPluginProcessorPointer;
     presetManagerWidget = std::make_unique<PresetTableComponent>(
         NeuralMidiFXPluginProcessorPointer.apvts,
-        NeuralMidiFXPluginProcessorPointer.singleMidiThread->CustomPresetData.get());
+        NeuralMidiFXPluginProcessorPointer.deploymentThread->CustomPresetData.get());
 
     // Set window sizes
     setResizable (true, true);
@@ -122,14 +122,14 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
 
     if (UIObjects::MidiInVisualizer::enable) {
         inputPianoRoll = std::make_unique<InputMidiPianoRollComponent>(
-            NeuralMidiFXPluginProcessorPointer.GUI2ITP_DroppedMidiFile_Que.get(),
+            NeuralMidiFXPluginProcessorPointer.GUI2DPL_DroppedMidiFile_Que.get(),
             seq_);
         len = std::max(len, inputPianoRoll->getLength());
     }
 
     if (UIObjects::GeneratedContentVisualizer::enable) {
         outputPianoRoll = std::make_unique<OutputMidiPianoRollComponent>(
-            NeuralMidiFXPluginProcessorPointer.PPP2GUI_GenerationMidiFile_Que.get());
+            NeuralMidiFXPluginProcessorPointer.DPL2GUI_GenerationMidiFile_Que.get());
         len = std::max(len, outputPianoRoll->getLength());
     }
 

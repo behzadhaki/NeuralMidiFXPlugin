@@ -7,7 +7,7 @@
 #include "shared_plugin_helpers/shared_plugin_helpers.h"
 #include "GuiParameters.h"
 #include "chrono_timer.h"
-#include "../../NeuralMidiFXPlugin/Configs_HostEvents.h"
+#include "../../Deployment/Configs_HostEvents.h"
 #include <utility>
 #include <mutex>
 
@@ -696,7 +696,7 @@ public:
 
     // if no sample rate is provided, use Time() method instead
     // it's your responsibility to keep track of the sample rate and qpm
-    // (provided as EventFromHost in the **deploy** method of the InputTensorPreparator -ITP-
+    // (provided as EventFromHost in the **deploy** method of the InputTensorPreparator -DPL-
     // thread)
     std::stringstream getDescription(double sample_rate, double qpm) const {
         auto time_in_samples = ppq_to_samples (sample_rate, qpm);
@@ -743,7 +743,7 @@ public:
 
     // if no sample rate is provided, use Time() method instead
     // it's your responsibility to keep track of the sample rate and qpm
-    // (provided as EventFromHost in the **deploy** method of the InputTensorPreparator -ITP-
+    // (provided as EventFromHost in the **deploy** method of the InputTensorPreparator -DPL-
     // thread)
     time_ Time(double sample_rate, double qpm) const {
         auto time_in_samples = ppq_to_samples (sample_rate, qpm);

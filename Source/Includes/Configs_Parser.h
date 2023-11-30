@@ -169,7 +169,7 @@ namespace UIObjects {
         // if you want to allow user to drag/drop midi files into the plugin
         // set following to true
         // If active, the content of the midi file will be visualized in the
-        // MidiInVisualizer and also be provided to you in the InputTensorPreparatorThread
+        // MidiInVisualizer and also be provided to you in the DeploymentThread
         const bool allowToDragInMidi = loaded_json["UI"]["MidiInVisualizer"]["allowToDragInMidi"];
 
         // if you want to visualize notes received in real-time from host

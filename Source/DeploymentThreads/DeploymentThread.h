@@ -8,13 +8,14 @@
 #include "../Includes/GuiParameters.h"
 #include "../Includes/InputEvent.h"
 #include "../Includes/LockFreeQueue.h"
-#include "../../NeuralMidiFXPlugin/Configs_HostEvents.h"
+#include "../../Deployment/Configs_HostEvents.h"
 #include "../Includes/Configs_Model.h"
 #include "../Includes/colored_cout.h"
 #include "../Includes/chrono_timer.h"
-#include "../../NeuralMidiFXPlugin/Configs_Debugging.h"
+#include "../../Deployment/Configs_Debugging.h"
 #include "../Includes/GenerationEvent.h"
-#include "../../NeuralMidiFXPlugin/NeuralMidiFXPlugin_SingleThread/CustomStructs.h"
+#include "../Includes/TorchScriptAndPresetLoaders.h"
+#include "../../Deployment/DeploymentData.h"
 
 class DeploymentThread : public juce::Thread {
 public:
@@ -30,9 +31,9 @@ public:
     // ---         Step 2 . give access to resources needed to communicate with other threads
     // ------------------------------------------------------------------------------------------------------------
     void startThreadUsingProvidedResources(
-        LockFreeQueue<EventFromHost, queue_settings::NMP2ITP_que_size> *NMP2DPL_Event_Que_ptr_,
+        LockFreeQueue<EventFromHost, queue_settings::NMP2DPL_que_size> *NMP2DPL_Event_Que_ptr_,
         LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2NMD_Parameters_Que_ptr_,
-        LockFreeQueue<GenerationEvent, queue_settings::PPP2NMP_que_size> *DPL2NMP_GenerationEvent_Que_ptr_,
+        LockFreeQueue<GenerationEvent, queue_settings::DPL2NMP_que_size> *DPL2NMP_GenerationEvent_Que_ptr_,
         LockFreeQueue<juce::MidiFile, 4>* GUI2DPL_DroppedMidiFile_Que_ptr_,
         RealTimePlaybackInfo *realtimePlaybackInfo_ptr_);
 
@@ -89,9 +90,9 @@ private:
     // ============================================================================================================
     // ===          I/O Queues for Receiving/Sending Data
     // ============================================================================================================
-    LockFreeQueue<EventFromHost, queue_settings::NMP2ITP_que_size> *NMP2DPL_Event_Que_ptr{};
+    LockFreeQueue<EventFromHost, queue_settings::NMP2DPL_que_size> *NMP2DPL_Event_Que_ptr{};
     LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2NMD_Parameters_Que_ptr{};
-    LockFreeQueue<GenerationEvent, queue_settings::PPP2NMP_que_size> *DPL2NMP_GenerationEvent_Que_ptr{};
+    LockFreeQueue<GenerationEvent, queue_settings::DPL2NMP_que_size> *DPL2NMP_GenerationEvent_Que_ptr{};
     LockFreeQueue<juce::MidiFile, 4>* GUI2DPL_DroppedMidiFile_Que_ptr{};
     RealTimePlaybackInfo *realtimePlaybackInfo{};
     // ============================================================================================================
@@ -111,8 +112,8 @@ private:
     // ===          User Customizable Struct
     // ============================================================================================================
 
-    // You can update the DPLdata struct in CustomStructs.h if you need any additional data
-    DPLdata DPLdata {};
+    // You can update the DeploymentData struct in CustomStructs.h if you need any additional data
+    DPLData DPLdata {};
 
 };
 

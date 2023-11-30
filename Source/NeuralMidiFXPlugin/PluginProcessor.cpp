@@ -28,109 +28,46 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
 
     //       Make_unique pointers for Queues
     // ----------------------------------------------------------------------------------
-    if (std::strcmp(PROJECT_NAME, "NMFx_ThreeThreads") == 0)
-    {
-        NMP2ITP_Event_Que =
-            make_unique<LockFreeQueue<EventFromHost, queue_settings::NMP2ITP_que_size>>();
-        ITP2MDL_ModelInput_Que =
-            make_unique<LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size>>();
-        MDL2PPP_ModelOutput_Que =
-            make_unique<LockFreeQueue<ModelOutput, queue_settings::MDL2PPP_que_size>>();
-        PPP2NMP_GenerationEvent_Que = make_unique<
-            LockFreeQueue<GenerationEvent, queue_settings::PPP2NMP_que_size>>();
-    } else { // single thread mode
-        // used for NMP2DPL_Event_Que
-        NMP2ITP_Event_Que =
-            make_unique<LockFreeQueue<EventFromHost, queue_settings::NMP2ITP_que_size>>();
-        // used for DPL2NMP_GenerationEvent_Que
-        PPP2NMP_GenerationEvent_Que = make_unique<
-            LockFreeQueue<GenerationEvent, queue_settings::PPP2NMP_que_size>>();
-    }
+    // used for NMP2DPL_Event_Que
+    NMP2DPL_Event_Que =
+        make_unique<LockFreeQueue<EventFromHost, queue_settings::NMP2DPL_que_size>>();
+    // used for DPL2NMP_GenerationEvent_Que
+    DPL2NMP_GenerationEvent_Que = make_unique<
+        LockFreeQueue<GenerationEvent, queue_settings::DPL2NMP_que_size>>();
 
     //     Make_unique pointers for APVM Queues
     // ----------------------------------------------------------------------------------
-    if (std::strcmp(PROJECT_NAME, "NMFx_ThreeThreads") == 0) {
-        APVM2ITP_GuiParams_Que =
-            make_unique<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>>();
-        APVM2MDL_GuiParams_Que =
-            make_unique<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>>();
-        APVM2PPP_GuiParams_Que =
-            make_unique<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>>();
-    } else { // single thread mode
-        // used for APVM2DPL_Parameters_Que
-        APVM2ITP_GuiParams_Que =
-            make_unique<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>>();
-    }
+    APVM2DPL_GuiParams_Que =
+        make_unique<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>>();
 
     // Queues used in both single and three thread mode
-    GUI2ITP_DroppedMidiFile_Que =
+    GUI2DPL_DroppedMidiFile_Que =
         make_unique<LockFreeQueue<juce::MidiFile, 4>>();
-    PPP2GUI_GenerationMidiFile_Que =
+    DPL2GUI_GenerationMidiFile_Que =
         make_unique<LockFreeQueue<juce::MidiFile, 4>>();
     NMP2GUI_IncomingMessageSequence =
         make_unique<LockFreeQueue<juce::MidiMessageSequence, 32>>() ;
 
-    //       Create shared pointers for Three Threads if PROJECT_NAME is NMFx_ThreeThreads
     // ----------------------------------------------------------------------------------
-    if (std::strcmp(PROJECT_NAME, "NMFx_ThreeThreads") == 0) {
-        inputTensorPreparatorThread = make_shared<InputTensorPreparatorThread>();
-        modelThread = make_shared<ModelThread>();
-        playbackPreparatorThread = make_shared<PlaybackPreparatorThread>();
-    } else { // single thread mode
-        singleMidiThread = make_shared<DeploymentThread>();
-        apvtsMediatorThread =
-            make_unique<APVTSMediatorThread>(singleMidiThread->CustomPresetData.get());
-    }
-
-    //      Create shared pointers for APVTSMediator
-    // ----------------------------------------------------------------------------------
+    deploymentThread = make_shared<DeploymentThread>();
+    apvtsMediatorThread =
+        make_unique<APVTSMediatorThread>(deploymentThread->CustomPresetData.get());
 
 
     //       give access to resources && run threads
     // ----------------------------------------------------------------------------------
-    if (std::strcmp(PROJECT_NAME, "NMFx_ThreeThreads") == 0) {
+    deploymentThread->startThreadUsingProvidedResources(
+            NMP2DPL_Event_Que.get(),
+            APVM2DPL_GuiParams_Que.get(),
+            DPL2NMP_GenerationEvent_Que.get(),
+            GUI2DPL_DroppedMidiFile_Que.get(),
+            realtimePlaybackInfo.get());
 
-        inputTensorPreparatorThread->startThreadUsingProvidedResources(
-            NMP2ITP_Event_Que.get(),
-            ITP2MDL_ModelInput_Que.get(),
-            APVM2ITP_GuiParams_Que.get(),
-            GUI2ITP_DroppedMidiFile_Que.get(),
-            realtimePlaybackInfo.get());
-        modelThread->startThreadUsingProvidedResources(
-            ITP2MDL_ModelInput_Que.get(),
-            MDL2PPP_ModelOutput_Que.get(),
-            APVM2MDL_GuiParams_Que.get(),
-            realtimePlaybackInfo.get());
-        playbackPreparatorThread->startThreadUsingProvidedResources(
-            MDL2PPP_ModelOutput_Que.get(),
-            PPP2NMP_GenerationEvent_Que.get(),
-            APVM2PPP_GuiParams_Que.get(),
-            realtimePlaybackInfo.get());
-    } else {
-        singleMidiThread->startThreadUsingProvidedResources(
-            NMP2ITP_Event_Que.get(),
-            APVM2ITP_GuiParams_Que.get(),
-            PPP2NMP_GenerationEvent_Que.get(),
-            GUI2ITP_DroppedMidiFile_Que.get(),
-            realtimePlaybackInfo.get());
-    }
 
-    // check if PROJECT_NAME is NMFx_ThreeThreads
-    if (std::strcmp(PROJECT_NAME, "NMFx_ThreeThreads") == 0) {
     // give access to resources && run threads
-        apvtsMediatorThread->startThreadUsingProvidedResources(
-            &apvts,
-            APVM2ITP_GuiParams_Que.get(),
-            APVM2MDL_GuiParams_Que.get(),
-            APVM2PPP_GuiParams_Que.get());
-    } else {
-        // give access to resources && run threads
-        apvtsMediatorThread->startThreadUsingProvidedResources(
-            &apvts,
-            APVM2ITP_GuiParams_Que.get(),
-            nullptr,
-            nullptr);
-    }
+    apvtsMediatorThread->startThreadUsingProvidedResources(
+        &apvts,
+        APVM2DPL_GuiParams_Que.get());
 
     /*
     if (JUCEApplicationBase::isStandaloneApp()) {
@@ -190,21 +127,11 @@ NeuralMidiFXPluginProcessor::~NeuralMidiFXPluginProcessor() {
         mVirtualMidiOutput = nullptr;
     }
 
-    if (std::strcmp(PROJECT_NAME, "NMFx_ThreeThreads") == 0) {
-
-        if (!modelThread->readyToStop) {
-                modelThread->prepareToStop();
-        }
-        if (!inputTensorPreparatorThread->readyToStop) {
-                inputTensorPreparatorThread->prepareToStop();
-        }
-        if (!playbackPreparatorThread->readyToStop) {
-                playbackPreparatorThread->prepareToStop();
-        }
-    } else {
-        if (!singleMidiThread->readyToStop) {
-                singleMidiThread->prepareToStop();
-        }
+    if (!deploymentThread->readyToStop) {
+        deploymentThread->prepareToStop();
+    }
+    if (!apvtsMediatorThread->readyToStop) {
+        apvtsMediatorThread->prepareToStop();
     }
 }
 
@@ -320,7 +247,7 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
 
                 auto frame_meta_data = EventFromHost {Pinfo, fs,
                                                       buffSize, true};
-                NMP2ITP_Event_Que->push(frame_meta_data);
+                NMP2DPL_Event_Que->push(frame_meta_data);
                 last_frame_meta_data = frame_meta_data;
                 incoming_messages_sequence = juce::MidiMessageSequence();
                 cout << "NMP sending empty message to GUI" << endl;
@@ -331,7 +258,7 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
                                                       buffSize, false};
                 if (print_start_stop_times) { PrintMessage("Stopped playing"); }
                 frame_meta_data.setPlaybackStoppedEvent();
-                NMP2ITP_Event_Que->push(frame_meta_data);
+                NMP2DPL_Event_Que->push(frame_meta_data);
                 last_frame_meta_data = frame_meta_data;     // reset last frame meta data
 
                 // clear playback sequence if playbackpolicy specifies so
@@ -352,10 +279,10 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
                     if (SendEventForNewBufferIfMetadataChanged_FLAG) {
                         if (frame_meta_data.getBufferMetaData() !=
                             last_frame_meta_data.getBufferMetaData()) {
-                            NMP2ITP_Event_Que->push(frame_meta_data);
+                            NMP2DPL_Event_Que->push(frame_meta_data);
                         }
                     } else {
-                        NMP2ITP_Event_Que->push(frame_meta_data);
+                        NMP2DPL_Event_Que->push(frame_meta_data);
                     }
                 }
 
@@ -415,7 +342,7 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
                 // check if new bar event exists && it is before the current midi event
                 if (NewBarEvent.has_value() && SendNewBarEvents_FLAG) {
                     if (midiEvent.Time().inSamples() >= NewBarEvent->Time().inSamples()) {
-                        NMP2ITP_Event_Que->push(*NewBarEvent);
+                        NMP2DPL_Event_Que->push(*NewBarEvent);
                         NewBarEvent = std::nullopt;
                     }
                 }
@@ -423,7 +350,7 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
                 // check if a specified number of whole notes has passed
                 if (NewTimeShiftEvent.has_value() && SendTimeShiftEvents_FLAG) {
                     if (midiEvent.Time().inSamples() >= NewTimeShiftEvent->Time().inSamples()) {
-                        NMP2ITP_Event_Que->push(*NewTimeShiftEvent);
+                        NMP2DPL_Event_Que->push(*NewTimeShiftEvent);
                         NewTimeShiftEvent = std::nullopt;
                     }
                 }
@@ -431,7 +358,7 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
                 if (midiEvent.isMidiMessageEvent()) {
                     if (midiEvent.isNoteOnEvent()) {
                         if (!FilterNoteOnEvents_FLAG) {
-                            NMP2ITP_Event_Que->push(midiEvent);
+                            NMP2DPL_Event_Que->push(midiEvent);
                         }
                         NoteOnOffReceived = true;
                         incoming_messages_sequence.addEvent(
@@ -443,7 +370,7 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
 
                     if (midiEvent.isNoteOffEvent()) {
                         if (!FilterNoteOffEvents_FLAG) {
-                            NMP2ITP_Event_Que->push(midiEvent);
+                            NMP2DPL_Event_Que->push(midiEvent);
                         }
                         NoteOnOffReceived = true;
                         incoming_messages_sequence.addEvent(
@@ -457,7 +384,7 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
                         NMP2GUI_IncomingMessageSequence->push(incoming_messages_sequence);
                     }
                     if (midiEvent.isCCEvent()) {
-                        if (!FilterCCEvents_FLAG) { NMP2ITP_Event_Que->push(midiEvent); }
+                        if (!FilterCCEvents_FLAG) { NMP2DPL_Event_Que->push(midiEvent); }
                     }
                 }
             }
@@ -465,11 +392,11 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
 
         // if there is a new bar event, && hasn't been sent yet, send it
         if (NewBarEvent.has_value() && SendNewBarEvents_FLAG) {
-            NMP2ITP_Event_Que->push(*NewBarEvent);
+            NMP2DPL_Event_Que->push(*NewBarEvent);
             NewBarEvent = std::nullopt;
         }
         if (NewTimeShiftEvent.has_value() && SendTimeShiftEvents_FLAG) {
-            NMP2ITP_Event_Que->push(*NewTimeShiftEvent);
+            NMP2DPL_Event_Que->push(*NewTimeShiftEvent);
             NewTimeShiftEvent = std::nullopt;
         }
     }
@@ -653,11 +580,11 @@ void NeuralMidiFXPluginProcessor::getStateInformation(juce::MemoryBlock &destDat
     copyXmlToBinary(*xml, destData);
 
     // generate and save the temp tensor
-//    auto tempTensor = singleMidiThread->CustomPresetData->tensors();
+//    auto tempTensor = deploymentThread->CustomPresetData->tensors();
 
     // save the tensor map
 //    cout << "Saving tensor map: " << endl;
-//    singleMidiThread->CustomPresetData->printTensorMap();
+//    deploymentThread->CustomPresetData->printTensorMap();
 //    save_tensor_map(tempTensor, filePath);
 
 }
@@ -676,10 +603,10 @@ void NeuralMidiFXPluginProcessor::setStateInformation(const void *data, int size
 //            cout << "Loading preset from: " << filePath << endl;
 //            auto tensormap = load_tensor_map(filePath.toStdString());
 
-//            singleMidiThread->CustomPresetData->copy_from_map(tensormap);
+//            deploymentThread->CustomPresetData->copy_from_map(tensormap);
 
 //            cout << "Loaded tensor map: " << endl;
-//            singleMidiThread->CustomPresetData->printTensorMap();
+//            deploymentThread->CustomPresetData->printTensorMap();
 
 
         }

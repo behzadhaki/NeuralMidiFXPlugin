@@ -4,9 +4,6 @@
 //#include <vector>
 #include <torch/torch.h>
 #include "../Includes/Configs_Model.h"
-#include "../DeploymentThreads/InputTensorPreparatorThread.h"
-#include "../DeploymentThreads/ModelThread.h"
-#include "../DeploymentThreads/PlaybackPreparatorThread.h"
 #include "../DeploymentThreads/DeploymentThread.h"
 #include "../Includes/APVTSMediatorThread.h"
 #include "../Includes/LockFreeQueue.h"
@@ -168,26 +165,19 @@ public:
     juce::AudioProcessorEditor* createEditor() override;
 
     // Queues
-    unique_ptr<LockFreeQueue<EventFromHost, queue_settings::NMP2ITP_que_size>> NMP2ITP_Event_Que;
-    unique_ptr<LockFreeQueue<ModelInput, queue_settings::ITP2MDL_que_size>> ITP2MDL_ModelInput_Que;
-    unique_ptr<LockFreeQueue<ModelOutput, queue_settings::MDL2PPP_que_size>> MDL2PPP_ModelOutput_Que;
-    unique_ptr<LockFreeQueue<GenerationEvent, queue_settings::PPP2NMP_que_size>> PPP2NMP_GenerationEvent_Que;
+    unique_ptr<LockFreeQueue<EventFromHost, queue_settings::NMP2DPL_que_size>> NMP2DPL_Event_Que;
+    unique_ptr<LockFreeQueue<GenerationEvent, queue_settings::DPL2NMP_que_size>> DPL2NMP_GenerationEvent_Que;
     unique_ptr<LockFreeQueue<juce::MidiMessageSequence, 32>> NMP2GUI_IncomingMessageSequence;
 
     // APVTS Queues
-    unique_ptr<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>> APVM2ITP_GuiParams_Que;
-    unique_ptr<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>> APVM2MDL_GuiParams_Que;
-    unique_ptr<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>> APVM2PPP_GuiParams_Que;
+    unique_ptr<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>> APVM2DPL_GuiParams_Que;
 
     // Drag/Drop Midi Queues
-    unique_ptr<LockFreeQueue<juce::MidiFile, 4>> GUI2ITP_DroppedMidiFile_Que;
-    unique_ptr<LockFreeQueue<juce::MidiFile, 4>> PPP2GUI_GenerationMidiFile_Que;
+    unique_ptr<LockFreeQueue<juce::MidiFile, 4>> GUI2DPL_DroppedMidiFile_Que;
+    unique_ptr<LockFreeQueue<juce::MidiFile, 4>> DPL2GUI_GenerationMidiFile_Que;
 
     // Threads used for generating patterns in the background
-    shared_ptr<InputTensorPreparatorThread> inputTensorPreparatorThread;
-    shared_ptr<ModelThread> modelThread;
-    shared_ptr<PlaybackPreparatorThread> playbackPreparatorThread;
-    shared_ptr<DeploymentThread> singleMidiThread;
+    shared_ptr<DeploymentThread> deploymentThread;
 
 
     // APVTS
@@ -214,9 +204,6 @@ public:
     // standalone
     unique_ptr<StandAloneParams> standAloneParams;
 
-    void saveAPVTSToFile(int preset_idx);
-    void loadAPVTSFromFile(int preset_idx);
-
 private:
     // =========  Queues for communicating Between the main threads in processor  ===============
 
@@ -240,7 +227,7 @@ private:
 
     // Gets DAW info and midi messages,
     // Wraps messages as Events
-    // then sends them to the InputTensorPreparatorThread via the NMP2ITP_Event_Que
+    // then sends them to the DeploymentThread via the NMP2DPL_Event_Que
     void sendReceivedInputsAsEvents(
             MidiBuffer &midiMessages, const Optional<AudioPlayHead::PositionInfo> &Pinfo,
             double fs,

@@ -50,7 +50,7 @@ add_subdirectory(Modules)
 
 if (${BUILD_JUCE_PROTOTYPE_EXAMPLES})
     #adding project folders:
-    add_subdirectory(NeuralMidiFXPlugin)
+    add_subdirectory(Deployment)
 endif()
 
 option(BUILD_UNIT_TESTS "Build JUCE prototype examples" ON)

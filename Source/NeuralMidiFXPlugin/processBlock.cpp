@@ -49,10 +49,10 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     generationsToDisplay.setQpm(   *Pinfo->getBpm());
     generationsToDisplay.playhead_pos = *Pinfo->getPpqPosition();
 
-    // check if any events are received from the PPP thread
-    if (PPP2NMP_GenerationEvent_Que->getNumReady() > 0)
+    // check if any events are received from the DPL thread
+    if (DPL2NMP_GenerationEvent_Que->getNumReady() > 0)
     {
-        event = PPP2NMP_GenerationEvent_Que->pop();
+        event = DPL2NMP_GenerationEvent_Que->pop();
         generationsToDisplay.policy = playbackPolicies;
         // update midi message sequence if new one arrived
         if (event->IsNewPlaybackSequence())
@@ -89,7 +89,7 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                                 *Pinfo->getTimeInSeconds(),
                                 *Pinfo->getPpqPosition()};
 
-        // Send received events from host to ITP thread
+        // Send received events from host to DPL thread
         sendReceivedInputsAsEvents(midiMessages, Pinfo, fs, buffSize);
 
         // retry sending time anchor to GUI if mutex was locked last time

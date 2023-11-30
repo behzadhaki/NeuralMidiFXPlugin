@@ -4,7 +4,6 @@
 // ===         Refer to:
 // https://neuralmidifx.github.io/DeploymentStages/????
 // ===================================================================================
-
 std::pair<bool, bool>
     DeploymentThread::deploy(
         std::optional<MidiFileEvent> & new_midi_event_dragdrop,

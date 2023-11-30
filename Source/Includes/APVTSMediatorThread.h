@@ -5,7 +5,7 @@
 #pragma once
 
 #include "shared_plugin_helpers/shared_plugin_helpers.h"
-#include "../../NeuralMidiFXPlugin/Configs_HostEvents.h"
+#include "../../Deployment/Configs_HostEvents.h"
 #include "GuiParameters.h"
 #include "LockFreeQueue.h"
 
@@ -40,7 +40,7 @@ public:
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 1 . Construct
     // ------------------------------------------------------------------------------------------------------------
-    APVTSMediatorThread(CustomPresetDataDictionary *prst) :
+    explicit APVTSMediatorThread(CustomPresetDataDictionary *prst) :
         juce::Thread("APVTSMediatorThread"), CustomPresetData(prst) {}
 
     // ------------------------------------------------------------------------------------------------------------
@@ -48,15 +48,11 @@ public:
     // ------------------------------------------------------------------------------------------------------------
     void startThreadUsingProvidedResources(
             juce::AudioProcessorValueTreeState *APVTSPntr_,
-            LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2ITP_GuiParams_QuePntr_,
-            LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2MDL_GuiParams_QuePntr_,
-            LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2PPP_GuiParams_QuePntr_) {
+            LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2DPL_GuiParams_QuePntr_) {
 
         // Resources Provided from NMP
         APVTSPntr = APVTSPntr_;
-        APVM2ITP_GuiParams_QuePntr = APVM2ITP_GuiParams_QuePntr_;
-        APVM2MDL_GuiParams_QuePntr = APVM2MDL_GuiParams_QuePntr_;
-        APVM2PPP_GuiParams_QuePntr = APVM2PPP_GuiParams_QuePntr_;
+        APVM2DPL_GuiParams_QuePntr = APVM2DPL_GuiParams_QuePntr_;
 
         guiParamsPntr = make_unique<GuiParams>(APVTSPntr_);
         // Get UIObjects in settings.h
@@ -80,15 +76,8 @@ public:
         while (!bExit) {
             if (APVTSPntr != nullptr) {
                 if (guiParamsPntr->update(APVTSPntr)) {
-                    // guiParamsPntr->print();
-                    if (APVM2ITP_GuiParams_QuePntr != nullptr) {
-                        APVM2ITP_GuiParams_QuePntr->push(*guiParamsPntr);
-                    }
-                    if (APVM2MDL_GuiParams_QuePntr != nullptr) {
-                        APVM2MDL_GuiParams_QuePntr->push(*guiParamsPntr);
-                    }
-                    if (APVM2PPP_GuiParams_QuePntr != nullptr) {
-                        APVM2PPP_GuiParams_QuePntr->push(*guiParamsPntr);
+                    if (APVM2DPL_GuiParams_QuePntr != nullptr) {
+                        APVM2DPL_GuiParams_QuePntr->push(*guiParamsPntr);
                     }
                 }
 
@@ -170,18 +159,9 @@ private:
     // ============================================================================================================
     // ===          Output Queues for Receiving/Sending Data
     // ============================================================================================================
-    LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2ITP_GuiParams_QuePntr{nullptr};
-    LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2MDL_GuiParams_QuePntr{nullptr};
-    LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2PPP_GuiParams_QuePntr{nullptr};
+    LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2DPL_GuiParams_QuePntr{nullptr};
 
     unique_ptr<GuiParams> guiParamsPntr;
-
-//    // ============================================================================================================
-//    // ===          pointer to NeuralMidiFXPluginProcessor
-//    // ============================================================================================================
-//    InputTensorPreparatorThread *inputThread{nullptr};
-//    ModelThread *modelThread{nullptr};
-//    PlaybackPreparatorThread *playbackPreparatorThread{nullptr};
 
     // ============================================================================================================
     // ===          Pointer to APVTS hosted in the Main Processor

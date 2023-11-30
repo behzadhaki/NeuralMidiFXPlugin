@@ -1,2 +1,0 @@
-add_subdirectory(NeuralMidiFXPlugin_ThreeThreads)
-add_subdirectory(NeuralMidiFXPlugin_SingleThread)
