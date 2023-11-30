@@ -23,7 +23,7 @@ inline std::string stripQuotes(const std::string &input) {
     return input;
 }
 
-inline torch::jit::Module load_processing_script(std::string script_name) {
+inline torch::jit::Module load_processing_script(const std::string& script_name) {
     std::string script_path = stripQuotes(std::string(default_processing_scripts_path)) +
                               std::string(path_separator) +
                               script_name;
@@ -53,19 +53,19 @@ inline void save_tensor_map(const std::map<std::string, torch::Tensor>& m, const
         const torch::Tensor& t = pair.second;
 
         // Write the key
-        size_t key_size = key.size();
+        auto key_size = (long long) key.size();
         out_file.write(reinterpret_cast<const char*>(&key_size), sizeof(key_size));
         out_file.write(key.c_str(), key_size);
 
         // Write tensor metadata
         const at::IntArrayRef& sizes = t.sizes();
-        int64_t nb_dims = sizes.size();
+        auto nb_dims = (int64_t) sizes.size();
         out_file.write(reinterpret_cast<const char*>(&nb_dims), sizeof(nb_dims));
         for (int64_t size : sizes) {
             out_file.write(reinterpret_cast<const char*>(&size), sizeof(int64_t));
         }
 
-        int64_t scalar_type = static_cast<int64_t>(t.scalar_type());
+        auto scalar_type = static_cast<int64_t>(t.scalar_type());
         out_file.write(reinterpret_cast<const char*>(&scalar_type), sizeof(scalar_type));
 
         int64_t elem_size = t.element_size();
@@ -76,6 +76,7 @@ inline void save_tensor_map(const std::map<std::string, torch::Tensor>& m, const
 
         // Write tensor data
         out_file.write(reinterpret_cast<const char*>(t.data_ptr()), elem_size * num_el);
+
     }
 
     out_file.close();
@@ -92,7 +93,7 @@ inline std::map<std::string, torch::Tensor> load_tensor_map(const std::string& f
         size_t key_size;
         in_file.read(reinterpret_cast<char*>(&key_size), sizeof(key_size));
         std::string key(key_size, '\0');
-        in_file.read(&key[0], key_size);
+        in_file.read(&key[0], (long long) key_size);
 
         // Read tensor metadata
         int64_t nb_dims;
@@ -126,52 +127,67 @@ inline std::map<std::string, torch::Tensor> load_tensor_map(const std::string& f
 
 #include <mutex>
 
-class TensorMap {
+class CustomPresetDataDictionary
+{
 private:
     std::map<std::string, torch::Tensor> tensorMap;
     std::map<std::string, bool> changeFlags;  // Track changes for each key
     mutable std::mutex mutex;
-
+    bool changed = false;
 public:
-    TensorMap() = default;
+    CustomPresetDataDictionary() = default;
 
+    std::vector<std::string> keys() {
+        std::lock_guard<std::mutex> lock(mutex);
+        std::vector<std::string> keys;
+        for (const auto& pair : tensorMap) {
+            keys.push_back(pair.first);
+        }
+        return keys;
+    }
 
+    std::vector<torch::Tensor> values() {
+        std::lock_guard<std::mutex> lock(mutex);
+        std::vector<torch::Tensor> values;
+        for (const auto& pair : tensorMap) {
+            values.push_back(pair.second);
+        }
+        return values;
+    }
+
+    std::vector<std::pair<std::string, torch::Tensor>> items() {
+        std::lock_guard<std::mutex> lock(mutex);
+        std::vector<std::pair<std::string, torch::Tensor>> items;
+        for (const auto& pair : tensorMap) {
+            items.emplace_back(pair);
+        }
+        return items;
+    }
 
     // Method to update the map (thread-safe)
-    void updateTensorData(const std::string& tensorLabel, const torch::Tensor& tensor) {
+    void tensor(const std::string& tensorLabel, const torch::Tensor& tensor) {
         std::lock_guard<std::mutex> lock(mutex);
         tensorMap[tensorLabel] = tensor;
-        changeFlags[tensorLabel] = true;  // Mark this key as changed
+        // changeFlags[tensorLabel] = true;  // Mark this key as changed
     }
 
     // Get tensorData by label and reset the change flag for that key
-    std::optional<torch::Tensor> getTensorData(const std::string& tensorLabel) {
+    // returns  nullopt if the key is not found
+    std::optional<torch::Tensor> tensor(const std::string& tensorLabel) {
         std::lock_guard<std::mutex> lock(mutex);
         auto it = tensorMap.find(tensorLabel);
         if (it != tensorMap.end()) {
             changeFlags[tensorLabel] = false;  // Reset the flag for this key
             return it->second;
         }
+        cout << "CustomPresetDataDictionary::tensor: Tensor with label " << tensorLabel << " not found" << endl;
         return std::nullopt;
-    }
-
-    // Method to check if the content for a specific key has changed
-    bool hasTensorDataChanged(const std::string& tensorLabel) {
-        std::lock_guard<std::mutex> lock(mutex);
-        auto it = changeFlags.find(tensorLabel);
-        if (it != changeFlags.end()) {
-            return it->second;
-        }
-        return false;
     }
 
     // Method to check if the content for any of the keys has changed
     bool hasTensorDataChanged() {
         std::lock_guard<std::mutex> lock(mutex);
-        for (const auto& pair : changeFlags) {
-            if (pair.second) return true;
-        }
-        return false;
+        return std::any_of(changeFlags.begin(), changeFlags.end(), [](const auto& pair) { return pair.second; });
     }
 
     // Method to access the map (thread-safe)
@@ -181,19 +197,24 @@ public:
     }
 
     // Method to get the map (thread-safe)
-    std::map<std::string, torch::Tensor> getTensorMap() {
+    std::map<std::string, torch::Tensor> tensors() {
         std::lock_guard<std::mutex> lock(mutex);
+        // Reset all change flags
+        for (auto& pair : changeFlags) {
+            pair.second = false;
+        }
         return tensorMap;
     }
 
     // update content from a map<string, tensor> (thread-safe)
-    void updateTensorMap(const std::map<std::string, torch::Tensor>& m) {
+    void copy_from_map(const std::map<std::string, torch::Tensor>& m) {
         std::lock_guard<std::mutex> lock(mutex);
         tensorMap = m;
         for (const auto& pair : m) {
             const std::string& key = pair.first;
             changeFlags[key] = true;  // Mark all keys as changed
         }
+        changed = true;
     }
 
     // Print the map (thread-safe)
@@ -202,13 +223,13 @@ public:
         for (const auto& pair : tensorMap) {
             const std::string& key = pair.first;
             const torch::Tensor& t = pair.second;
-            std::cout << key << ": " << t << std::endl;
+            std::cout << key << ": Tensor Dim:" << t.dim() << " Size: " << t.sizes() <<
+            " Type: " << t.scalar_type() << "Min: " << t.min() << " Max: " << t.max() << "Mean: " << t.mean() << std::endl;
         }
     }
 
-    // compare two maps
-    bool operator==(TensorMap other)
-    {
+    // compare two CustomPresetDataDictionary
+    bool operator==(CustomPresetDataDictionary other) {
         printTensorMap();
         other.printTensorMap();
 
@@ -237,18 +258,20 @@ public:
     }
 
     // copy constructor
-    TensorMap(const TensorMap& other) {
+    CustomPresetDataDictionary(const CustomPresetDataDictionary& other) {
         std::lock_guard<std::mutex> lock(other.mutex);
         tensorMap = other.tensorMap;
         changeFlags = other.changeFlags;
+        changed = true;
     }
 
     // copy assignment operator
-    TensorMap& operator=(const TensorMap& other) {
+    CustomPresetDataDictionary& operator=(const CustomPresetDataDictionary& other) {
         std::lock_guard<std::mutex> lock(mutex);
         std::lock_guard<std::mutex> lock2(other.mutex);
         tensorMap = other.tensorMap;
         changeFlags = other.changeFlags;
+        changed = true;
         return *this;
     }
 };

@@ -40,7 +40,8 @@ public:
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 1 . Construct
     // ------------------------------------------------------------------------------------------------------------
-    APVTSMediatorThread() : juce::Thread("APVTSMediatorThread") {}
+    APVTSMediatorThread(CustomPresetDataDictionary *prst) :
+        juce::Thread("APVTSMediatorThread"), CustomPresetData(prst) {}
 
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 2 . give access to resources needed to communicate with other threads
@@ -74,6 +75,8 @@ public:
         // notify if the thread is still running
         bool bExit = threadShouldExit();
 
+        // check selected preset
+        int prev_selectedPreset = -1;
         while (!bExit) {
             if (APVTSPntr != nullptr) {
                 if (guiParamsPntr->update(APVTSPntr)) {
@@ -89,15 +92,59 @@ public:
                     }
                 }
 
+                // check if selected preset has changed
+                auto selectedPreset = (int) *APVTSPntr->getRawParameterValue(label2ParamID("Preset"));
+                if (selectedPreset != prev_selectedPreset) {
+                    // if selected preset has changed, send a message to the deployment thread
+                    // to load the new preset
+                    prev_selectedPreset = selectedPreset;
+
+                    load_preset(selectedPreset);
+
+                }
+
                 bExit = threadShouldExit();
 
                 // avoid burning CPU, if reading is returning immediately
                 sleep(thread_configurations::APVTSMediatorThread::waitTimeBtnIters);
             }
         }
+
+
     }
     // ============================================================================================================
+    void load_preset(const int preset_idx) {
+        // XML file paths
+        std::string fp = stripQuotes(default_preset_dir) + path_separator + std::to_string(preset_idx) + ".apvts";
+        std::string fp_data = stripQuotes(default_preset_dir) + path_separator + std::to_string(preset_idx) + ".preset_data";
 
+        // Step 1: Read the XML from the file
+        auto xml = juce::XmlDocument::parse(juce::File(fp));
+
+        // Step 2: Get the ValueTree from the XML
+        if (xml != nullptr)
+        {
+            juce::ValueTree xmlState = juce::ValueTree::fromXml(*xml);
+
+            if (xml->hasTagName(APVTSPntr->state.getType()))
+            {
+                APVTSPntr->replaceState(juce::ValueTree::fromXml(*xml));
+
+                auto filePath = xml->getStringAttribute("filePath");
+                // Handle the file path as needed
+
+                // cout << "Loading preset from: " << filePath << endl;
+                auto tensormap = load_tensor_map(filePath.toStdString());
+
+                CustomPresetData->copy_from_map(tensormap);
+
+                // cout << "Loaded tensor map: [x1] = " << *CustomPresetData->tensor("x1") << endl;
+                CustomPresetData->printTensorMap();
+            }
+
+        }
+
+}
 
     // ============================================================================================================
     // ===          Preparing Thread for Stopping
@@ -118,6 +165,7 @@ public:
     }
 
 private:
+    CustomPresetDataDictionary *CustomPresetData;
 
     // ============================================================================================================
     // ===          Output Queues for Receiving/Sending Data

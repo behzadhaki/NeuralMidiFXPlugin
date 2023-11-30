@@ -29,7 +29,9 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
     tabs (juce::TabbedButtonBar::Orientation::TabsAtTop)
 {
     NeuralMidiFXPluginProcessorPointer_ = &NeuralMidiFXPluginProcessorPointer;
-    presetManagerWidget = std::make_unique<PresetTableComponent>(NeuralMidiFXPluginProcessorPointer.apvts);
+    presetManagerWidget = std::make_unique<PresetTableComponent>(
+        NeuralMidiFXPluginProcessorPointer.apvts,
+        NeuralMidiFXPluginProcessorPointer.singleMidiThread->CustomPresetData.get());
 
     // Set window sizes
     setResizable (true, true);

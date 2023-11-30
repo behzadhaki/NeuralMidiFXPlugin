@@ -48,6 +48,8 @@ public:
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> denominatorSliderAttachment;
     unique_ptr<PresetTableComponent> presetManagerWidget;
 
+    void saveAPVTSToFile(int preset_idx);
+    void loadAPVTSFromFile(int preset_idx);
 private:
     NeuralMidiFXPluginProcessor* NeuralMidiFXPluginProcessorPointer_;
     tab_tuple currentTab;

@@ -10,20 +10,27 @@ class PresetTableComponent : public juce::Component,
                              private juce::Slider::Listener
 {
 public:
-    explicit PresetTableComponent(juce::AudioProcessorValueTreeState& apvts_) : apvts(apvts_)
+    explicit PresetTableComponent(juce::AudioProcessorValueTreeState& apvts_,
+                                  CustomPresetDataDictionary *prst) : apvts(apvts_), CustomPresetData(prst)
     {
+
         // Initialize the tables
         for (auto& table : presetTables) {
             initializeTable(table);
             addAndMakeVisible(table);
         }
-        currentPresetSlider.setValue(0);
+
+        // attach the slider listener
+        currentPresetSlider.addListener(this);
         currentPresetSliderAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-            apvts, label2ParamID("presetParam"), currentPresetSlider);
+            apvts, label2ParamID("Preset"), currentPresetSlider);
+
+//        presetTables[0].selectRow(int(currentPresetSlider.getValue() - 1) );
+//        selectedRowsChanged(int(currentPresetSlider.getValue()- 1));
 
         // Add and configure Save and Rename buttons
         saveButton.setButtonText("Save");
-        saveButton.onClick = [this] { savePreset(); };
+        saveButton.onClick = [this] { renamePreset(); savePreset(); };
         addAndMakeVisible(saveButton);
 
 
@@ -38,16 +45,27 @@ public:
 
         loadPresetNames();
 
-        saveButton.onClick = [this] { renamePreset(); savePreset(); };
 
-        // attach the slider listener
-        currentPresetSlider.addListener(this);
+
     }
 
     void paint(juce::Graphics& g) override
     {
         // make background light grey
         presetTables[0].setColour(juce::ListBox::backgroundColourId, juce::Colours::lightgrey);
+
+    }
+
+    void paintRowBackground(juce::Graphics& g, int rowNumber, int /*width*/, int /*height*/, bool rowIsSelected) override
+    {
+        if (rowIsSelected)
+            g.fillAll(juce::Colours::lightblue);
+    }
+
+    void paintCell(juce::Graphics& g, int rowNumber, int columnId, int width, int height, bool /*rowIsSelected*/) override
+    {
+        g.setColour(juce::Colours::black);
+        g.drawText(presetNames[rowNumber], 2, 0, width - 4, height, juce::Justification::centredLeft, true);
     }
 
     ~PresetTableComponent() override = default;
@@ -74,15 +92,20 @@ public:
     // Override to handle row selection changes
     void selectedRowsChanged(int lastRowSelected) override
     {
-        cout << "Selected row changed to " << lastRowSelected << endl;
         if (lastRowSelected >= 0 && lastRowSelected < presetNames.size())
         {
-            if (lastRowSelected != (currentPresetSlider.getValue() - 1)) {
+            if ((lastRowSelected != (currentPresetSlider.getValue() - 1)) || startUp) {
                 currentPresetSlider.setValue(lastRowSelected);
+                presetTables[0].selectRow(lastRowSelected);
+                startUp = false;
             }
+
+
+
             presetNameEditor.setText(presetNames[lastRowSelected], juce::dontSendNotification);
             currentPresetSlider.setValue(lastRowSelected + 1);
         }
+        repaint();
 
     }
 
@@ -103,7 +126,6 @@ public:
 
         if (presetNamesFile.existsAsFile())
         {
-            cout << "Loading preset names from file" << endl;
             presetNames.clear();
             presetNamesFile.readLines(presetNames);
         }
@@ -114,7 +136,7 @@ public:
         // Add a single column
         table.getHeader().addColumn("Preset", 1, 100);
 
-        // Set up table properties
+        // Set up table propertie
         table.setModel(this);
         table.setColour(juce::ListBox::outlineColourId, juce::Colours::grey);
         table.setOutlineThickness(1);
@@ -132,26 +154,27 @@ public:
         return presetNames.size();
     }
 
-    void paintRowBackground(juce::Graphics& g, int rowNumber, int /*width*/, int /*height*/, bool rowIsSelected) override
-    {
-        if (rowIsSelected)
-            g.fillAll(juce::Colours::lightblue);
-    }
 
-    void paintCell(juce::Graphics& g, int rowNumber, int columnId, int width, int height, bool /*rowIsSelected*/) override
-    {
-        g.setColour(juce::Colours::black);
-        g.drawText(presetNames[rowNumber], 2, 0, width - 4, height, juce::Justification::centredLeft, true);
-    }
 
     void savePreset()
     {
-        // Implement the logic to save the selected preset
-    }
+        // Step 1: Get the ValueTree from APVTS
+        auto state = apvts.copyState();
 
-    void getSelectedPreset() {
-        // Implement the logic to get the selected preset
+        // Step 2: Serialize the ValueTree to XML
+        std::unique_ptr<juce::XmlElement> xml(state.createXml());
 
+        // Step 3: Write the XML to the file
+        auto preset_idx = (int) currentPresetSlider.getValue();
+        std::string fp = stripQuotes(default_preset_dir) + path_separator + std::to_string(preset_idx) + ".apvts";
+        std::string fp_data = std::to_string(preset_idx) + ".preset_data";
+
+        // Step 4: Add the file path as an attribute
+        xml->setAttribute("filePath", fp_data); // Add the file path as an attribute
+
+        // save to files
+        save_tensor_map(CustomPresetData->tensors(), fp_data);
+        xml->writeTo(juce::File(fp), {}); // Write the XML to the file
     }
 
     void renamePreset()
@@ -171,7 +194,6 @@ public:
     // listen to slider changes
     void sliderValueChanged(juce::Slider* slider) override {
         if (slider == &currentPresetSlider) {
-            cout << "currentPresetSlider value changed from " << currentPresetSlider.getValue() -1 << " to " << slider->getValue() << endl;
             auto selectedRow = (int) currentPresetSlider.getValue() -1 ;
             if (true) {
                 presetNameEditor.setText(presetNames[selectedRow], juce::dontSendNotification);
@@ -184,6 +206,9 @@ public:
     }
 
 private:
+    // used for saving presets only - Initialized in deployment thread
+    CustomPresetDataDictionary *CustomPresetData;
+
     std::array<juce::TableListBox, 1> presetTables;
     juce::StringArray presetNames;
     juce::TextButton saveButton;
@@ -192,5 +217,6 @@ private:
     juce::Slider currentPresetSlider;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> currentPresetSliderAttachment;
 
+    bool startUp = true;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PresetTableComponent)
 };

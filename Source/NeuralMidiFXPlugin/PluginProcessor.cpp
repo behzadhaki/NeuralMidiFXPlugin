@@ -78,11 +78,13 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
         playbackPreparatorThread = make_shared<PlaybackPreparatorThread>();
     } else { // single thread mode
         singleMidiThread = make_shared<DeploymentThread>();
+        apvtsMediatorThread =
+            make_unique<APVTSMediatorThread>(singleMidiThread->CustomPresetData.get());
     }
 
     //      Create shared pointers for APVTSMediator
     // ----------------------------------------------------------------------------------
-    apvtsMediatorThread = make_unique<APVTSMediatorThread>();
+
 
     //       give access to resources && run threads
     // ----------------------------------------------------------------------------------
@@ -622,7 +624,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
     // add preset parameter
     layout.add(
         std::make_unique<juce::AudioParameterInt>(
-            juce::ParameterID(label2ParamID("presetParam"), version_hint),
+            juce::ParameterID(label2ParamID("Preset"), version_hint),
             "Preset", 1, 100, 0));
 
     return layout;
@@ -647,16 +649,17 @@ void NeuralMidiFXPluginProcessor::getStateInformation(juce::MemoryBlock &destDat
     // Generate and save the file path
     auto filePath = generateTempFileName();
     xml->setAttribute("filePath", filePath); // Add the file path as an attribute
-    cout << "Saving preset to: " << filePath << endl;
+//    cout << "Saving preset to: " << filePath << endl;
     copyXmlToBinary(*xml, destData);
 
     // generate and save the temp tensor
-    auto tempTensor = singleMidiThread->TensorPresetTracker.getTensorMap();
+//    auto tempTensor = singleMidiThread->CustomPresetData->tensors();
 
     // save the tensor map
-    cout << "Saving tensor map: " << endl;
-    singleMidiThread->TensorPresetTracker.printTensorMap();
-    save_tensor_map(tempTensor, filePath);
+//    cout << "Saving tensor map: " << endl;
+//    singleMidiThread->CustomPresetData->printTensorMap();
+//    save_tensor_map(tempTensor, filePath);
+
 }
 
 void NeuralMidiFXPluginProcessor::setStateInformation(const void *data, int sizeInBytes) {
@@ -670,23 +673,23 @@ void NeuralMidiFXPluginProcessor::setStateInformation(const void *data, int size
              auto filePath = xmlState->getStringAttribute("filePath");
             // Handle the file path as needed
 
-            cout << "Loading preset from: " << filePath << endl;
-            auto tensormap = load_tensor_map(filePath.toStdString());
+//            cout << "Loading preset from: " << filePath << endl;
+//            auto tensormap = load_tensor_map(filePath.toStdString());
 
-            singleMidiThread->TensorPresetTracker.updateTensorMap(tensormap);
+//            singleMidiThread->CustomPresetData->copy_from_map(tensormap);
 
-            cout << "Loaded tensor map: " << endl;
-            singleMidiThread->TensorPresetTracker.printTensorMap();
+//            cout << "Loaded tensor map: " << endl;
+//            singleMidiThread->CustomPresetData->printTensorMap();
 
 
         }
 
-        // scope lock mutex singleMidiThread->preset_loaded_mutex
-        std::lock_guard<std::mutex> lock(singleMidiThread->preset_loaded_mutex);
-        singleMidiThread->newPresetLoaded = true;
+
     }
 
+
 }
+
 
 
 

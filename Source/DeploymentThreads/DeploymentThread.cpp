@@ -4,7 +4,9 @@
 
 #include "DeploymentThread.h"
 
-DeploymentThread::DeploymentThread(): juce::Thread("BackgroundDPLThread") {}
+DeploymentThread::DeploymentThread(): juce::Thread("BackgroundDPLThread") {
+    CustomPresetData = make_unique<CustomPresetDataDictionary>();
+}
 
 void DeploymentThread::startThreadUsingProvidedResources(
     LockFreeQueue<EventFromHost, queue_settings::NMP2ITP_que_size> *NMP2DPL_Event_Que_ptr_,
@@ -13,6 +15,8 @@ void DeploymentThread::startThreadUsingProvidedResources(
     LockFreeQueue<juce::MidiFile, 4>* GUI2DPL_DroppedMidiFile_Que_ptr_,
     RealTimePlaybackInfo *realtimePlaybackInfo_ptr_)
 {
+
+
     NMP2DPL_Event_Que_ptr = NMP2DPL_Event_Que_ptr_;
     APVM2NMD_Parameters_Que_ptr = APVM2NMD_Parameters_Que_ptr_;
     DPL2NMP_GenerationEvent_Que_ptr = DPL2NMP_GenerationEvent_Que_ptr_;
@@ -87,11 +91,7 @@ void DeploymentThread::run() {
 
         // scope lock mutex singleMidiThread->preset_loaded_mutex
         // try to lock mutex, if not possible, skip the rest of the loop
-        bool newPresAvail = false;
-        if (preset_loaded_mutex.try_lock()) {
-            newPresAvail = newPresetLoaded;
-            preset_loaded_mutex.unlock();
-        }
+        bool newPresAvail = CustomPresetData->hasTensorDataChanged();
 
         if (new_event_from_DAW.has_value() || gui_params.changed() || newPresAvail) {
             new_midi_event_dropped_manually = std::nullopt;

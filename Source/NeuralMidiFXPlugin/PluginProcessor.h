@@ -214,6 +214,9 @@ public:
     // standalone
     unique_ptr<StandAloneParams> standAloneParams;
 
+    void saveAPVTSToFile(int preset_idx);
+    void loadAPVTSFromFile(int preset_idx);
+
 private:
     // =========  Queues for communicating Between the main threads in processor  ===============
 

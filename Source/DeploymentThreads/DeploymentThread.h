@@ -61,9 +61,10 @@ public:
     // ============================================================================================================
     // ===          User Customizable Struct
     // ============================================================================================================
-    TensorMap TensorPresetTracker; // data stored here will be saved automatically when the plugin is saved/loaded/preset changed
-    mutable std::mutex  preset_loaded_mutex;
-    bool newPresetLoaded{false};
+    unique_ptr<CustomPresetDataDictionary>
+        CustomPresetData; // data stored here will be saved automatically when the plugin is saved/loaded/preset changed
+//    mutable std::mutex  preset_loaded_mutex;
+//    bool newPresetLoaded{false};
 
 private:
     // ============================================================================================================
