@@ -1008,16 +1008,16 @@ private:
 
         noteInfo = pitch_class_to_name[pitch_class] + juce::String(octave);
         noteInfo += " (" + juce::String(noteNumber) + ")";
-        noteInfo += " | Start time: " + juce::String(start_time);
-        noteInfo += " | Velocity: " + juce::String(velocity);
+        noteInfo += " | t: " + juce::String(start_time);
+        noteInfo += " | Vel: " + juce::String(velocity);
         if (!isHangingNoteOff && !isHangingNoteOn) {
-            noteInfo += " | Duration: " + juce::String(duration);
+            noteInfo += " | Dur: " + juce::String(duration);
         } else if (isHangingNoteOn) {
             noteInfo += " | Note On";
         } else if (isHangingNoteOff) {
             noteInfo += " | Note Off";
         } else {
-            noteInfo += " | Both Note On and Note Off --> ERROR";
+            noteInfo += " | Unknown";
         }
     }
 };
@@ -1142,10 +1142,14 @@ private:
 };
 
 class MidiVisualizer: public juce::Component {
+
 public:
-    MidiVisualizer(bool needsPlayhead_) {
+    bool AllowToDragInMidi{true};
+    bool AllowToDragOutAsMidi{true};
+
+    MidiVisualizer(bool needsPlayhead_, string label = "MidiVisualizer") {
         needsPlayhead = needsPlayhead_;
-        noteInfoLabel.setFont(8.0f);
+        noteInfoLabel.setFont(10);
         pianoRollComponent.noteInfoLabel = &noteInfoLabel;
         addAndMakeVisible(playheadVisualizer);
         addAndMakeVisible(pianoRollComponent);
@@ -1206,6 +1210,7 @@ public:
     void paint(juce::Graphics& g) override {
         g.fillAll(juce::Colours::black);
     }
+
 private:
     PlayheadVisualizer playheadVisualizer;
     PianoRollComponent pianoRollComponent;

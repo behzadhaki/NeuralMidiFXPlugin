@@ -6,7 +6,7 @@
 
 
 #include "GuiParameters.h"
-
+#include "MidiDisplayWidget.h"
 
 using namespace std;
 
@@ -23,6 +23,8 @@ public:
         buttonsList = std::get<3>(tabTuple);
         hslidersList = std::get<4>(tabTuple);
         comboBoxesList = std::get<5>(tabTuple);
+        midiDisplayList = std::get<6>(tabTuple);
+        cout << "midiDisplayList.size(): " << midiDisplayList.size() << endl;
 
         numButtons = buttonsList.size();
     }
@@ -112,6 +114,14 @@ public:
             addAndMakeVisible(comboBoxLabelArray.getLast());
         }
 
+        for (const auto &midiDisplayTuple: midiDisplayList) {
+            MidiVisualizer *newMidiVisualizer = generateMidiVisualizer(midiDisplayTuple);
+            midiDisplayTopLeftCorners.emplace_back(std::get<4>(midiDisplayTuple));
+            midiDisplayBottomRightCorners.emplace_back(std::get<5>(midiDisplayTuple));
+            midiDisplayArray.add(newMidiVisualizer);
+            addAndMakeVisible(newMidiVisualizer);
+        }
+
     }
 
     void resizeGuiElements(juce::Rectangle<int> area) {
@@ -140,6 +150,9 @@ public:
 
          // ComboBoxes
          resizeComboBoxes();
+
+         // MidiDisplays
+         resizeMidiDisplays();
 
          repaint();
     }
@@ -231,11 +244,12 @@ private:
     juce::OwnedArray<juce::ComboBox> comboBoxArray;
     juce::OwnedArray<juce::Label> comboBoxLabelArray;
 
+    juce::OwnedArray<MidiVisualizer> midiDisplayArray;
+
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>> sliderAttachmentArray;
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>> rotaryAttachmentArray;
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment>> buttonAttachmentArray;
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment>> comboBoxAttachmentArray;
-
 
     std::vector<std::string> sliderTopLeftCorners;
     std::vector<std::string> sliderBottomRightCorners;
@@ -245,6 +259,8 @@ private:
     std::vector<std::string> buttonBottomRightCorners;
     std::vector<std::string> comboBoxTopLeftCorners;
     std::vector<std::string> comboBoxBottomRightCorners;
+    std::vector<std::string> midiDisplayTopLeftCorners;
+    std::vector<std::string> midiDisplayBottomRightCorners;
 
     std::vector<std::tuple<float, float, float, float, string, string>> componentBorders;
 
@@ -269,6 +285,7 @@ private:
     button_list buttonsList;
     hslider_list hslidersList;
     comboBox_list comboBoxesList;
+    midiDisplay_list midiDisplayList;
 
     size_t numButtons;
 
@@ -367,6 +384,19 @@ private:
         }
 
         return newComboBox;
+    }
+
+    MidiVisualizer *generateMidiVisualizer(midiDisplay_tuple midiDisplayTuple) {
+        auto label = std::get<0>(midiDisplayTuple);
+        auto allowToDragOutAsMidiFile = std::get<1>(midiDisplayTuple);
+        auto allowToDragInMidiFile = std::get<2>(midiDisplayTuple);
+        auto needsPlayhead = std::get<3>(midiDisplayTuple);
+
+        auto *newMidiVisualizer = new MidiVisualizer{needsPlayhead, label};
+        newMidiVisualizer->AllowToDragInMidi = allowToDragInMidiFile;
+        newMidiVisualizer->AllowToDragOutAsMidi = allowToDragOutAsMidiFile;
+
+        return newMidiVisualizer;
     }
 
     void resizeSliders() {
@@ -491,6 +521,37 @@ private:
             }
 
             comboBox_ix++;
+        }
+    }
+
+    void resizeMidiDisplays() {
+        int midiDisplay_ix = 0;
+        for (auto *comp: midiDisplayArray) {
+            auto [topLeftX, topLeftY] = coordinatesFromString(midiDisplayTopLeftCorners[midiDisplay_ix]);
+            auto [bottomRightX, bottomRightY] = coordinatesFromString(midiDisplayBottomRightCorners[midiDisplay_ix]);
+            cout << "topLeftX: " << topLeftX << endl;
+            cout << "topLeftY: " << topLeftY << endl;
+            cout << "bottomRightX: " << bottomRightX << endl;
+            cout << "bottomRightY: " << bottomRightY << endl;
+
+            auto area = getLocalBounds();
+
+            auto x = topLeftX - 2.0f;
+            auto y = topLeftY - 2.0f;
+            auto width = (bottomRightX - topLeftX) + 4.0f;
+            auto height = (bottomRightY - topLeftY) + 4.0f;
+
+            comp->setBounds(x, y, width, height);
+
+            if (UIObjects::Tabs::draw_borders_for_components) {
+                string tl_label = midiDisplayTopLeftCorners[midiDisplay_ix];
+                string br_label = midiDisplayBottomRightCorners[midiDisplay_ix];
+                auto border = std::tuple<float, float, float, float, string, string>(
+                    x, y, width, height, tl_label, br_label);
+                componentBorders.emplace_back(border);
+            }
+
+            midiDisplay_ix++;
         }
     }
 

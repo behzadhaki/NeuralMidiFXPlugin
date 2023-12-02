@@ -29,13 +29,17 @@ using button_tuple = std::tuple<std::string, bool, std::string, std::string>;
 using hslider_tuple = std::tuple<std::string, double, double, double, std::string, std::string>;
 using comboBox_tuple = std::tuple<std::string, std::vector<std::string>, std::string, std::string>;
 
+// label, allowToDragInMidi, allowToDragOutAsMidi, needs_playhead, topLeftCorner, bottomRightCorner
+using midiDisplay_tuple = std::tuple<std::string, bool, bool, bool, std::string, std::string>;
+
 using slider_list = std::vector<slider_tuple>;
 using rotary_list = std::vector<rotary_tuple>;
 using button_list = std::vector<button_tuple>;
 using hslider_list = std::vector<hslider_tuple>;
 using comboBox_list = std::vector<comboBox_tuple>;
+using midiDisplay_list = std::vector<midiDisplay_tuple>;
 
-using tab_tuple = std::tuple<std::string, slider_list, rotary_list, button_list, hslider_list, comboBox_list>;
+using tab_tuple = std::tuple<std::string, slider_list, rotary_list, button_list, hslider_list, comboBox_list, midiDisplay_list>;
 
 inline json load_settings_json() {
 
@@ -76,6 +80,7 @@ inline std::vector<tab_tuple> parse_to_tabList() {
         button_list tabButtons;
         hslider_list tabhsliders;
         comboBox_list tabComboBoxes;
+        midiDisplay_list tabMidiDisplays;
 
         // check if sliders exist
         if (tabJson.contains("sliders")) {
@@ -143,7 +148,23 @@ inline std::vector<tab_tuple> parse_to_tabList() {
             }
         }
 
-        tab_tuple tabTuple = {tabName, tabSliders, tabRotaries, tabButtons, tabhsliders, tabComboBoxes};
+        if (tabJson.contains("MidiDisplays")) {
+            for (const auto& midiDisplayJson: tabJson["MidiDisplays"]) {
+                std::string midiDisplayLabel = midiDisplayJson["label"].get<std::string>();
+                bool allowToDragInMidi = midiDisplayJson["allowToDragInMidi"];
+                bool allowToDragOutAsMidi = midiDisplayJson["allowToDragOutAsMidi"];
+                bool needsPlayhead = midiDisplayJson["needsPlayhead"];
+                std::string midiDisplayTopLeftCorner = midiDisplayJson["topLeftCorner"].get<std::string>();
+                std::string midiDisplayBottomRightCorner =  midiDisplayJson["bottomRightCorner"];
+
+                midiDisplay_tuple midiDisplayTuple = {
+                        midiDisplayLabel, allowToDragInMidi, allowToDragOutAsMidi, needsPlayhead,
+                        midiDisplayTopLeftCorner, midiDisplayBottomRightCorner};
+                tabMidiDisplays.push_back(midiDisplayTuple);
+            }
+        }
+
+        tab_tuple tabTuple = {tabName, tabSliders, tabRotaries, tabButtons, tabhsliders, tabComboBoxes, tabMidiDisplays};
         tabList.push_back(tabTuple);
 
     }
