@@ -881,6 +881,147 @@ private:
     juce::Colour sharpNoteColour;
 };
 
+class NoteComponent : public juce::Component {
+public:
+    int noteNumber;
+    int pitch_class; // 0-11
+    juce::String noteInfo;
+    float start_time;
+    float duration{-1}; // if neg, then note is still on (i.e. no note off event)
+    float velocity;
+    juce::Colour color{juce::Colours::black};
+    juce::Label* display_label;
+    bool isHangingNoteOn{false};
+    bool isHangingNoteOff{false};
+
+    NoteComponent() = default;
+
+    // creates a note component with a specified duration
+    // NOTE: Velocity must be between 0 and 1
+    // If you want to display the note name, pass in a pointer to a label
+    void completeNote(int noteNumber_,
+                  float start_time_,
+                  float velocity_,
+                  float duration_,
+                  juce::Label* display_label_ = nullptr) {
+        isHangingNoteOff = false;
+        isHangingNoteOn = false;
+        noteNumber = noteNumber_;
+        start_time = start_time_;
+        duration = duration_;
+        velocity = velocity_;
+        display_label = display_label_;
+        generate_info_text();
+        repaint();
+    }
+
+    void hangingNoteOn(int noteNumber_,
+                  float start_time_,
+                  float velocity_,
+                  juce::Label* display_label_ = nullptr) {
+        isHangingNoteOn = true;
+        isHangingNoteOff = false;
+        noteNumber = noteNumber_;
+        start_time = start_time_;
+        duration = -1;
+        velocity = velocity_;
+        display_label = display_label_;
+        generate_info_text();
+        repaint();
+    }
+
+    void hangingNoteOff(int noteNumber_,
+                  float start_time_,
+                  float velocity_,
+                  juce::Label* display_label_ = nullptr) {
+        isHangingNoteOff = true;
+        isHangingNoteOn = false;
+        noteNumber = noteNumber_;
+        start_time = start_time_;
+        duration = -1;
+        velocity = velocity_;
+        display_label = display_label_;
+        generate_info_text();
+        repaint();
+    }
+
+    void paint(juce::Graphics& g) override {
+        // Set the colour with alpha based on velocity for all shapes
+        g.setColour(color.withAlpha(velocity));
+
+        if (!isHangingNoteOn && !isHangingNoteOff) {
+            // Standard note: Draw a rectangle
+            g.fillRect(getLocalBounds());
+            // Draw a black border around the rectangle
+            g.setColour(juce::Colours::black);
+            g.drawRect(getLocalBounds().toFloat(), 1);
+        } else {
+            // Prepare to draw an arrow for note-on or note-off
+            juce::Path arrowPath;
+            auto bounds = getLocalBounds().toFloat();
+
+            if (isHangingNoteOn) {
+                // Note-on (right-pointing arrow)
+                arrowPath.startNewSubPath(bounds.getX(), bounds.getY());
+                arrowPath.lineTo(bounds.getRight(), bounds.getCentreY());
+                arrowPath.lineTo(bounds.getX(), bounds.getBottom());
+                arrowPath.closeSubPath();
+            } else if (isHangingNoteOff) {
+                // Note-off (left-pointing arrow)
+                arrowPath.startNewSubPath(bounds.getRight(), bounds.getY());
+                arrowPath.lineTo(bounds.getX(), bounds.getCentreY());
+                arrowPath.lineTo(bounds.getRight(), bounds.getBottom());
+                arrowPath.closeSubPath();
+            }
+
+            // Fill the arrow with the same colour and alpha as the standard note
+            g.fillPath(arrowPath);
+
+            // Optionally, draw a black border around the arrow if needed
+             g.setColour(juce::Colours::black);
+             g.strokePath(arrowPath, juce::PathStrokeType(1.0f));
+        }
+    }
+
+    // Mouse enter and exit events
+    void mouseEnter(const juce::MouseEvent& event) override {
+        if (display_label != nullptr) {
+            display_label->setText(noteInfo, juce::dontSendNotification);
+        }
+    }
+
+    void mouseExit(const juce::MouseEvent& event) override {
+        if (display_label != nullptr) {
+            display_label->setText("", juce::dontSendNotification);
+        }
+    }
+
+private:
+    void generate_info_text() {
+        pitch_class = noteNumber % 12;
+        int octave = noteNumber / 12 - 1;
+        std::map<int, juce::String> pitch_class_to_name = {
+            {0, "C"}, {1, "C#"}, {2, "D"},
+            {3, "D#"}, {4, "E"}, {5, "F"},
+            {6, "F#"}, {7, "G"}, {8, "G#"},
+            {9, "A"}, {10, "A#"}, {11, "B"}};
+
+        noteInfo = pitch_class_to_name[pitch_class] + juce::String(octave);
+        noteInfo += " (" + juce::String(noteNumber) + ")";
+        noteInfo += " | Start time: " + juce::String(start_time);
+        noteInfo += " | Velocity: " + juce::String(velocity);
+        if (!isHangingNoteOff && !isHangingNoteOn) {
+            noteInfo += " | Duration: " + juce::String(duration);
+        } else if (isHangingNoteOn) {
+            noteInfo += " | Note On";
+        } else if (isHangingNoteOff) {
+            noteInfo += " | Note Off";
+        } else {
+            noteInfo += " | Both Note On and Note Off --> ERROR";
+        }
+    }
+};
+
 class PianoRollComponent : public juce::Component {
 public:
     bool allowToDragInMidi{true};
@@ -889,6 +1030,7 @@ public:
     juce::String label{"Midi Display"};
     juce::Colour backgroundColour{juce::Colours::whitesmoke};
     juce::Colour playheadColour = juce::Colours::red;
+    juce::Label* noteInfoLabel;
 
     juce::Colour sharpNoteColour = juce::Colours::lightgrey;
 
@@ -897,13 +1039,45 @@ public:
 
     bool NewDroppedSequenceAccessed{false};
 
-    // shows a sequence assuming the specified duration (as such, time unit agnostic)
-    void show_sequence(PlaybackSequence& sequence, float duration) {
-        displayedSequence = sequence;
-        SequenceDuration = duration;
-        NewDroppedSequenceAccessed = true;
-        repaint();
+
+    // clear the sequence
+    void clear_noteComponents() {
+        noteComponents.clear();
+        resized();
     }
+
+    void setSequenceDuration(float duration) {
+        SequenceDuration = duration;
+        resized();
+    }
+
+    void add_complete_noteComponent(int noteNumber_, float start_time_, float velocity_, float duration_ = -1,
+                           juce::Label* display_label_ = nullptr) {
+        auto noteComponent = std::make_unique<NoteComponent>();
+        noteComponent->completeNote(noteNumber_, start_time_, velocity_, duration_, display_label_);
+        noteComponents.push_back(std::move(noteComponent));
+        addAndMakeVisible(noteComponents.back().get());
+        resized();
+    }
+
+    void add_hanging_noteOnComponent(int noteNumber_, float start_time_, float velocity_,
+                           juce::Label* display_label_ = nullptr) {
+        auto noteComponent = std::make_unique<NoteComponent>();
+        noteComponent->hangingNoteOn(noteNumber_, start_time_, velocity_, display_label_);
+        noteComponents.push_back(std::move(noteComponent));
+        addAndMakeVisible(noteComponents.back().get());
+        resized();
+    }
+
+    void add_hanging_noteOffComponent(int noteNumber_, float start_time_, float velocity_,
+                           juce::Label* display_label_ = nullptr) {
+        auto noteComponent = std::make_unique<NoteComponent>();
+        noteComponent->hangingNoteOff(noteNumber_, start_time_, velocity_, display_label_);
+        noteComponents.push_back(std::move(noteComponent));
+        addAndMakeVisible(noteComponents.back().get());
+        resized();
+    }
+
 
     // paints the sequence
     void paint(juce::Graphics& g) override {
@@ -916,7 +1090,7 @@ public:
         // ---------------------
         // divide the component into 12 rows
         // Starting from C0 (MIDI note 12)
-        // Draw a horizontal rectangle for each row with the corresponding note name 
+        // Draw a horizontal rectangle for each row with the corresponding note name
         // and color the row if it is a sharp note
         // ---------------------
         int numRows = 12;
@@ -924,7 +1098,7 @@ public:
         g.setFont(juce::Font(getHeight() / 10.0f)); // Font size
         vector<juce::String> noteNames = {"C", "", "D", "", "E", "F",
                                           "", "G", "", "A", "", "B"};
-        
+
         for (int i = 0; i < numRows; ++i)
         {
             float y = float(numRows - 1 - i) * rowHeight;
@@ -941,23 +1115,75 @@ public:
                 g.fillRect(juce::Rectangle<float>(0, y, getWidth(), rowHeight));
             }
         }
+
     }
 
+    // resizes the note components
+    void resized() override {
+        for (auto& noteComponent : noteComponents) {
+            float x = noteComponent->start_time / SequenceDuration * (float)getWidth();
+            float length = 0;
+            float height = 1.0f / 12.0f * (float)getHeight();
+            if (noteComponent->duration > 0) {
+                length = noteComponent->duration / SequenceDuration * (float)getWidth();
+            } else {
+                // will draw a small circle if the note has no note off event
+                length = height;
+            }
+            float y = (12 - noteComponent->pitch_class - 1) / 12.0f * (float)getHeight();
+
+            noteComponent->setBounds(x, y, length, height);
+        }
+
+    }
+
+private:
+    std::vector<std::unique_ptr<NoteComponent>> noteComponents;
 };
 
 class MidiVisualizer: public juce::Component {
 public:
     MidiVisualizer(bool needsPlayhead_) {
         needsPlayhead = needsPlayhead_;
+        noteInfoLabel.setFont(8.0f);
+        pianoRollComponent.noteInfoLabel = &noteInfoLabel;
         addAndMakeVisible(playheadVisualizer);
         addAndMakeVisible(pianoRollComponent);
         addAndMakeVisible(pianoKeysComponent);
+        addAndMakeVisible(noteInfoLabel);
+
+        // 4 on the floor kick snare pattern
+        pianoRollComponent.setSequenceDuration(4.0f);
+
+        pianoRollComponent.add_complete_noteComponent(
+            36, 0.1, 0.1f, 0.1f, &noteInfoLabel);
+        pianoRollComponent.add_complete_noteComponent(
+            36, 1, 0.3f, 0.1f, &noteInfoLabel);
+        pianoRollComponent.add_complete_noteComponent(
+            36, 2, 0.5f, 0.1f, &noteInfoLabel);
+        pianoRollComponent.add_complete_noteComponent(
+            36, 3, 0.6f, 0.1f, &noteInfoLabel);
+        pianoRollComponent.add_complete_noteComponent(
+            38, 1, 0.8f, 0.1f, &noteInfoLabel);
+        pianoRollComponent.add_complete_noteComponent(
+            38, 3, 1.0f, 0.1f, &noteInfoLabel);
+
+        // 1 hihat without note off
+        pianoRollComponent.add_hanging_noteOnComponent(
+            42, 0.1, 0.1f, &noteInfoLabel);
+        // 1 tom without note on
+        pianoRollComponent.add_hanging_noteOffComponent(
+            43, 0.1, 0.0f, &noteInfoLabel);
+
     }
 
     void resized() override {
         // 10% of the height for the playhead
         // 90% of the height for the piano roll
         auto area = getLocalBounds();
+
+        noteInfoLabel.setBounds(area.removeFromBottom(area.getHeight() * 0.1));
+
         auto key_area = area.removeFromLeft(20);
 
 
@@ -986,5 +1212,6 @@ private:
     PianoKeysComponent pianoKeysComponent{
         juce::Colours::whitesmoke,
         juce::Colours::grey};
+    juce::Label noteInfoLabel; // displays the note name when the mouse hovers over a note
     bool needsPlayhead{false};
 };
