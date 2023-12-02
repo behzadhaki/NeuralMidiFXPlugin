@@ -17,15 +17,18 @@
 ### New UI Elements 
 
 - Sliders can now be vertical or horizontal using the "horizontal" property in the JSON
-- comboboxes:
+  - comboboxes:
   - getComboBoxSelectionText() of gui_params
   - add in JSON using "comboBoxes" property
 
 ### Preset Management
  - new flag added to deploy() to specify new_preset_loaded_since_last_call
  - preset data (defined as map<string, tensor>) is now accessible and updatable via CustomPresetData
+ - For documentation, use the deploy() function as an example
 
 ### NOW ONLY SINGLE THREAD VERSION
+
+- ONLY DPL THREAD
 
 -----
 
@@ -36,8 +39,6 @@ _______
 
 #### TODOS
 
-- Single MIDI_PROCESSOR Thread Implementation
-- Single AUDIO_PROCESSOR Thread Implementation
+- AUDIO_PROCESSOR Thread Implementation
 - AUDIO VISUALIZER GUI ELEMENT
 - Midi Visualizer GUI Element
-- Preset Manager

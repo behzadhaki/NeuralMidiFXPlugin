@@ -16,6 +16,7 @@
 #include "../Includes/GenerationEvent.h"
 #include "../Includes/TorchScriptAndPresetLoaders.h"
 #include "../../Deployment/DeploymentData.h"
+#include "../Includes/MidiDisplayWidget.h"
 
 class DeploymentThread : public juce::Thread {
 public:
@@ -66,6 +67,8 @@ public:
         CustomPresetData; // data stored here will be saved automatically when the plugin is saved/loaded/preset changed
 //    mutable std::mutex  preset_loaded_mutex;
 //    bool newPresetLoaded{false};
+
+
 
 private:
     // ============================================================================================================

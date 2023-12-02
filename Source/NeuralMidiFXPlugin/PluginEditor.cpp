@@ -79,6 +79,8 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
         denominatorSlider.setTextValueSuffix(juce::String("Den"));
         addAndMakeVisible(denominatorSlider);
 
+        addAndMakeVisible(midiVisualizer);
+
     }
 
 
@@ -169,6 +171,8 @@ void NeuralMidiFXPluginEditor::resized()
     int standalone_control_height;
     int proll_height;
     int gap;
+
+    midiVisualizer.setBounds(area.removeFromBottom(int(area.getHeight() * .2)));
 
     // place preset manager at the top
     area.removeFromLeft(int(area.getWidth() * .02));

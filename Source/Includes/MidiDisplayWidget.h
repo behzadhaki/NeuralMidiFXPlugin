@@ -50,7 +50,6 @@ public:
             }
         }
 
-
         juce::MidiFile mf;
         mf.setTicksPerQuarterNote(960);
         mf.addTrack(NMP2GUI_IncomingMessageSequence_);
@@ -786,4 +785,206 @@ private:
             }
         }
     }
+};
+
+class PlayheadVisualizer : public juce::Component {
+public:
+    bool show_playhead{true};
+    juce::Colour playheadColour = juce::Colours::red;
+    float playhead_pos{0};
+    float disp_length{8};
+
+    void paint(juce::Graphics& g) override
+    {
+        if (show_playhead) {
+            g.setColour(playheadColour);
+            // Draw playhead
+            if (playhead_pos >= 0)
+            {
+                auto x = playhead_pos / disp_length * (float)getWidth();
+                g.drawLine(
+                    x, 0, x, (float) getHeight(), 2);
+            }
+        }
+    }
+
+    void resized() override
+    {
+        repaint();
+    }
+
+    void setLength(float length) {
+        if (length != disp_length) {
+            disp_length = length;
+            repaint();
+        }
+    }
+
+    void setPlayheadPos(float pos) {
+        if (pos != playhead_pos) {
+            playhead_pos = pos;
+            repaint();
+        }
+    }
+
+};
+
+class PianoKeysComponent : public juce::Component
+{
+public:
+
+    void paint(Graphics &g) override {
+
+        g.fillAll(backgroundColour);
+
+        // ---------------------
+        // divide the component into 12 rows
+        // Starting from C0 (MIDI note 12)
+        // Draw a horizontal rectangle for each row with the corresponding note name
+        // and color the row if it is a sharp note
+        // ---------------------
+        int numRows = 12;
+        float rowHeight = (float)getHeight() / (float)numRows;
+        g.setFont(juce::Font(getHeight() / 10.0f)); // Font size
+        vector<juce::String> noteNames = {"C", "", "D", "", "E", "F",
+                                          "", "G", "", "A", "", "B"};
+
+        for (int i = 0; i < numRows; ++i)
+        {
+            float y = float(numRows - 1 - i) * rowHeight;
+            g.setColour(juce::Colours::grey);
+            g.drawRect(juce::Rectangle<float>(0, y, (float)getWidth(), rowHeight), .1);
+
+            // Draw note name
+            juce::String noteName = noteNames[i];
+            g.drawText(noteName, 0, y, (float)getWidth(), rowHeight, juce::Justification::centredLeft);
+
+            // Color the row if it is a sharp note
+            if (noteName == "")
+            {
+                g.setColour(sharpNoteColour);
+                g.fillRect(juce::Rectangle<float>(0, y, getWidth(), rowHeight));
+            }
+        }
+
+    }
+
+    PianoKeysComponent(juce::Colour backgroundColour_,
+                       juce::Colour sharpNoteColour_)
+    {
+        backgroundColour = backgroundColour_;
+        sharpNoteColour = sharpNoteColour_;
+    }
+
+private:
+    juce::Colour backgroundColour;
+    juce::Colour sharpNoteColour;
+};
+
+class PianoRollComponent : public juce::Component {
+public:
+    bool allowToDragInMidi{true};
+    bool allowToDragOutAsMidi{true};
+    bool show_playhead{true};
+    juce::String label{"Midi Display"};
+    juce::Colour backgroundColour{juce::Colours::whitesmoke};
+    juce::Colour playheadColour = juce::Colours::red;
+
+    juce::Colour sharpNoteColour = juce::Colours::lightgrey;
+
+    PlaybackSequence displayedSequence{};
+    float SequenceDuration{8};
+
+    bool NewDroppedSequenceAccessed{false};
+
+    // shows a sequence assuming the specified duration (as such, time unit agnostic)
+    void show_sequence(PlaybackSequence& sequence, float duration) {
+        displayedSequence = sequence;
+        SequenceDuration = duration;
+        NewDroppedSequenceAccessed = true;
+        repaint();
+    }
+
+    // paints the sequence
+    void paint(juce::Graphics& g) override {
+
+        // ---------------------
+        // Draw background (12 notes
+        // ---------------------
+        g.fillAll(backgroundColour);
+
+        // ---------------------
+        // divide the component into 12 rows
+        // Starting from C0 (MIDI note 12)
+        // Draw a horizontal rectangle for each row with the corresponding note name 
+        // and color the row if it is a sharp note
+        // ---------------------
+        int numRows = 12;
+        float rowHeight = (float)getHeight() / (float)numRows;
+        g.setFont(juce::Font(getHeight() / 10.0f)); // Font size
+        vector<juce::String> noteNames = {"C", "", "D", "", "E", "F",
+                                          "", "G", "", "A", "", "B"};
+        
+        for (int i = 0; i < numRows; ++i)
+        {
+            float y = float(numRows - 1 - i) * rowHeight;
+            g.setColour(juce::Colours::lightgrey);
+            g.drawRect(juce::Rectangle<float>(0, y, (float)getWidth(), rowHeight), .1);
+
+            // Draw note name
+            juce::String noteName = noteNames[i];
+
+            // Color the row if it is a sharp note
+            if (noteName == "")
+            {
+                g.setColour(sharpNoteColour);
+                g.fillRect(juce::Rectangle<float>(0, y, getWidth(), rowHeight));
+            }
+        }
+    }
+
+};
+
+class MidiVisualizer: public juce::Component {
+public:
+    MidiVisualizer(bool needsPlayhead_) {
+        needsPlayhead = needsPlayhead_;
+        addAndMakeVisible(playheadVisualizer);
+        addAndMakeVisible(pianoRollComponent);
+        addAndMakeVisible(pianoKeysComponent);
+    }
+
+    void resized() override {
+        // 10% of the height for the playhead
+        // 90% of the height for the piano roll
+        auto area = getLocalBounds();
+        auto key_area = area.removeFromLeft(20);
+
+
+        if (needsPlayhead) {
+            auto phead_height = area.getHeight() * 0.1;
+            pianoRollComponent.setBounds(
+                area.removeFromTop(area.getHeight() * 0.9));
+            playheadVisualizer.setBounds(
+                area.removeFromTop(phead_height));
+
+            key_area.removeFromBottom(phead_height);
+            pianoKeysComponent.setBounds(key_area);
+        } else {
+            pianoRollComponent.setBounds(area);
+            pianoKeysComponent.setBounds(key_area);
+        }
+
+    }
+
+    void paint(juce::Graphics& g) override {
+        g.fillAll(juce::Colours::black);
+    }
+private:
+    PlayheadVisualizer playheadVisualizer;
+    PianoRollComponent pianoRollComponent;
+    PianoKeysComponent pianoKeysComponent{
+        juce::Colours::whitesmoke,
+        juce::Colours::grey};
+    bool needsPlayhead{false};
 };

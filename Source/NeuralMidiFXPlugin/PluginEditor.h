@@ -64,5 +64,11 @@ private:
     double LoopStart {0};
     double LoopEnd {0};
     juce::MidiMessageSequence incoming_sequence;
+
+    // ============================================================================================================
+    // ===          MidiWidget
+    // ============================================================================================================
+    MidiVisualizer midiVisualizer{true};
+
 };
 
