@@ -210,7 +210,8 @@ public:
         {
             g.setColour(juce::Colours::red);
             auto x = playhead_pos / disp_length * (float)getWidth();
-            g.drawLine(x, 0, x, getHeight(), 2);
+            g.drawLine(x, 0, x,
+                       (float) getHeight(), 2);
         }
 
         full_repaint = false;
@@ -326,7 +327,7 @@ public:
                     return true;
                 } else {
                     // Negative value indicates frames per second (SMPTE)
-                    DBG("SMPTE Format midi files are not supported at this time.");
+                    cout << "SMPTE Format midi files are not supported at this time." << endl;
                 }
             }
         }
@@ -419,7 +420,7 @@ private:
 
     void drawNotes(juce::Graphics& g, const juce::MidiMessageSequence& midi)
     {
-        int numRows = uniquePitches.size();
+        int numRows = (int) uniquePitches.size();
         float rowHeight = (float)getHeight() / (float)numRows;
         g.setFont(juce::Font(10.0f));
 
@@ -593,7 +594,7 @@ public:
     }
 
     double getMidiLength() {
-        int ticksPerQuarterNote = 960;
+        // int ticksPerQuarterNote = 960;
         if (midiFile.getNumTracks() > 0)
         {
             auto track = midiFile.getTrack(0);
@@ -634,7 +635,7 @@ public:
             g.setColour(juce::Colours::brown.withAlpha(0.4f));
             auto xStart = LoopStartPPQ / disp_length * (float) getWidth() * 960;
             auto xEnd = LoopEndPPQ / disp_length * (float) getWidth() * 960;
-            g.fillRect(xStart, 0, xEnd - xStart, getHeight());
+            g.fillRect((int) xStart, 0, int(xEnd - xStart), getHeight());
         }
 
         if (midiDataChanged) // You need to define and update this flag
@@ -704,7 +705,7 @@ private:
     juce::MidiFile midiFile;
     juce::Colour backgroundColour{juce::Colours::black};
     juce::Colour noteColour = juce::Colours::white;
-    LockFreeQueue<juce::MidiFile, 4>* MidiQue{};
+     LockFreeQueue<juce::MidiFile, 4>* MidiQue{};
     double playhead_pos{-1};
     double disp_length{8};
     double LoopStartPPQ{-1};
@@ -758,9 +759,9 @@ private:
         }
     }
 
-    void drawNotes(juce::Graphics& g, const juce::Colour& noteColour)
+    void drawNotes(juce::Graphics& g, const juce::Colour& noteColour_)
     {
-        int numRows = uniquePitches.size();
+        int numRows = (int) uniquePitches.size();
         float rowHeight = (float)getHeight() / (float)numRows;
         g.setFont(juce::Font(10.0f));
 
@@ -775,7 +776,7 @@ private:
                 float velocity = std::get<2>(pos); // Get velocity
 
                 // Set color according to the velocity
-                auto color = noteColour.withAlpha(velocity); // Set alpha to velocity
+                auto color = noteColour_.withAlpha(velocity); // Set alpha to velocity
                 g.setColour(color);
                 g.fillRect(juce::Rectangle<float>(x, y, length, rowHeight));
 
@@ -1020,12 +1021,13 @@ private:
             noteInfo += " | Unknown";
         }
     }
+
 };
 
 class PianoRollComponent : public juce::Component {
 public:
-    bool allowToDragInMidi{true};
-    bool allowToDragOutAsMidi{true};
+    bool AllowToDragInMidi{true};
+    bool AllowToDragOutAsMidi{true};
     bool show_playhead{true};
     juce::String label{"Midi Display"};
     juce::Colour backgroundColour{juce::Colours::whitesmoke};
@@ -1137,15 +1139,75 @@ public:
 
     }
 
+    std::vector<std::unique_ptr<NoteComponent>>& get_noteComponents() {
+        return noteComponents;
+    }
+
+    void mouseDrag(const juce::MouseEvent& event) override
+    {
+        if (AllowToDragOutAsMidi)
+        {
+            // populate the midi file with the notes from the piano roll
+            auto mfile = juce::MidiFile();
+            float ticksPerQuarterNote = 960;
+            mfile.setTicksPerQuarterNote((int) ticksPerQuarterNote);  \
+            juce::MidiMessageSequence sequence;
+
+            for (auto& noteComponent : noteComponents)
+            {
+                if (noteComponent->isHangingNoteOff || noteComponent->isHangingNoteOn) {
+                    continue;
+                } else {
+                    auto noteNumber = noteComponent->noteNumber;
+                    auto start_time = noteComponent->start_time;
+                    auto duration = noteComponent->duration;
+                    auto velocity = noteComponent->velocity;
+
+                    sequence.addEvent(
+                        juce::MidiMessage::noteOn(1, noteNumber, juce::uint8(velocity*127)),
+                        start_time * ticksPerQuarterNote);
+                    sequence.addEvent(juce::MidiMessage::noteOff(1, noteNumber),
+                                      (start_time + duration) * ticksPerQuarterNote);
+                }
+
+            }
+
+
+            mfile.addTrack(sequence);
+
+            // save the midi file to a temporary file
+            juce::String fileName = juce::Uuid().toString() + ".mid";  // Random filename
+
+            juce::File outf = juce::File::getSpecialLocation(
+                                  juce::File::SpecialLocationType::tempDirectory
+                                  ).getChildFile(fileName);
+            juce::TemporaryFile tempf(outf);
+            {
+                auto p_os = std::make_unique<juce::FileOutputStream>(
+                    tempf.getFile());
+                if (p_os->openedOk()) {
+                    mfile.writeTo(*p_os, 0);
+                }
+            }
+
+            bool succeeded = tempf.overwriteTargetFileWithTemporary();
+            if (succeeded) {
+                juce::DragAndDropContainer::performExternalDragDropOfFiles(
+                    {outf.getFullPathName()}, false);
+            }
+        }
+    }
+
 private:
+    juce::MidiFile midiFile;
     std::vector<std::unique_ptr<NoteComponent>> noteComponents;
 };
 
 class MidiVisualizer: public juce::Component {
 
 public:
-    bool AllowToDragInMidi{true};
-    bool AllowToDragOutAsMidi{true};
+    /*bool AllowToDragInMidi{true};
+    bool AllowToDragOutAsMidi{true};*/
 
     MidiVisualizer(bool needsPlayhead_, string label = "MidiVisualizer") {
         needsPlayhead = needsPlayhead_;
@@ -1174,7 +1236,7 @@ public:
 
         // 1 hihat without note off
         pianoRollComponent.add_hanging_noteOnComponent(
-            42, 0.1, 0.1f, &noteInfoLabel);
+            42, 0, 0.1f, &noteInfoLabel);
         // 1 tom without note on
         pianoRollComponent.add_hanging_noteOffComponent(
             43, 0.1, 0.0f, &noteInfoLabel);
@@ -1211,7 +1273,17 @@ public:
         g.fillAll(juce::Colours::black);
     }
 
+    void enableDragInMidi(bool enable) {
+        pianoRollComponent.AllowToDragInMidi = enable;
+    }
+
+    void enableDragOutAsMidi(bool enable) {
+        pianoRollComponent.AllowToDragOutAsMidi = enable;
+    }
+
 private:
+    juce::MidiFile midiFile;
+
     PlayheadVisualizer playheadVisualizer;
     PianoRollComponent pianoRollComponent;
     PianoKeysComponent pianoKeysComponent{

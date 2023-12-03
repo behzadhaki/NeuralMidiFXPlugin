@@ -48,7 +48,7 @@
                             "label": "MidiDisplay 1",
                             "topLeftCorner": "Bb",
                             "bottomRightCorner": "Jh",
-                            "allowToDragOutAsMidi": false,
+                            "allowToDragOutAsMidi": true,
                             "allowToDragInMidi": false,
                             "needsPlayhead": true
                         }

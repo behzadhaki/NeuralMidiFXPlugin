@@ -388,13 +388,14 @@ private:
 
     MidiVisualizer *generateMidiVisualizer(midiDisplay_tuple midiDisplayTuple) {
         auto label = std::get<0>(midiDisplayTuple);
-        auto allowToDragOutAsMidiFile = std::get<1>(midiDisplayTuple);
-        auto allowToDragInMidiFile = std::get<2>(midiDisplayTuple);
+        auto allowToDragOutAsMidiFile = std::get<2>(midiDisplayTuple);
+        auto allowToDragInMidiFile = std::get<1>(midiDisplayTuple);
         auto needsPlayhead = std::get<3>(midiDisplayTuple);
 
         auto *newMidiVisualizer = new MidiVisualizer{needsPlayhead, label};
-        newMidiVisualizer->AllowToDragInMidi = allowToDragInMidiFile;
-        newMidiVisualizer->AllowToDragOutAsMidi = allowToDragOutAsMidiFile;
+
+        newMidiVisualizer->enableDragInMidi(allowToDragInMidiFile);
+        newMidiVisualizer->enableDragOutAsMidi(allowToDragOutAsMidiFile);
 
         return newMidiVisualizer;
     }
