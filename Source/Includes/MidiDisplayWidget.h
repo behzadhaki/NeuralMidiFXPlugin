@@ -1075,7 +1075,6 @@ public:
     }
 
 
-
     void add_complete_noteComponent(int noteNumber_, float start_time_,
                                     float velocity_, float duration_ = -1,
                            juce::Label* display_label_ = nullptr) {
@@ -1156,6 +1155,7 @@ public:
             float height = 1.0f / 12.0f * (float)getHeight();
             if (noteComponent->duration > 0) {
                 length = noteComponent->duration / SequenceDuration * (float)getWidth();
+                length = max(length, 1.0f);
             } else {
                 // will draw a small circle if the note has no note off event
                 length = height;
@@ -1377,7 +1377,7 @@ private:
         if (remainder > 0) {
             max_time += 4 - remainder;
         }
-
+        SequenceDuration = max_time;
         resized();
     }
 };

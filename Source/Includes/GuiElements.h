@@ -229,15 +229,6 @@ public:
         }
     }
 
-private:
-
-    std::string name{};
-    double minValue{}, maxValue{}, initValue{};
-    std::string topleftCorner{}, bottomrightCorner{};
-
-    // In Runtime, APVTS used only for untoggleable buttons
-    juce::AudioProcessorValueTreeState *apvtsPointer{nullptr};
-
     juce::OwnedArray<juce::Slider> sliderArray;
     juce::OwnedArray<juce::Slider> rotaryArray;
     juce::OwnedArray<juce::Button> buttonArray;
@@ -247,6 +238,15 @@ private:
     juce::OwnedArray<juce::Label> comboBoxLabelArray;
 
     juce::OwnedArray<MidiVisualizer> midiDisplayArray;
+
+private:
+
+    std::string name{};
+    double minValue{}, maxValue{}, initValue{};
+    std::string topleftCorner{}, bottomrightCorner{};
+
+    // In Runtime, APVTS used only for untoggleable buttons
+    juce::AudioProcessorValueTreeState *apvtsPointer{nullptr};
 
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>> sliderAttachmentArray;
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>> rotaryAttachmentArray;
