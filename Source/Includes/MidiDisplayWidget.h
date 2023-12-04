@@ -1024,9 +1024,10 @@ private:
 
 };
 
-class PianoRollComponent : public juce::Component {
+class PianoRollComponent : public juce::Component, public juce::FileDragAndDropTarget {
 public:
     bool AllowToDragInMidi{true};
+    bool newFileDraggedIn{false};
     bool AllowToDragOutAsMidi{true};
     bool show_playhead{true};
     juce::String label{"Midi Display"};
@@ -1053,13 +1054,17 @@ public:
         resized();
     }
 
-    void add_complete_noteComponent(int noteNumber_, float start_time_, float velocity_, float duration_ = -1,
+    void add_complete_noteComponent(int noteNumber_, float start_time_,
+                                    float velocity_, float duration_ = -1,
                            juce::Label* display_label_ = nullptr) {
+
         auto noteComponent = std::make_unique<NoteComponent>();
-        noteComponent->completeNote(noteNumber_, start_time_, velocity_, duration_, display_label_);
+        noteComponent->completeNote(
+            noteNumber_, start_time_, velocity_, duration_, display_label_);
         noteComponents.push_back(std::move(noteComponent));
         addAndMakeVisible(noteComponents.back().get());
         resized();
+
     }
 
     void add_hanging_noteOnComponent(int noteNumber_, float start_time_, float velocity_,
@@ -1198,8 +1203,138 @@ public:
         }
     }
 
+    bool isInterestedInFileDrag (const juce::StringArray& files) override
+    {
+        // Check if the files are of a type you're interested in
+        // Return true to indicate interest
+        return true;
+    }
+
+    void filesDropped (const juce::StringArray& files, int x, int y) override
+    {
+        auto file = juce::File(files[0]);
+        cout << "Dropped file: " << file.getFullPathName() << endl;
+
+        // check if midi and exists
+        if (file.existsAsFile() && file.hasFileExtension("mid"))
+        {
+            // load the midi file
+            loadMidiFile(file);
+        }
+
+    }
+
+
+    // call back function for drag and drop into the component
+    // returns true if the file was successfully loaded
+    // called from filesDropped() in PluginEditor.cpp
+    // keep in mind that a file can be dropped anywhere in the parent component
+    // (i.e. PluginEditor.cpp) and not just on this component
+    // *NOTE* As soon as loaded, all timings are converted to quarter notes instead of ticks
+    bool loadMidiFile(const juce::File& file)
+    {
+        if (!AllowToDragInMidi) { return false; }
+
+        auto stream = file.createInputStream();
+
+
+        if (stream != nullptr)
+        {
+            juce::MidiFile loadedMFile;
+            if (loadedMFile.readFrom(*stream))
+            {
+                // MidiMessageSequence
+                juce::MidiMessageSequence quarter_note_sequence;
+
+                // get the start time of the first note
+                int TPQN = loadedMFile.getTimeFormat();
+                if (TPQN > 0)
+                {
+
+                    // Iterate through all notes in track 0 of the original file
+                    auto track = loadedMFile.getTrack(0);
+                    if (track != nullptr)
+                    {
+                        // Iterate through all notes in track 0 of the copy for conversion
+                        auto quarterNoteTrack = loadedMFile.getTrack(0);
+                        if (quarterNoteTrack != nullptr)
+                        {
+                            for (int i = 0; i < quarterNoteTrack->getNumEvents(); ++i)
+                            {
+                                auto event = quarterNoteTrack->getEventPointer(i);
+                                event->message.setTimeStamp(
+                                    event->message.getTimeStamp() / TPQN);
+                                // add to quarter_note_sequence
+                                quarter_note_sequence.addEvent(event->message);
+                            }
+                        }
+                    }
+
+                    quarter_note_sequence.updateMatchedPairs();
+
+                    // iterate through all note ons and find corresponding note offs
+                    // and add them to the displayed sequence
+
+                    noteComponents.clear();
+
+                    for (int i = 0; i < quarter_note_sequence.getNumEvents(); ++i)
+                    {
+                        auto event = quarter_note_sequence.getEventPointer(i);
+                        if (event->message.isNoteOn())
+                        {
+                            int noteNumber = event->message.getNoteNumber();
+                            float start_time = event->message.getTimeStamp();
+                            float duration = 0;
+                            float velocity = event->message.getFloatVelocity();
+
+                            // find the corresponding note off
+                            for (int j = i + 1; j < quarter_note_sequence.getNumEvents(); ++j)
+                            {
+                                auto offEvent = quarter_note_sequence.getEventPointer(j);
+                                if (offEvent->message.isNoteOff() &&
+                                    offEvent->message.getNoteNumber() == noteNumber &&
+                                    offEvent->message.getTimeStamp() >= event->message.getTimeStamp())
+                                {
+                                    double noteLength = offEvent->message.getTimeStamp() -
+                                                        event->message.getTimeStamp();
+                                    duration = float(noteLength);
+                                    break;
+                                }
+                            }
+
+                            add_complete_noteComponent(
+                                noteNumber, start_time,
+                                velocity, duration, noteInfoLabel);
+                        }
+                    }
+
+                    // print out the note components
+                    for (auto& noteComponent : noteComponents)
+                    {
+                        cout << "Note: " << noteComponent->noteNumber << endl;
+                        cout << "Start time: " << noteComponent->start_time << endl;
+                        cout << "Duration: " << noteComponent->duration << endl;
+                        cout << "Velocity: " << noteComponent->velocity << endl;
+                        cout << endl;
+                    }
+
+                    repaint();
+
+                    return true;
+
+                } else {
+                    // Negative value indicates frames per second (SMPTE)
+                    cout << "SMPTE Format midi files are not supported at this time." << endl;
+                }
+            }
+        }
+
+
+
+        return false;
+    }
+
 private:
-    juce::MidiFile midiFile;
     std::vector<std::unique_ptr<NoteComponent>> noteComponents;
 };
 
@@ -1222,17 +1357,23 @@ public:
         pianoRollComponent.setSequenceDuration(4.0f);
 
         pianoRollComponent.add_complete_noteComponent(
-            36, 0.1, 0.1f, 0.1f, &noteInfoLabel);
+            36, 0.1, 0.1f,
+            0.1f, &noteInfoLabel);
         pianoRollComponent.add_complete_noteComponent(
-            36, 1, 0.3f, 0.1f, &noteInfoLabel);
+            36, 1, 0.3f,
+            0.1f, &noteInfoLabel);
         pianoRollComponent.add_complete_noteComponent(
-            36, 2, 0.5f, 0.1f, &noteInfoLabel);
+            36, 2, 0.5f,
+            0.1f, &noteInfoLabel);
         pianoRollComponent.add_complete_noteComponent(
-            36, 3, 0.6f, 0.1f, &noteInfoLabel);
+            36, 3, 0.6f,
+            0.1f, &noteInfoLabel);
         pianoRollComponent.add_complete_noteComponent(
-            38, 1, 0.8f, 0.1f, &noteInfoLabel);
+            38, 1, 0.8f,
+            0.1f, &noteInfoLabel);
         pianoRollComponent.add_complete_noteComponent(
-            38, 3, 1.0f, 0.1f, &noteInfoLabel);
+            38, 3, 1.0f,
+            0.1f, &noteInfoLabel);
 
         // 1 hihat without note off
         pianoRollComponent.add_hanging_noteOnComponent(

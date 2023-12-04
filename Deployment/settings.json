@@ -49,7 +49,7 @@
                             "topLeftCorner": "Bb",
                             "bottomRightCorner": "Jh",
                             "allowToDragOutAsMidi": true,
-                            "allowToDragInMidi": false,
+                            "allowToDragInMidi": true,
                             "needsPlayhead": true
                         }
                     ]
