@@ -16,6 +16,8 @@ class ParameterComponent : public juce::Button::Listener,
 public:
 
     explicit ParameterComponent(tab_tuple tabTuple) {
+        setInterceptsMouseClicks(false, true);
+
         // Separate the larger tuple into a separate tuple for each category of UI elements
         tabName = std::get<0>(tabTuple);
         slidersList = std::get<1>(tabTuple);

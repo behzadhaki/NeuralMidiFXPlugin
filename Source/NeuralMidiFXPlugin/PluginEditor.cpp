@@ -28,6 +28,7 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
     : AudioProcessorEditor(&NeuralMidiFXPluginProcessorPointer),
     tabs (juce::TabbedButtonBar::Orientation::TabsAtTop)
 {
+
     NeuralMidiFXPluginProcessorPointer_ = &NeuralMidiFXPluginProcessorPointer;
     presetManagerWidget = std::make_unique<PresetTableComponent>(
         NeuralMidiFXPluginProcessorPointer.apvts,
@@ -153,6 +154,7 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
     {
         tabs.setCurrentTabIndex(i);
         tabs.resized();
+        tabs.setInterceptsMouseClicks(false, true);
     }
     tabs.setCurrentTabIndex(0);
 
@@ -163,7 +165,6 @@ void NeuralMidiFXPluginEditor::resized()
 {
     auto area = getLocalBounds();
     setBounds(area);
-
     int preset_manager_width = int(area.getWidth() * .17);
 
     int standalone_control_height;
@@ -364,27 +365,3 @@ void NeuralMidiFXPluginEditor::timerCallback()
 
 }
 
-bool NeuralMidiFXPluginEditor::isInterestedInFileDrag (const juce::StringArray& files)
-{
-    bool hasMidiFiles = std::any_of(files.begin(), files.end(), [](const auto& file) {
-                                        return file.endsWith(".mid") || file.endsWith(".midi");
-                                    });
-
-    return hasMidiFiles;
-}
-
-void NeuralMidiFXPluginEditor::filesDropped (const juce::StringArray& files, int /*x*/, int /*y*/)
-{
-    for (auto& file : files)
-    {
-        if (file.endsWith(".mid") || file.endsWith(".midi"))
-        {
-            juce::File midiFileToLoad(file);
-            if (inputPianoRoll->loadMidiFile(midiFileToLoad))
-            {
-                repaint();
-                break;
-            }
-        }
-    }
-}

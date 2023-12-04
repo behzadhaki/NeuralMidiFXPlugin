@@ -51,6 +51,14 @@
                             "allowToDragOutAsMidi": true,
                             "allowToDragInMidi": true,
                             "needsPlayhead": true
+                        },
+                        {
+                            "label": "MidiDisplay 2",
+                            "topLeftCorner": "Jh",
+                            "bottomRightCorner": "Ro",
+                            "allowToDragOutAsMidi": true,
+                            "allowToDragInMidi": true,
+                            "needsPlayhead": true
                         }
                     ]
                 },

@@ -8,7 +8,8 @@
 
 using namespace std;
 
-class InputMidiPianoRollComponent : public juce::Component
+class InputMidiPianoRollComponent : public juce::Component,
+                                    public juce::FileDragAndDropTarget
 {
 public:
 
@@ -337,6 +338,27 @@ public:
         return false;
     }
 
+
+    bool isInterestedInFileDrag (const juce::StringArray& files) override
+    {
+        return true;
+    }
+
+    void filesDropped (const juce::StringArray& files, int /*x*/, int /*y*/) override
+    {
+        for (auto& file : files)
+        {
+            if (file.endsWith(".mid") || file.endsWith(".midi"))
+            {
+                juce::File midiFileToLoad(file);
+                if (loadMidiFile(midiFileToLoad))
+                {
+                    repaint();
+                    break;
+                }
+            }
+        }
+    }
 
 private:
     void Initialize()
@@ -1042,6 +1064,9 @@ public:
 
     bool NewDroppedSequenceAccessed{false};
 
+    PianoRollComponent() {
+        setWantsKeyboardFocus(true);
+    }
 
     // clear the sequence
     void clear_noteComponents() {
@@ -1049,10 +1074,7 @@ public:
         resized();
     }
 
-    void setSequenceDuration(float duration) {
-        SequenceDuration = duration;
-        resized();
-    }
+
 
     void add_complete_noteComponent(int noteNumber_, float start_time_,
                                     float velocity_, float duration_ = -1,
@@ -1063,6 +1085,7 @@ public:
             noteNumber_, start_time_, velocity_, duration_, display_label_);
         noteComponents.push_back(std::move(noteComponent));
         addAndMakeVisible(noteComponents.back().get());
+        setSequenceDuration();
         resized();
 
     }
@@ -1183,9 +1206,10 @@ public:
             // save the midi file to a temporary file
             juce::String fileName = juce::Uuid().toString() + ".mid";  // Random filename
 
-            juce::File outf = juce::File::getSpecialLocation(
+            juce::File outf (juce::File::getSpecialLocation(
                                   juce::File::SpecialLocationType::tempDirectory
-                                  ).getChildFile(fileName);
+                                  ).getChildFile(fileName));
+
             juce::TemporaryFile tempf(outf);
             {
                 auto p_os = std::make_unique<juce::FileOutputStream>(
@@ -1216,7 +1240,7 @@ public:
         cout << "Dropped file: " << file.getFullPathName() << endl;
 
         // check if midi and exists
-        if (file.existsAsFile() && file.hasFileExtension("mid"))
+        if (files[0].endsWith(".mid") && file.exists())
         {
             // load the midi file
             loadMidiFile(file);
@@ -1224,6 +1248,9 @@ public:
 
     }
 
+    void fileDragEnter (const juce::StringArray& files, int x, int y) override {
+        cout << "Drag enter" << endl;
+    }
 
     // call back function for drag and drop into the component
     // returns true if the file was successfully loaded
@@ -1250,7 +1277,7 @@ public:
                 int TPQN = loadedMFile.getTimeFormat();
                 if (TPQN > 0)
                 {
-
+                    cout << "TPQN: " << TPQN << endl;
                     // Iterate through all notes in track 0 of the original file
                     auto track = loadedMFile.getTrack(0);
                     if (track != nullptr)
@@ -1309,14 +1336,14 @@ public:
                     }
 
                     // print out the note components
-                    for (auto& noteComponent : noteComponents)
+                   /* for (auto& noteComponent : noteComponents)
                     {
                         cout << "Note: " << noteComponent->noteNumber << endl;
                         cout << "Start time: " << noteComponent->start_time << endl;
                         cout << "Duration: " << noteComponent->duration << endl;
                         cout << "Velocity: " << noteComponent->velocity << endl;
                         cout << endl;
-                    }
+                    }*/
 
                     repaint();
 
@@ -1336,6 +1363,23 @@ public:
 
 private:
     std::vector<std::unique_ptr<NoteComponent>> noteComponents;
+
+    void setSequenceDuration() {
+        // find the last note off event
+        float max_time = 0;
+        for (auto& noteComponent : noteComponents) {
+            if (noteComponent->start_time + noteComponent->duration > max_time) {
+                max_time = noteComponent->start_time + noteComponent->duration;
+            }
+        }
+        // make sure the max time is multiple of 4
+        float remainder = fmod(max_time, 4);
+        if (remainder > 0) {
+            max_time += 4 - remainder;
+        }
+
+        resized();
+    }
 };
 
 class MidiVisualizer: public juce::Component {
@@ -1345,6 +1389,8 @@ public:
     bool AllowToDragOutAsMidi{true};*/
 
     MidiVisualizer(bool needsPlayhead_, string label = "MidiVisualizer") {
+        setInterceptsMouseClicks(false, true);
+
         needsPlayhead = needsPlayhead_;
         noteInfoLabel.setFont(10);
         pianoRollComponent.noteInfoLabel = &noteInfoLabel;
@@ -1354,8 +1400,6 @@ public:
         addAndMakeVisible(noteInfoLabel);
 
         // 4 on the floor kick snare pattern
-        pianoRollComponent.setSequenceDuration(4.0f);
-
         pianoRollComponent.add_complete_noteComponent(
             36, 0.1, 0.1f,
             0.1f, &noteInfoLabel);

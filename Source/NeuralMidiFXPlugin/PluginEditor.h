@@ -8,8 +8,7 @@
 using namespace std;
 
 class NeuralMidiFXPluginEditor : public juce::AudioProcessorEditor,
-                                 public juce::Timer,
-                                 public juce::FileDragAndDropTarget
+                                 public juce::Timer
 
 {
 public:
@@ -18,11 +17,6 @@ public:
     void paint(juce::Graphics&) override;
     void resized() override;
     void timerCallback() override;
-
-    bool isInterestedInFileDrag (const juce::StringArray& files) override;
-
-    void filesDropped (const juce::StringArray& files, int /*x*/, int /*y*/) override;
-
 
     juce::TabbedComponent tabs;
 
@@ -48,8 +42,8 @@ public:
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> denominatorSliderAttachment;
     unique_ptr<PresetTableComponent> presetManagerWidget;
 
-    void saveAPVTSToFile(int preset_idx);
-    void loadAPVTSFromFile(int preset_idx);
+    /*void saveAPVTSToFile(int preset_idx);
+    void loadAPVTSFromFile(int preset_idx);*/
 private:
     NeuralMidiFXPluginProcessor* NeuralMidiFXPluginProcessorPointer_;
     tab_tuple currentTab;
