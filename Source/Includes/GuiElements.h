@@ -26,7 +26,6 @@ public:
         hslidersList = std::get<4>(tabTuple);
         comboBoxesList = std::get<5>(tabTuple);
         midiDisplayList = std::get<6>(tabTuple);
-        cout << "midiDisplayList.size(): " << midiDisplayList.size() << endl;
 
         numButtons = buttonsList.size();
     }
@@ -532,10 +531,6 @@ private:
         for (auto *comp: midiDisplayArray) {
             auto [topLeftX, topLeftY] = coordinatesFromString(midiDisplayTopLeftCorners[midiDisplay_ix]);
             auto [bottomRightX, bottomRightY] = coordinatesFromString(midiDisplayBottomRightCorners[midiDisplay_ix]);
-            cout << "topLeftX: " << topLeftX << endl;
-            cout << "topLeftY: " << topLeftY << endl;
-            cout << "bottomRightX: " << bottomRightX << endl;
-            cout << "bottomRightY: " << bottomRightY << endl;
 
             auto area = getLocalBounds();
 

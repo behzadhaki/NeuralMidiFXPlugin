@@ -26,6 +26,23 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
 
     realtimePlaybackInfo = make_unique<RealTimePlaybackInfo>();
 
+    // Populate Pianoroll Data
+    // ----------------------------------------------------------------------------------
+    auto tabList = UIObjects::Tabs::tabList;
+
+    pianoRollData = std::make_unique<map<std::string, PianoRollData>>();
+
+    for (auto tab_list: tabList) {
+        auto midiVisualizers = std::get<6>(tab_list);
+        for (auto midiVisualizer: midiVisualizers) {
+            auto label = label2ParamID(std::get<0>(midiVisualizer));
+            (*pianoRollData)[label] = PianoRollData();
+            (*pianoRollData)[label].addNoteWithDuration(0, 32, 0.5, 0, 10);
+            (*pianoRollData)[label].addNoteOn(0, 32, 0.2, 11);
+        }
+    }
+    cout << "PianoRollData populated with " << pianoRollData->size() << " items" << endl;
+
     //       Make_unique pointers for Queues
     // ----------------------------------------------------------------------------------
     // used for NMP2DPL_Event_Que

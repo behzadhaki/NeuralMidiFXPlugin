@@ -3,6 +3,8 @@
 //
 
 #pragma once
+#include <utility>
+
 #include "GuiParameters.h"
 #include "Configs_Parser.h"
 
@@ -809,6 +811,11 @@ private:
         }
     }
 };
+/// --------------------- MIDI IO VISUALIZER ---------------------
+
+
+
+
 
 class PlayheadVisualizer : public juce::Component {
 public:
@@ -904,16 +911,17 @@ private:
     juce::Colour sharpNoteColour;
 };
 
+
 class NoteComponent : public juce::Component {
 public:
-    int noteNumber;
-    int pitch_class; // 0-11
+    int noteNumber{};
+    int pitch_class{}; // 0-11
     juce::String noteInfo;
-    float start_time;
+    float start_time{};
     float duration{-1}; // if neg, then note is still on (i.e. no note off event)
-    float velocity;
+    float velocity{};
     juce::Colour color{juce::Colours::black};
-    juce::Label* display_label;
+    juce::Label* display_label{};
     bool isHangingNoteOn{false};
     bool isHangingNoteOff{false};
 
@@ -1237,7 +1245,6 @@ public:
     void filesDropped (const juce::StringArray& files, int x, int y) override
     {
         auto file = juce::File(files[0]);
-        cout << "Dropped file: " << file.getFullPathName() << endl;
 
         // check if midi and exists
         if (files[0].endsWith(".mid") && file.exists())
@@ -1249,7 +1256,7 @@ public:
     }
 
     void fileDragEnter (const juce::StringArray& files, int x, int y) override {
-        cout << "Drag enter" << endl;
+
     }
 
     // call back function for drag and drop into the component
@@ -1277,7 +1284,6 @@ public:
                 int TPQN = loadedMFile.getTimeFormat();
                 if (TPQN > 0)
                 {
-                    cout << "TPQN: " << TPQN << endl;
                     // Iterate through all notes in track 0 of the original file
                     auto track = loadedMFile.getTrack(0);
                     if (track != nullptr)
@@ -1335,16 +1341,6 @@ public:
                         }
                     }
 
-                    // print out the note components
-                   /* for (auto& noteComponent : noteComponents)
-                    {
-                        cout << "Note: " << noteComponent->noteNumber << endl;
-                        cout << "Start time: " << noteComponent->start_time << endl;
-                        cout << "Duration: " << noteComponent->duration << endl;
-                        cout << "Velocity: " << noteComponent->velocity << endl;
-                        cout << endl;
-                    }*/
-
                     repaint();
 
                     return true;
@@ -1352,6 +1348,12 @@ public:
                 } else {
                     // Negative value indicates frames per second (SMPTE)
                     cout << "SMPTE Format midi files are not supported at this time." << endl;
+                }
+
+                if (pianoRollData != nullptr) {
+                    auto track = loadedMFile.getTrack(0);
+                    pianoRollData->setSequence(*track, true);
+
                 }
             }
         }
@@ -1361,9 +1363,13 @@ public:
         return false;
     }
 
+    void setPianoRollData(PianoRollData* pianoRollData_) {
+        pianoRollData = pianoRollData_;
+    }
+
 private:
     std::vector<std::unique_ptr<NoteComponent>> noteComponents;
-
+    PianoRollData* pianoRollData{nullptr};
     void setSequenceDuration() {
         // find the last note off event
         float max_time = 0;
@@ -1382,15 +1388,17 @@ private:
     }
 };
 
-class MidiVisualizer: public juce::Component {
+class MidiVisualizer: public juce::Component, juce::Timer {
 
 public:
     /*bool AllowToDragInMidi{true};
     bool AllowToDragOutAsMidi{true};*/
 
-    MidiVisualizer(bool needsPlayhead_, string label = "MidiVisualizer") {
+    MidiVisualizer(bool needsPlayhead_,
+                   string paramID_) {
         setInterceptsMouseClicks(false, true);
-
+        paramID = std::move(paramID_);
+        std::transform(paramID.begin(), paramID.end(), paramID.begin(), ::toupper);
         needsPlayhead = needsPlayhead_;
         noteInfoLabel.setFont(10);
         pianoRollComponent.noteInfoLabel = &noteInfoLabel;
@@ -1426,6 +1434,8 @@ public:
         pianoRollComponent.add_hanging_noteOffComponent(
             43, 0.1, 0.0f, &noteInfoLabel);
 
+        // start timer
+        startTimerHz(10);
     }
 
     void resized() override {
@@ -1466,6 +1476,97 @@ public:
         pianoRollComponent.AllowToDragOutAsMidi = enable;
     }
 
+    void setpianoRollData(PianoRollData* pianoRollData_) {
+        pianoRollComponent.setPianoRollData(pianoRollData_);
+        pianoRollData = pianoRollData_;
+    }
+
+    // timer callback
+    void timerCallback() override
+    {
+        if (pianoRollData != nullptr)
+        {
+            if (pianoRollData->shouldRepaint()
+                && !pianoRollData->userDroppedNewSequence())
+            {
+                pianoRollComponent.clear_noteComponents();
+
+                auto sequence = pianoRollData->getCurrentSequence();
+                sequence.sort();
+                sequence.updateMatchedPairs();
+
+                auto CompleteNotes = vector<pair<MidiMessage, MidiMessage>>();
+
+                for (int i = 0; i < sequence.getNumEvents(); ++i)
+                {
+                    auto event = sequence.getEventPointer(i);
+                    if (event->message.isNoteOn())
+                    {
+                        if (event->noteOffObject != nullptr)
+                        {
+                            pianoRollComponent.add_complete_noteComponent(
+                                event->message.getNoteNumber(),
+                                event->message.getTimeStamp(),
+                                event->message.getFloatVelocity(),
+                                event->noteOffObject->message.getTimeStamp() -
+                                event->message.getTimeStamp(),
+                                &noteInfoLabel);
+
+                            CompleteNotes.push_back(
+                                pair<MidiMessage, MidiMessage>(
+                                    event->message, event->noteOffObject->message));
+                        }
+                        else
+                        {
+                            pianoRollComponent.add_hanging_noteOnComponent(
+                                event->message.getNoteNumber(),
+                                event->message.getTimeStamp(),
+                                event->message.getFloatVelocity(),
+                                &noteInfoLabel);
+                        }
+
+                    }
+
+                    // find note offs that don't have a corresponding note on
+                    else if (event->message.isNoteOff())
+                    {
+                        // check if message already in CompleteNotes
+                        bool found = false;
+                        for (auto& pair : CompleteNotes)
+                        {
+                            if (pair.second.getNoteNumber() == event->message.getNoteNumber()
+                                && pair.second.getChannel() == event->message.getChannel() &&
+                                pair.second.getTimeStamp() == event->message.getTimeStamp())
+                            {
+                                found = true;
+                                break;
+                            }
+                        }
+
+                        if (!found)
+                        {
+                            pianoRollComponent.add_hanging_noteOffComponent(
+                                event->message.getNoteNumber(),
+                                event->message.getTimeStamp(),
+                                event->message.getFloatVelocity(),
+                                &noteInfoLabel);
+                        }
+
+                    }
+
+                }
+
+            }
+
+        }
+
+    }
+
+    std::string getParamID() {
+
+        return paramID;
+    }
+
 private:
     juce::MidiFile midiFile;
 
@@ -1476,4 +1577,8 @@ private:
         juce::Colours::grey};
     juce::Label noteInfoLabel; // displays the note name when the mouse hovers over a note
     bool needsPlayhead{false};
+    PianoRollData* pianoRollData{nullptr};
+    std::string paramID;
+
 };
+

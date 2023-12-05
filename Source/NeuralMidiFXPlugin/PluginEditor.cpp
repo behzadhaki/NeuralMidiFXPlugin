@@ -158,6 +158,24 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
     }
     tabs.setCurrentTabIndex(0);
 
+    // provide resources for midi visualizers
+    for (auto & i : paramComponentVector)
+    {
+        for (auto & midiVis : i->midiDisplayArray)
+        {
+            for (auto & mV : i->midiDisplayArray)
+            {
+                auto paramID = mV->getParamID();
+                auto proll = (NeuralMidiFXPluginProcessorPointer_->pianoRollData.get());
+                if (proll->find(paramID) != proll->end())
+                {
+                    cout << "Found paramID " << paramID << endl;
+                    mV->setpianoRollData(&proll->at(paramID));
+                }
+            }
+        }
+    }
+
     resized();
 }
 

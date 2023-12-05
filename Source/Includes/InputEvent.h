@@ -783,7 +783,8 @@ private:
     juce::MidiMessage message{};
 
     // The actual time of the event. If event is a midiMessage, this time stamp
-    // can be different from the starting time stam of the buffer found in bufferMetaData.time_in_* fields
+    // can be different from the starting time stam of the buffer found
+    // in bufferMetaData.time_in_* fields
     double time_in_ppq{-1};
 
     long ppq_to_samples (double sample_rate, double qpm) const {
@@ -831,4 +832,104 @@ public:
         std::lock_guard<std::mutex> lock(mutex);
         return bufferMetaData;
     }
+};
+
+
+struct PianoRollData {
+
+    PianoRollData() = default;
+
+    // copy assignment operator
+    PianoRollData& operator=(const PianoRollData& other) {
+        std::lock_guard<std::mutex> lock(mutex);
+        displayedSequence = other.displayedSequence;
+        should_repaint = other.should_repaint;
+        user_dropped_new_sequence = other.user_dropped_new_sequence;
+        return *this;
+    }
+
+    // call this to empty out the content of the piano roll
+    void clear() {
+        std::lock_guard<std::mutex> lock(mutex);
+        displayedSequence.clear();
+        should_repaint = true;
+        user_dropped_new_sequence = false;
+    }
+
+    // call this to set the content of the piano roll
+    // isDraggedIn is true if the user dragged in a new sequence
+    // if you call this from DPL thread, set this to false
+    void setSequence(const juce::MidiMessageSequence& sequence, bool isDraggedIn = false) {
+        std::lock_guard<std::mutex> lock(mutex);
+        displayedSequence = sequence;
+        should_repaint = true;
+        user_dropped_new_sequence = isDraggedIn;
+        cout << "setSequence: " << sequence.getNumEvents() << endl;
+    }
+
+    void addNoteOn(int channel, int noteNumber, float velocity, double time) {
+        std::lock_guard<std::mutex> lock(mutex);
+        displayedSequence.addEvent(
+            juce::MidiMessage::noteOn(channel, noteNumber, velocity),
+            time);
+        should_repaint = true;
+        user_dropped_new_sequence = false;
+    }
+
+    void addNoteOff(int channel, int noteNumber, double time) {
+        std::lock_guard<std::mutex> lock(mutex);
+        displayedSequence.addEvent(
+            juce::MidiMessage::noteOff(channel, noteNumber),
+            time);
+        should_repaint = true;
+        user_dropped_new_sequence = false;
+    }
+
+    void addNoteWithDuration(
+        int channel, int noteNumber, float velocity, double time, double duration)	{
+        std::lock_guard<std::mutex> lock(mutex);
+        displayedSequence.addEvent(
+            juce::MidiMessage::noteOn(channel, noteNumber, velocity),
+            time);
+        displayedSequence.addEvent(
+            juce::MidiMessage::noteOff(channel, noteNumber),
+            time + duration);
+        should_repaint = true;
+        user_dropped_new_sequence = false;
+    }
+
+    vector<MidiFileEvent> getMidiFileEvents(juce::MidiMessageSequence& sequence) {
+            std::lock_guard<std::mutex> lock(mutex);
+            vector<MidiFileEvent> events;
+            for (int i = 0; i < sequence.getNumEvents(); ++i) {
+                auto e = sequence.getEventPointer(i);
+                auto& m = e->message;
+                events.emplace_back(
+                    m, i == 0, i == sequence.getNumEvents() - 1);
+            }
+            user_dropped_new_sequence = false;
+            should_repaint = false;
+            return events;
+    }
+
+    juce::MidiMessageSequence getCurrentSequence() {
+        std::lock_guard<std::mutex> lock(mutex);
+        return displayedSequence;
+    }
+
+    bool shouldRepaint() {
+        std::lock_guard<std::mutex> lock(mutex);
+        return should_repaint;
+    }
+
+    bool userDroppedNewSequence() {
+        std::lock_guard<std::mutex> lock(mutex);
+        return user_dropped_new_sequence;
+    }
+
+private:
+    std::mutex mutex{};
+    juce::MidiMessageSequence displayedSequence;
+    bool user_dropped_new_sequence{false};
+    bool should_repaint{false};
 };

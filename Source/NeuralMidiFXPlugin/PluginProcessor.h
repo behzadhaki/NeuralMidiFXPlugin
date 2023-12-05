@@ -204,6 +204,9 @@ public:
     // standalone
     unique_ptr<StandAloneParams> standAloneParams;
 
+    // PianoRollData
+    unique_ptr<map<std::string, PianoRollData>> pianoRollData{};
+
 private:
     // =========  Queues for communicating Between the main threads in processor  ===============
 
