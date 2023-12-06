@@ -36,7 +36,8 @@ public:
         LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2NMD_Parameters_Que_ptr_,
         LockFreeQueue<GenerationEvent, queue_settings::DPL2NMP_que_size> *DPL2NMP_GenerationEvent_Que_ptr_,
         LockFreeQueue<juce::MidiFile, 4>* GUI2DPL_DroppedMidiFile_Que_ptr_,
-        RealTimePlaybackInfo *realtimePlaybackInfo_ptr_);
+        RealTimePlaybackInfo *realtimePlaybackInfo_ptr_,
+        std::map<string, PianoRollData> *visualizerData_ptr_);
 
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 3 . start run() thread by calling startThread().
@@ -47,9 +48,12 @@ public:
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 4 . Implement Deploy Method -----> DO NOT MODIFY ANY PART EXCEPT THE BODY OF THE METHOD
     // ------------------------------------------------------------------------------------------------------------
-    std::pair<bool, bool> deploy(std::optional<MidiFileEvent> & new_midi_event_dragdrop,
-                std::optional<EventFromHost> & new_event_from_host, bool did_any_gui_params_change,
-                                 bool new_preset_loaded_since_last_call);
+    std::pair<bool, bool> deploy(
+        std::optional<MidiFileEvent> & new_midi_event_dragdrop,
+        std::optional<EventFromHost> & new_event_from_host,
+        bool did_any_gui_params_change,
+        bool new_preset_loaded_since_last_call,
+        bool new_midi_file_dropped_on_visualizers);
     // ============================================================================================================
 
     // ============================================================================================================
@@ -118,6 +122,7 @@ private:
     // You can update the DeploymentData struct in CustomStructs.h if you need any additional data
     DPLData DPLdata {};
 
+    std::map<string, PianoRollData> *visualizerData{};
 };
 
 

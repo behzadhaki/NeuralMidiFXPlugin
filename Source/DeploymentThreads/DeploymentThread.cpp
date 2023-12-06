@@ -14,7 +14,8 @@ void DeploymentThread::startThreadUsingProvidedResources(
     LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2NMD_Parameters_Que_ptr_,
     LockFreeQueue<GenerationEvent, queue_settings::DPL2NMP_que_size> *DPL2NMP_GenerationEvent_Que_ptr_,
     LockFreeQueue<juce::MidiFile, 4>* GUI2DPL_DroppedMidiFile_Que_ptr_,
-    RealTimePlaybackInfo *realtimePlaybackInfo_ptr_)
+    RealTimePlaybackInfo *realtimePlaybackInfo_ptr_,
+    std::map<string, PianoRollData> *visualizerData_ptr_)
 {
 
 
@@ -23,6 +24,7 @@ void DeploymentThread::startThreadUsingProvidedResources(
     DPL2NMP_GenerationEvent_Que_ptr = DPL2NMP_GenerationEvent_Que_ptr_;
     GUI2DPL_DroppedMidiFile_Que_ptr = GUI2DPL_DroppedMidiFile_Que_ptr_;
     realtimePlaybackInfo = realtimePlaybackInfo_ptr_;
+    visualizerData = visualizerData_ptr_;
 
     // Start the thread. This function internally calls run() method. DO NOT CALL run() DIRECTLY.
     // ---------------------------------------------------------------------------------------------
@@ -54,6 +56,7 @@ void DeploymentThread::run() {
     std::optional<MidiFileEvent> new_midi_event_dropped_manually {};
     bool shouldSendNewPlaybackPolicy{false};
     bool shouldSendNewPlaybackSequence{false};
+    bool midiFileDroppedOnVisualizer{false};
 
     int cnt{0};
 
@@ -88,14 +91,29 @@ void DeploymentThread::run() {
             new_event_from_DAW = std::nullopt;
         }
 
+        // check if a new midi file dropped on the visualizer
+        midiFileDroppedOnVisualizer = false;
+        if (visualizerData != nullptr) {
+            for (auto& [key, value] : *visualizerData) {
+                if (value.userDroppedNewSequence()) {
+                    midiFileDroppedOnVisualizer = true;
+                    break;
+                }
+            }
+        }
+
         // scope lock mutex deploymentThread->preset_loaded_mutex
         // try to lock mutex, if not possible, skip the rest of the loop
         bool newPresAvail = CustomPresetData->hasTensorDataChanged();
 
-        if (new_event_from_DAW.has_value() || gui_params.changed() || newPresAvail) {
+        if (new_event_from_DAW.has_value() || gui_params.changed() || newPresAvail || midiFileDroppedOnVisualizer) {
             new_midi_event_dropped_manually = std::nullopt;
             chrono_timed_deploy.registerStartTime();
-            auto status = deploy(new_midi_event_dropped_manually, new_event_from_DAW, gui_params.changed(), newPresAvail);
+            auto status = deploy(
+                new_midi_event_dropped_manually, new_event_from_DAW,
+                gui_params.changed(), newPresAvail,
+                midiFileDroppedOnVisualizer);
+
             shouldSendNewPlaybackPolicy = status.first;
             shouldSendNewPlaybackSequence = status.second;
             // push to next thread if a new input is provided
@@ -139,7 +157,7 @@ void DeploymentThread::run() {
                     auto isLast = (i == track->getNumEvents() - 1);
                     new_midi_event_dropped_manually = MidiFileEvent(msg_, isFirst, isLast);
                     new_event_from_DAW = std::nullopt;
-                    auto status =  deploy(new_midi_event_dropped_manually, new_event_from_DAW, false, false);
+                    auto status =  deploy(new_midi_event_dropped_manually, new_event_from_DAW, false, false, false);
                     shouldSendNewPlaybackPolicy = status.first;
                     shouldSendNewPlaybackSequence = status.second;
 

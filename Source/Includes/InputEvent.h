@@ -861,10 +861,12 @@ struct PianoRollData {
     // if you call this from DPL thread, set this to false
     void setSequence(const juce::MidiMessageSequence& sequence, bool isDraggedIn = false) {
         std::lock_guard<std::mutex> lock(mutex);
+        displayedSequence.clear();
+        should_repaint = true;
+        user_dropped_new_sequence = false;
         displayedSequence = sequence;
         should_repaint = true;
         user_dropped_new_sequence = isDraggedIn;
-        cout << "setSequence: " << sequence.getNumEvents() << endl;
     }
 
     void addNoteOn(int channel, int noteNumber, float velocity, double time) {
@@ -872,8 +874,8 @@ struct PianoRollData {
         displayedSequence.addEvent(
             juce::MidiMessage::noteOn(channel, noteNumber, velocity),
             time);
-        should_repaint = true;
         user_dropped_new_sequence = false;
+        should_repaint = true;
     }
 
     void addNoteOff(int channel, int noteNumber, double time) {
@@ -881,8 +883,8 @@ struct PianoRollData {
         displayedSequence.addEvent(
             juce::MidiMessage::noteOff(channel, noteNumber),
             time);
-        should_repaint = true;
         user_dropped_new_sequence = false;
+        should_repaint = true;
     }
 
     void addNoteWithDuration(
@@ -894,8 +896,8 @@ struct PianoRollData {
         displayedSequence.addEvent(
             juce::MidiMessage::noteOff(channel, noteNumber),
             time + duration);
-        should_repaint = true;
         user_dropped_new_sequence = false;
+        should_repaint = true;
     }
 
     vector<MidiFileEvent> getMidiFileEvents(juce::MidiMessageSequence& sequence) {
@@ -907,13 +909,14 @@ struct PianoRollData {
                 events.emplace_back(
                     m, i == 0, i == sequence.getNumEvents() - 1);
             }
-            user_dropped_new_sequence = false;
             should_repaint = false;
+            user_dropped_new_sequence = false;
             return events;
     }
 
     juce::MidiMessageSequence getCurrentSequence() {
         std::lock_guard<std::mutex> lock(mutex);
+        user_dropped_new_sequence = false;
         return displayedSequence;
     }
 
@@ -928,8 +931,16 @@ struct PianoRollData {
     }
 
 private:
-    std::mutex mutex{};
+    std::mutex mutex;
     juce::MidiMessageSequence displayedSequence;
     bool user_dropped_new_sequence{false};
     bool should_repaint{false};
+};
+
+
+struct VisualizerData {
+
+private:
+    std::vector<std::map<string, PianoRollData>> *pianoRolls;
+
 };

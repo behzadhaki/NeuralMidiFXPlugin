@@ -1341,6 +1341,17 @@ public:
                         }
                     }
 
+                    if (pianoRollData != nullptr) {
+                        cout << "Setting sequence" << endl;
+                        if (loadedMFile.getNumTracks() > 0) {
+                            auto track = loadedMFile.getTrack(0);
+                            cout << "Track size: " << track->getNumEvents() << endl;
+                            pianoRollData->setSequence(*track, true);
+                        }
+                    }   else {
+                        cout << "pianoRollData is null" << endl;
+                    }
+
                     repaint();
 
                     return true;
@@ -1350,14 +1361,9 @@ public:
                     cout << "SMPTE Format midi files are not supported at this time." << endl;
                 }
 
-                if (pianoRollData != nullptr) {
-                    auto track = loadedMFile.getTrack(0);
-                    pianoRollData->setSequence(*track, true);
 
-                }
             }
         }
-
 
 
         return false;
@@ -1365,6 +1371,7 @@ public:
 
     void setPianoRollData(PianoRollData* pianoRollData_) {
         pianoRollData = pianoRollData_;
+        cout << "Setting piano roll data" << endl;
     }
 
 private:
