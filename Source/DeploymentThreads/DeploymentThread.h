@@ -37,7 +37,7 @@ public:
         LockFreeQueue<GenerationEvent, queue_settings::DPL2NMP_que_size> *DPL2NMP_GenerationEvent_Que_ptr_,
         LockFreeQueue<juce::MidiFile, 4>* GUI2DPL_DroppedMidiFile_Que_ptr_,
         RealTimePlaybackInfo *realtimePlaybackInfo_ptr_,
-        std::map<string, PianoRollData> *visualizerData_ptr_);
+        VisualizersData *visualizerData_ptr_);
 
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 3 . start run() thread by calling startThread().
@@ -122,7 +122,7 @@ private:
     // You can update the DeploymentData struct in CustomStructs.h if you need any additional data
     DPLData DPLdata {};
 
-    std::map<string, PianoRollData> *visualizerData{};
+    VisualizersData *visualizerData{};
 };
 
 

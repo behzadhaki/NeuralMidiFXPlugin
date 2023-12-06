@@ -30,6 +30,10 @@
 
 - ONLY DPL THREAD
 
+### Midi VISUALIZER
+- Midi Visualizer GUI Elements now supported
+- See deploy() function for example
+
 -----
 
 -----
@@ -41,4 +45,3 @@ _______
 
 - AUDIO_PROCESSOR Thread Implementation
 - AUDIO VISUALIZER GUI ELEMENT
-- Midi Visualizer GUI Element

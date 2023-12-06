@@ -30,23 +30,20 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
     // ----------------------------------------------------------------------------------
     auto tabList = UIObjects::Tabs::tabList;
 
-    pianoRollData = std::make_unique<map<std::string, PianoRollData>>();
-
     int count = 0;
+    std::vector<std::string> param_ids;
 
     for (auto tab_list: tabList) {
         auto midiVisualizers = std::get<6>(tab_list);
         for (auto midiVisualizer: midiVisualizers) {
-            auto label = label2ParamID(std::get<0>(midiVisualizer));
-            (*pianoRollData)[label] = PianoRollData();
-            if (count == 0) {
-                (*pianoRollData)[label].addNoteWithDuration(0, 32, 0.5, 0, 10);
-                (*pianoRollData)[label].addNoteOn(0, 32, 0.2, 11);
-                (*pianoRollData)[label].addNoteOff(0, 32, 12);
-            }
+            param_ids.push_back(label2ParamID(std::get<0>(midiVisualizer)));
             count++;
         }
     }
+    visualizersData = std::make_unique<VisualizersData>(param_ids);
+
+    visualizersData->displayNoteOn(param_ids[0], 32, 0.2, 11);
+    visualizersData->displayNoteOff(param_ids[0], 32, 12);
 
     //       Make_unique pointers for Queues
     // ----------------------------------------------------------------------------------
@@ -84,7 +81,7 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
             DPL2NMP_GenerationEvent_Que.get(),
             GUI2DPL_DroppedMidiFile_Que.get(),
             realtimePlaybackInfo.get(),
-            pianoRollData.get());
+        visualizersData.get());
 
 
     // give access to resources && run threads

@@ -721,7 +721,7 @@ public:
         }
     }
 
-    std::stringstream getDescription(){
+    std::stringstream getDescription() const{
         std::stringstream ss;
         ss << "++ ";
         ss << " | message:    " << message.getDescription();
@@ -839,6 +839,14 @@ struct PianoRollData {
 
     PianoRollData() = default;
 
+    // copy constructor
+    PianoRollData(const PianoRollData& other) {
+        std::lock_guard<std::mutex> lock(mutex);
+        displayedSequence = other.displayedSequence;
+        should_repaint = other.should_repaint;
+        user_dropped_new_sequence = other.user_dropped_new_sequence;
+    }
+
     // copy assignment operator
     PianoRollData& operator=(const PianoRollData& other) {
         std::lock_guard<std::mutex> lock(mutex);
@@ -900,14 +908,14 @@ struct PianoRollData {
         should_repaint = true;
     }
 
-    vector<MidiFileEvent> getMidiFileEvents(juce::MidiMessageSequence& sequence) {
+    vector<MidiFileEvent> getMidiFileEvents() {
             std::lock_guard<std::mutex> lock(mutex);
             vector<MidiFileEvent> events;
-            for (int i = 0; i < sequence.getNumEvents(); ++i) {
-                auto e = sequence.getEventPointer(i);
+            for (int i = 0; i < displayedSequence.getNumEvents(); ++i) {
+                auto e = displayedSequence.getEventPointer(i);
                 auto& m = e->message;
                 events.emplace_back(
-                    m, i == 0, i == sequence.getNumEvents() - 1);
+                    m, i == 0, i == displayedSequence.getNumEvents() - 1);
             }
             should_repaint = false;
             user_dropped_new_sequence = false;
@@ -938,9 +946,131 @@ private:
 };
 
 
-struct VisualizerData {
+struct VisualizersData {
+
+    VisualizersData(std::vector<std::string> param_ids) {
+        for (auto& param_id: param_ids) {
+            (pianoRolls)[label2ParamID(param_id)] = PianoRollData();
+        }
+    }
+
+    // do not use this method in DPL thread!!
+    void setVisualizers(std::map<std::string, PianoRollData> pianoRolls_) {
+        std::lock_guard<std::mutex> lock(mutex);
+        pianoRolls = pianoRolls_;
+    }
+
+    // do not use this method in DPL thread!!
+    PianoRollData* getVisualizerResources(const std::string& param_id) {
+        std::lock_guard<std::mutex> lock(mutex);
+
+        if (!is_valid_param_id(param_id)) {
+            return nullptr;
+        } else {
+            return &(pianoRolls)[label2ParamID(param_id)];
+        }
+    }
+
+    // get the list of visualizer ids on which the user dropped a new sequence
+    std::vector<std::string> get_visualizer_ids_with_user_dropped_new_sequences() {
+        std::lock_guard<std::mutex> lock(mutex);
+        std::vector<std::string> visualizers_with_new_sequences;
+        for (auto& [key, value] : pianoRolls) {
+            if (value.userDroppedNewSequence()) {
+                visualizers_with_new_sequences.push_back(key);
+            }
+        }
+        return visualizers_with_new_sequences;
+    }
+
+    // returns the midi file events for the visualizer
+    std::optional<vector<MidiFileEvent>> get_visualizer_data(const std::string& param_id) {
+        std::lock_guard<std::mutex> lock(mutex);
+        if (!is_valid_param_id(param_id)) {
+            return std::nullopt;
+        } else {
+            auto mf_events = (pianoRolls)[label2ParamID(param_id)].getMidiFileEvents();
+            if (mf_events.empty()) {
+                return std::nullopt;
+            } else {
+                return mf_events;
+            }
+        }
+    }
+
+    void clear_visualizer_data(const std::string& visualizer_id) {
+        std::lock_guard<std::mutex> lock(mutex);
+        // if visualizer_id is not valid, do nothing
+        if (!is_valid_param_id(visualizer_id)) {
+            return;
+        }
+        (pianoRolls)[label2ParamID(visualizer_id)].clear();
+    }
+
+    void clear_all_visualizers() {
+        std::lock_guard<std::mutex> lock(mutex);
+        for (auto& [key, value] : pianoRolls) {
+            value.clear();
+        }
+    }
+
+    // returns true if successful
+    bool displayNoteOn(
+        const string&  visualizer_id, int noteNumber, float velocity, double time) {
+        std::lock_guard<std::mutex> lock(mutex);
+        // if visualizer_id is not valid, do nothing
+        if (!is_valid_param_id(visualizer_id)) {
+            return false;
+        } else {
+            (pianoRolls)[label2ParamID(visualizer_id)].addNoteOn(
+                0, noteNumber, velocity, time);
+            return true;
+        }
+    }
+
+    // returns true if successful
+    bool displayNoteOff(
+        const string& visualizer_id, int noteNumber, double time) {
+        std::lock_guard<std::mutex> lock(mutex);
+        // if visualizer_id is not valid, do nothing
+        if (!is_valid_param_id(visualizer_id)) {
+            return false;
+        } else {
+            (pianoRolls)[label2ParamID(visualizer_id)].addNoteOff(
+                0, noteNumber, time);
+            return true;
+        }
+    }
+
+    // returns true if successful
+    bool displayNoteWithDuration(
+        const string&  visualizer_id, int noteNumber, float velocity, double time, double duration) {
+        std::lock_guard<std::mutex> lock(mutex);
+        // if visualizer_id is not valid, do nothing
+        if (!is_valid_param_id(visualizer_id)) {
+            return false;
+        } else {
+            (pianoRolls)[label2ParamID(visualizer_id)].addNoteWithDuration(
+                0, noteNumber, velocity, time, duration);
+            return true;
+        }
+    }
 
 private:
-    std::vector<std::map<string, PianoRollData>> *pianoRolls;
+    std::mutex mutex;
+    std::map<std::string, PianoRollData> pianoRolls;
+
+    // check if param_id is valid
+    bool is_valid_param_id(const std::string& visualizer_id) {
+        auto stat = pianoRolls.find(label2ParamID(visualizer_id)) != pianoRolls.end();
+        if (!stat) {
+            cout << "visualizer_id " << visualizer_id << " is not valid" << endl;
+            cout << "Select a valid param_id from the list below:" << endl;
+            for (auto& [key, value] : pianoRolls) {
+                cout << key << endl;
+            }
+        }
+        return stat;
+    }
 
 };

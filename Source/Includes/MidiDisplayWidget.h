@@ -1349,7 +1349,7 @@ public:
                             pianoRollData->setSequence(*track, true);
                         }
                     }   else {
-                        cout << "pianoRollData is null" << endl;
+                        cout << "visualizersData is null" << endl;
                     }
 
                     repaint();
@@ -1371,7 +1371,6 @@ public:
 
     void setPianoRollData(PianoRollData* pianoRollData_) {
         pianoRollData = pianoRollData_;
-        cout << "Setting piano roll data" << endl;
     }
 
 private:

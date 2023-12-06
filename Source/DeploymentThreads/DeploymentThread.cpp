@@ -15,7 +15,7 @@ void DeploymentThread::startThreadUsingProvidedResources(
     LockFreeQueue<GenerationEvent, queue_settings::DPL2NMP_que_size> *DPL2NMP_GenerationEvent_Que_ptr_,
     LockFreeQueue<juce::MidiFile, 4>* GUI2DPL_DroppedMidiFile_Que_ptr_,
     RealTimePlaybackInfo *realtimePlaybackInfo_ptr_,
-    std::map<string, PianoRollData> *visualizerData_ptr_)
+    VisualizersData *visualizerData_ptr_)
 {
 
 
@@ -94,12 +94,17 @@ void DeploymentThread::run() {
         // check if a new midi file dropped on the visualizer
         midiFileDroppedOnVisualizer = false;
         if (visualizerData != nullptr) {
+            auto changed_visualizers = visualizerData->get_visualizer_ids_with_user_dropped_new_sequences();
+            if (changed_visualizers.size() > 0) {
+                midiFileDroppedOnVisualizer = true;
+            }
+            /*
             for (auto& [key, value] : *visualizerData) {
                 if (value.userDroppedNewSequence()) {
                     midiFileDroppedOnVisualizer = true;
                     break;
                 }
-            }
+            }*/
         }
 
         // scope lock mutex deploymentThread->preset_loaded_mutex

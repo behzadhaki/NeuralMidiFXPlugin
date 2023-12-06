@@ -43,13 +43,24 @@ std::pair<bool, bool>
 
     // ===============================================================================
     if (new_midi_file_dropped_on_visualizers) {
-        for (const auto& [key, value] : *visualizerData) {
-            const auto& piano_roll_data = value;
-            const auto& piano_roll_name = key;
-            cout << clr::blue << "[DPL] Midi File Dropped on Visualizer: " << piano_roll_name << endl;
+        auto ids = visualizerData->get_visualizer_ids_with_user_dropped_new_sequences();
+        for (const auto& id : ids) {
+            auto new_sequence = visualizerData->get_visualizer_data(id);
+            if (new_sequence != std::nullopt) {
+                for (const auto& event : *new_sequence) {
+                    cout << event.getDescription().str() << endl;
+                }
+            }
         }
-
     }
+
+    // ===============================================================================
+    // displaying contents in a visualizer
+    // ===============================================================================
+    visualizerData->clear_visualizer_data("MidiDisplay 1");
+    visualizerData->displayNoteOn("MidiDisplay 1", 32, 0.1, 0.5);
+    visualizerData->displayNoteOff("MidiDisplay 1", 32, 0.5);
+    visualizerData->displayNoteWithDuration("MidiDisplay 1", 31, 0.1, 0.5, 0.9);
 
     // your implementation goes here
     return {newPlaybackPolicyShouldBeSent, newPlaybackSequenceGeneratedAndShouldBeSent};

@@ -164,13 +164,8 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
         for (auto & mV : i->midiDisplayArray)
         {
             auto paramID = mV->getParamID();
-            auto proll = (NeuralMidiFXPluginProcessorPointer_->pianoRollData.get());
-            cout << "Looking for paramID " << paramID << endl;
-            if (proll->find(paramID) != proll->end())
-            {
-                cout << "Found paramID " << paramID << endl;
-                mV->setpianoRollData(&proll->at(paramID));
-            }
+            auto vis_data = (NeuralMidiFXPluginProcessorPointer_->visualizersData.get());
+            mV->setpianoRollData(vis_data->getVisualizerResources(paramID));
         }
     }
 
