@@ -59,8 +59,7 @@
                             "allowToDragOutAsMidi": true,
                             "allowToDragInMidi": true,
                             "needsPlayhead": true,
-                            "PlayheadLoopStartQuarterNotes": 0.0,
-                            "PlayheadLoopEndQuarterNotes": 4.0
+                            "PlayheadLoopDurationQuarterNotes": 4.0
                         }
                     ]
                 },

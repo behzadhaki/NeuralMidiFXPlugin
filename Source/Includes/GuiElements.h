@@ -408,6 +408,15 @@ private:
         newMidiVisualizer->enableDragInMidi(allowToDragInMidiFile);
         newMidiVisualizer->enableDragOutAsMidi(allowToDragOutAsMidiFile);
 
+        if (midiDisplayJson.contains("PlayheadLoopDurationQuarterNotes")) {
+
+            auto playheadLoopDurationQuarterNotes = midiDisplayJson["PlayheadLoopDurationQuarterNotes"].get<float>();
+
+            newMidiVisualizer->enableLooping(
+                0.0f,
+                playheadLoopDurationQuarterNotes);
+        }
+
         return newMidiVisualizer;
     }
 

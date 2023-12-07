@@ -645,6 +645,7 @@ void NeuralMidiFXPluginProcessor::setStateInformation(const void *data, int size
 
 void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                                                juce::MidiBuffer &midiMessages) {
+    // cout << UIObjects::StandaloneTransportPanel::enable << endl;
     tempBuffer.clear();
 
     // get Playhead info && buffer size && sample rate from host
@@ -654,6 +655,7 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     auto buffSize = buffer.getNumSamples();
 
     // check if standalone mode
+
     if (UIObjects::StandaloneTransportPanel::enable) {
         standAloneParams->update();
         Pinfo->setTimeInSamples(standAloneParams->TimeInSamples);

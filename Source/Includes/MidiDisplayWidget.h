@@ -823,6 +823,8 @@ public:
     juce::Colour playheadColour = juce::Colours::red;
     float playhead_pos{0};
     float disp_length{8};
+    float LoopStart{-1};
+    float LoopDuarion{-1};
 
     void paint(juce::Graphics& g) override
     {
@@ -852,11 +854,19 @@ public:
             if (length != disp_length) {
                 disp_length = length;
             }
+            if (LoopStart >= 0 && LoopDuarion > 0) {
+                pos = std::fmod(pos, LoopDuarion);
+            }
+
             playhead_pos = pos;
             repaint();
         }
     }
 
+    void enableLooping(float start_quarternotes, float duration_quarternotes) {
+        LoopStart = start_quarternotes;
+        LoopDuarion = duration_quarternotes;
+    }
 };
 
 class PianoKeysComponent : public juce::Component
@@ -1414,33 +1424,6 @@ public:
         addAndMakeVisible(pianoKeysComponent);
         addAndMakeVisible(noteInfoLabel);
 
-        // 4 on the floor kick snare pattern
-        pianoRollComponent.add_complete_noteComponent(
-            36, 0.1, 0.1f,
-            0.1f, &noteInfoLabel);
-        pianoRollComponent.add_complete_noteComponent(
-            36, 1, 0.3f,
-            0.1f, &noteInfoLabel);
-        pianoRollComponent.add_complete_noteComponent(
-            36, 2, 0.5f,
-            0.1f, &noteInfoLabel);
-        pianoRollComponent.add_complete_noteComponent(
-            36, 3, 0.6f,
-            0.1f, &noteInfoLabel);
-        pianoRollComponent.add_complete_noteComponent(
-            38, 1, 0.8f,
-            0.1f, &noteInfoLabel);
-        pianoRollComponent.add_complete_noteComponent(
-            38, 3, 1.0f,
-            0.1f, &noteInfoLabel);
-
-        // 1 hihat without note off
-        pianoRollComponent.add_hanging_noteOnComponent(
-            42, 0, 0.1f, &noteInfoLabel);
-        // 1 tom without note on
-        pianoRollComponent.add_hanging_noteOffComponent(
-            43, 0.1, 0.0f, &noteInfoLabel);
-
         // start timer
         startTimerHz(10);
     }
@@ -1481,6 +1464,10 @@ public:
 
     void enableDragOutAsMidi(bool enable) {
         pianoRollComponent.AllowToDragOutAsMidi = enable;
+    }
+
+    void enableLooping(float start_quarternotes, float duration_quarternotes) {
+        playheadVisualizer.enableLooping(start_quarternotes, duration_quarternotes);
     }
 
     void setpianoRollData(PianoRollData* pianoRollData_) {

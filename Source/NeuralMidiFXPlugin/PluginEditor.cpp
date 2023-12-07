@@ -293,6 +293,7 @@ void NeuralMidiFXPluginEditor::timerCallback()
 
     auto playhead_pos_ = NeuralMidiFXPluginProcessorPointer_->generationsToDisplay.getPlayheadPos();
     if (playhead_pos_ != std::nullopt){
+
         if (*playhead_pos_ != playhead_pos) {
             playhead_pos = *playhead_pos_;
             newPlayheadPos = true;
