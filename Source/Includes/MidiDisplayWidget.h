@@ -843,15 +843,15 @@ public:
         repaint();
     }
 
-    void setLength(float length) {
-        if (length != disp_length) {
-            disp_length = length;
-            repaint();
-        }
-    }
+    /*void setLength(float length) {
 
-    void setPlayheadPos(float pos) {
+    }*/
+
+    void setPlayheadPos(float pos, float length) {
         if (pos != playhead_pos) {
+            if (length != disp_length) {
+                disp_length = length;
+            }
             playhead_pos = pos;
             repaint();
         }
@@ -1059,10 +1059,8 @@ public:
     bool AllowToDragInMidi{true};
     bool newFileDraggedIn{false};
     bool AllowToDragOutAsMidi{true};
-    bool show_playhead{true};
     juce::String label{"Midi Display"};
     juce::Colour backgroundColour{juce::Colours::whitesmoke};
-    juce::Colour playheadColour = juce::Colours::red;
     juce::Label* noteInfoLabel;
 
     juce::Colour sharpNoteColour = juce::Colours::lightgrey;
@@ -1373,6 +1371,9 @@ public:
         pianoRollData = pianoRollData_;
     }
 
+    float getSequenceDuration() {
+        return SequenceDuration;
+    }
 private:
     std::vector<std::unique_ptr<NoteComponent>> noteComponents;
     PianoRollData* pianoRollData{nullptr};
@@ -1571,6 +1572,10 @@ public:
     std::string getParamID() {
 
         return paramID;
+    }
+
+    void updatePlayhead(double playhead_pos) {
+        playheadVisualizer.setPlayheadPos(playhead_pos, pianoRollComponent.getSequenceDuration());
     }
 
 private:

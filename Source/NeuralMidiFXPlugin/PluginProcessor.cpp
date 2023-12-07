@@ -309,7 +309,7 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
                 // if playhead moved manually backward clear all events after now
                 if (frame_meta_data.Time().inQuarterNotes() < last_frame_meta_data.Time().inQuarterNotes())
                 {
-                    if (UIObjects::MidiInVisualizer::deletePreviousIncomingMidiMessagesOnBackwardPlayhead) { // todo add flag to settings file for this
+                    if (UIObjects::MidiInVisualizer::deletePreviousIncomingMidiMessagesOnBackwardPlayhead) {
                         auto incoming_messages_sequence_temp = juce::MidiMessageSequence();
                         for (int i = 0; i < incoming_messages_sequence.getNumEvents(); i++) {
                             auto msg = incoming_messages_sequence.getEventPointer(i);

@@ -322,6 +322,16 @@ void NeuralMidiFXPluginEditor::timerCallback()
                 outputPianoRoll->displayMidiMessageSequence(playhead_pos);
             }
         }
+
+        // update playhead for user specified midi visualizers
+        for (auto & i : paramComponentVector)
+        {
+            for (auto & mV : i->midiDisplayArray)
+            {
+                auto paramID = mV->getParamID();
+                mV->updatePlayhead(playhead_pos);
+            }
+        }
     }
 
     if (newContent)
