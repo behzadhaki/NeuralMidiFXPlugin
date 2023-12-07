@@ -12,6 +12,7 @@
 ### MAJOR UPDATE
 
 - Settings are now saved in a file called "settings.json" rather than the settings Configs_GUI.h file
+- defaultVal changed to default
 - there is now a single thread version of the plugin as well
 
 ### New UI Elements 
@@ -33,6 +34,7 @@
 ### Midi VISUALIZER
 - Midi Visualizer GUI Elements now supported
 - See deploy() function for example
+
 
 -----
 
