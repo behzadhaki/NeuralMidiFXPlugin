@@ -41,17 +41,15 @@ struct param {
     bool isComboBox{false};         // for comboBoxes
     vector<string> comboBoxOptions{};
 
-    using slider_or_rotary_tuple = std::tuple<std::string, double, double, double, std::string, std::string>;
-
     param() = default;
 
-    explicit param(slider_or_rotary_tuple slider_or_rotary_tuple, bool isSlider_) {
-        label = std::get<0>(slider_or_rotary_tuple);
-        value = std::get<3>(slider_or_rotary_tuple);
+    void InitializeSlider(json slider_or_rotary_json, bool isSlider_) {
+        label = slider_or_rotary_json["label"].get<std::string>();
+        value = slider_or_rotary_json["default"].get<double>();
         paramID = label2ParamID(label);
-        min = std::get<1>(slider_or_rotary_tuple);
-        max = std::get<2>(slider_or_rotary_tuple);
-        defaultVal = std::get<3>(slider_or_rotary_tuple);
+        min = slider_or_rotary_json["min"].get<double>();
+        max = slider_or_rotary_json["max"].get<double>();
+        defaultVal = slider_or_rotary_json["default"].get<double>();
         isSlider = isSlider_;
         isRotary = !isSlider_;
         isButton = false;
@@ -59,8 +57,8 @@ struct param {
         isChanged = true;   // first time update is always true
     }
 
-    explicit param(button_tuple button_tuple) {
-        label = std::get<0>(button_tuple);
+    void InitializeButton(json button_json) {
+        label = button_json["label"].get<std::string>();
         value = 0;
         paramID = label2ParamID(label);
         min = std::nullopt;
@@ -69,16 +67,17 @@ struct param {
         isSlider = false;
         isRotary = false;
         isButton = true;
-        isToggle = std::get<1>(button_tuple);
+        isToggle = button_json["isToggle"].get<bool>();
         isChanged = true; // first time update is always true
     }
 
-    explicit param(comboBox_tuple comboBox_tuple) {
-        label = std::get<0>(comboBox_tuple);
+    void InitializeCombobox(json comboBox_json) {
+        label = comboBox_json["label"].get<std::string>();
         value = 1;
         paramID = label2ParamID(label);
         min = 1;
-        max = std::get<1>(comboBox_tuple).size();
+        comboBoxOptions = comboBox_json["options"].get<std::vector<std::string>>();
+        max = comboBoxOptions.size();
         defaultVal = 1;
         isSlider = false;
         isRotary = false;
@@ -86,8 +85,6 @@ struct param {
         isToggle = false;
         isComboBox = true;
         isChanged = true; // first time update is always true
-
-        comboBoxOptions = std::get<1>(comboBox_tuple);
     }
 
     bool update(juce::AudioProcessorValueTreeState *apvts) {
@@ -286,34 +283,44 @@ private:
             auto vslidersList = std::get<4>(tab_list);
             auto comboBoxesList = std::get<5>(tab_list);
 
-            for (const auto &slider_tuple: slidersList) {
-                auto label = std::get<0>(slider_tuple);
+            for (const auto &slider_json: slidersList) {
+                auto label = slider_json["label"].get<std::string>();
                 assertLabelIsUnique(label);
-                Parameters.emplace_back(slider_tuple, true);
+                auto param_ = param();
+                param_.InitializeSlider(slider_json, true);
+                Parameters.emplace_back(param_);
             }
 
-            for (const auto &vslider_tuple: vslidersList) {
-                auto label = std::get<0>(vslider_tuple);
+            for (const auto &vslider_json: vslidersList) {
+                auto label = vslider_json["label"].get<std::string>();
                 assertLabelIsUnique(label);
-                Parameters.emplace_back(vslider_tuple, true);
+                auto param_ = param();
+                param_.InitializeSlider(vslider_json, true);
+                Parameters.emplace_back(param_);
             }
 
-            for (const auto &rotary_tuple: rotariesList) {
-                auto label = std::get<0>(rotary_tuple);
+            for (const auto &rotary_json: rotariesList) {
+                auto label = rotary_json["label"].get<std::string>();
                 assertLabelIsUnique(label);
-                Parameters.emplace_back(rotary_tuple, false);
+                auto param_ = param();
+                param_.InitializeSlider(rotary_json, false);
+                Parameters.emplace_back(param_);
             }
 
-            for (const auto &button_tuple: buttonsList) {
-                std::string label = std::get<0>(button_tuple);
+            for (const auto &button_json: buttonsList) {
+                std::string label = button_json["label"].get<std::string>();
                 assertLabelIsUnique(label);
-                Parameters.emplace_back(button_tuple);
+                auto param_ = param();
+                param_.InitializeButton(button_json);
+                Parameters.emplace_back(param_);
             }
 
-            for (const auto &comboBox_tuple: comboBoxesList) {
-                std::string label = std::get<0>(comboBox_tuple);
+            for (const auto &comboBox_json: comboBoxesList) {
+                std::string label = comboBox_json["label"].get<std::string>();
                 assertLabelIsUnique(label);
-                Parameters.emplace_back(comboBox_tuple);
+                auto param_ = param();
+                param_.InitializeCombobox(comboBox_json);
+                Parameters.emplace_back(param_);
             }
         }
     }

@@ -11,7 +11,7 @@
                             "label": "Slider 1",
                             "min": 0.0,
                             "max": 1.0,
-                            "defaultVal": 0.0,
+                            "default": 0.0,
                             "topLeftCorner": "Av",
                             "bottomRightCorner": "Cz",
                             "horizontal": true
@@ -22,7 +22,7 @@
                             "label": "Rotary 1",
                             "min": 0.0,
                             "max": 1.0,
-                            "defaultVal": 0.5,
+                            "default": 0.5,
                             "topLeftCorner": "Vc",
                             "bottomRightCorner": "Xk"
                         },
@@ -30,7 +30,7 @@
                             "label": "Rotary 2",
                             "min": 0.0,
                             "max": 4.0,
-                            "defaultVal": 1.5,
+                            "default": 1.5,
                             "topLeftCorner": "Iq",
                             "bottomRightCorner": "Qz"
                         }
@@ -58,7 +58,9 @@
                             "bottomRightCorner": "Ro",
                             "allowToDragOutAsMidi": true,
                             "allowToDragInMidi": true,
-                            "needsPlayhead": true
+                            "needsPlayhead": true,
+                            "PlayheadLoopStartQuarterNotes": 0.0,
+                            "PlayheadLoopEndQuarterNotes": 4.0
                         }
                     ]
                 },
@@ -69,7 +71,7 @@
                             "label": "Test 1",
                             "min": 0.0,
                             "max": 1.0,
-                            "defaultVal": 0.0,
+                            "default": 0.0,
                             "topLeftCorner": "Aa",
                             "bottomRightCorner": "Ff"
                         },
@@ -77,7 +79,7 @@
                             "label": "Gibberish",
                             "min": 0.0,
                             "max": 25.0,
-                            "defaultVal": 11.0,
+                            "default": 11.0,
                             "topLeftCorner": "Ff",
                             "bottomRightCorner": "Ll"
                         }
@@ -87,7 +89,7 @@
                             "label": "Rotary 1B",
                             "min": 0.0,
                             "max": 1.0,
-                            "defaultVal": 0.5,
+                            "default": 0.5,
                             "topLeftCorner": "Ll",
                             "bottomRightCorner": "Pp"
                         },
@@ -95,7 +97,7 @@
                             "label": "Test 2B",
                             "min": 0.0,
                             "max": 4.0,
-                            "defaultVal": 1.5,
+                            "default": 1.5,
                             "topLeftCorner": "Pp",
                             "bottomRightCorner": "Tt"
                         }
@@ -116,7 +118,7 @@
                             "label": "Generation Playback Delay",
                             "min": 0.0,
                             "max": 10.0,
-                            "defaultVal": 0.0,
+                            "default": 0.0,
                             "topLeftCorner": "Aa",
                             "bottomRightCorner": "Zk",
                             "horizontal": true

@@ -35,8 +35,8 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
 
     for (auto tab_list: tabList) {
         auto midiVisualizers = std::get<6>(tab_list);
-        for (auto midiVisualizer: midiVisualizers) {
-            param_ids.push_back(label2ParamID(std::get<0>(midiVisualizer)));
+        for (auto midiVisualizerJson: midiVisualizers) {
+            param_ids.push_back(label2ParamID(midiVisualizerJson["label"].get<std::string>()));
             count++;
         }
     }
@@ -437,13 +437,9 @@ juce::AudioProcessor *JUCE_CALLTYPE createPluginFilter() {
 juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor::createParameterLayout() {
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
-    int version_hint = 1;
+    cout << "Creating parameter layout" << endl;
 
-    std::string name;
-    bool isToggleable;
-    double minValue, maxValue, initValue;
-    std::string topleftCorner{};
-    std::string bottomrightCorner{};
+    int version_hint = 1;
 
     size_t numTabs = UIObjects::Tabs::tabList.size();
     size_t numSliders;
@@ -460,13 +456,6 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
     hslider_list hsliderList;
     comboBox_list comboboxList;
 
-    slider_tuple sliderTuple;
-    rotary_tuple rotaryTuple;
-    button_tuple buttonTuple;
-    hslider_tuple hsliderTuple;
-    comboBox_tuple comboboxTuple;
-
-
     for (size_t j = 0; j < numTabs; j++) {
         tabTuple = UIObjects::Tabs::tabList[j];
 
@@ -482,10 +471,18 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
         numhsliders = hsliderList.size();
         numComboBoxes = comboboxList.size();
 
+        cout << "Adding tab: " << std::get<0>(tabTuple) << " out of " << numTabs << endl;
+
         // Sliders
         for (size_t i = 0; i < numSliders; ++i) {
-            sliderTuple = sliderList[i];
-            std::tie(name, minValue, maxValue, initValue, topleftCorner, bottomrightCorner) = sliderTuple;
+            cout << "Adding slider: " << endl;
+            auto sliderJson = sliderList[i];
+
+            auto name = sliderJson["label"].get<std::string>();
+            auto minValue = sliderJson["min"].get<float>();
+            auto maxValue = sliderJson["max"].get<float>();
+            auto initValue = sliderJson["default"].get<float>();
+
 
             // Param ID will read "Slider" + [tab, item] i.e. 'Slider_13"
             juce::String paramIDstr = label2ParamID(name);
@@ -496,8 +493,13 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
 
         // Rotaries
         for (size_t i = 0; i < numRotaries; ++i) {
-            rotaryTuple = rotaryList[i];
-            std::tie(name, minValue,maxValue, initValue, topleftCorner, bottomrightCorner) = rotaryTuple;
+            cout << "Adding rotary: " << rotaryList[i] << endl;
+            auto rotaryJson = rotaryList[i];
+
+            auto name = rotaryJson["label"].get<std::string>();
+            auto minValue = rotaryJson["min"].get<float>();
+            auto maxValue = rotaryJson["max"].get<float>();
+            auto initValue = rotaryJson["default"].get<float>();
 
             auto paramIDstr = label2ParamID(name);
             juce::ParameterID paramID = juce::ParameterID(paramIDstr, version_hint);
@@ -507,7 +509,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
 
         // Buttons
         for (size_t i = 0; i < numButtons; ++i) {
-            std::tie(name, isToggleable, topleftCorner, bottomrightCorner) = buttonList[i];
+            auto buttonJson = buttonList[i];
+
+            auto name = buttonJson["label"].get<std::string>();
+
             auto paramIDstr = label2ParamID(name);
             juce::ParameterID paramID = juce::ParameterID(paramIDstr, version_hint);
             layout.add (std::make_unique<juce::AudioParameterInt> (paramID, name, 0, 1, 0));
@@ -515,8 +520,12 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
 
         // Vertical Sliders
         for (size_t i = 0; i < numhsliders; ++i) {
-            hsliderTuple = hsliderList[i];
-            std::tie(name, minValue, maxValue, initValue, topleftCorner, bottomrightCorner) = hsliderTuple;
+            auto sliderJson = hsliderList[i];
+
+            auto name = sliderJson["label"].get<std::string>();
+            auto minValue = sliderJson["min"].get<float>();
+            auto maxValue = sliderJson["max"].get<float>();
+            auto initValue = sliderJson["default"].get<float>();
 
             auto paramIDstr = label2ParamID(name);
             juce::ParameterID paramID = juce::ParameterID(paramIDstr, version_hint);
@@ -526,10 +535,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
 
         // Combo Boxes
         for (size_t i = 0; i < numComboBoxes; ++i) {
-            comboboxTuple = comboboxList[i];
-            std::vector<std::string> items;
+            auto comboboxJson = comboboxList[i];
 
-            std::tie(name, items, topleftCorner, bottomrightCorner) = comboboxTuple;
+            auto name = comboboxJson["label"].get<std::string>();
+            auto items = comboboxJson["options"].get<std::vector<std::string>>();
 
             auto paramIDstr = label2ParamID(name);
             juce::ParameterID paramID = juce::ParameterID(paramIDstr, version_hint);
@@ -574,6 +583,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
             juce::ParameterID(label2ParamID("Preset"), version_hint),
             "Preset", 1, 100, 0));
 
+    cout << "Finished creating parameter layout" << endl;
     return layout;
 }
 
@@ -628,13 +638,8 @@ void NeuralMidiFXPluginProcessor::setStateInformation(const void *data, int size
 //            cout << "Loaded tensor map: " << endl;
 //            deploymentThread->CustomPresetData->printTensorMap();
 
-
         }
-
-
     }
-
-
 }
 
 

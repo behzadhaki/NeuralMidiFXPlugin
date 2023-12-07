@@ -28,9 +28,9 @@ tab_tuple{
 
 Each slider, rotary and button is expressed as a tuple with the following arguments:
 ```
-slider_tuple{"Name", min_value, max_value, default_value}
-rotary_tuple{"Name", min_value, max_value, default_value}
-button_tuple{"Name", IsToggleable}
+slider_json{"Name", min_value, max_value, default_value}
+rotary_json{"Name", min_value, max_value, default_value}
+button_json{"Name", IsToggleable}
 ```
 
 The plugin will automatically determine the vertical and horizontal
@@ -47,35 +47,35 @@ namespace Tabs {
                 tab_tuple{
                         "Model",
                         slider_list{
-                                slider_tuple{"Slider 1", 0.0, 1.0, 0.0},
-                                slider_tuple{"Slider 2", 0.0, 25.0, 11.0}},
+                                slider_json{"Slider 1", 0.0, 1.0, 0.0},
+                                slider_json{"Slider 2", 0.0, 25.0, 11.0}},
                         rotary_list{
-                                rotary_tuple{"Rotary 1", 0.0, 1.0, 0.5},
-                                rotary_tuple{"Rotary 2", 0.0, 4.0, 1.5},
-                                rotary_tuple{"Rotary 3", 0.0, 1.0, 0.0}},
+                                rotary_json{"Rotary 1", 0.0, 1.0, 0.5},
+                                rotary_json{"Rotary 2", 0.0, 4.0, 1.5},
+                                rotary_json{"Rotary 3", 0.0, 1.0, 0.0}},
                         button_list{
-                                button_tuple{"ToggleButton 1", true},
-                                button_tuple{"TriggerButton 1", false}}
+                                button_json{"ToggleButton 1", true},
+                                button_json{"TriggerButton 1", false}}
                 },
 
                 tab_tuple{
                         "Settings",
                         slider_list{
-                                slider_tuple{"Test 1", 0.0, 1.0, 0.0},
-                                slider_tuple{"Gibberish", 0.0, 25.0, 11.0}},
+                                slider_json{"Test 1", 0.0, 1.0, 0.0},
+                                slider_json{"Gibberish", 0.0, 25.0, 11.0}},
                         rotary_list{
-                                rotary_tuple{"Rotary 1B", 0.0, 1.0, 0.5},
-                                rotary_tuple{"Test 2B", 0.0, 4.0, 1.5}},
+                                rotary_json{"Rotary 1B", 0.0, 1.0, 0.5},
+                                rotary_json{"Test 2B", 0.0, 4.0, 1.5}},
                         button_list{
-                                button_tuple{"ToggleButton 2", true},
-                                button_tuple{"ToggleButton 3", true},
-                                button_tuple{"Dynamics", false}}
+                                button_json{"ToggleButton 2", true},
+                                button_json{"ToggleButton 3", true},
+                                button_json{"Dynamics", false}}
                 },
 
                 tab_tuple{
                         "Generation",
                         slider_list{
-                                slider_tuple{"Generation Playback Delay", 0.0, 10.0, 0.0}},
+                                slider_json{"Generation Playback Delay", 0.0, 10.0, 0.0}},
                         rotary_list{},
                         button_list{}
                 },

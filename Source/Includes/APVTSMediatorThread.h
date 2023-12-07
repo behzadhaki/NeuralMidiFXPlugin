@@ -55,9 +55,6 @@ public:
         APVM2DPL_GuiParams_QuePntr = APVM2DPL_GuiParams_QuePntr_;
 
         guiParamsPntr = make_unique<GuiParams>(APVTSPntr_);
-        // Get UIObjects in settings.h
-        auto tabList = UIObjects::Tabs::tabList;
-        size_t numTabs = tabList.size();
 
         startThread();
     }
