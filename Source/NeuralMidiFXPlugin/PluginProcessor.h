@@ -204,7 +204,7 @@ public:
     // standalone
     unique_ptr<StandAloneParams> standAloneParams;
 
-    // PianoRollData
+    // CrossThreadPianoRollData
     unique_ptr<VisualizersData> visualizersData{};
 
 private:

@@ -835,12 +835,12 @@ public:
 };
 
 
-struct PianoRollData {
-
-    PianoRollData() = default;
+struct CrossThreadPianoRollData
+{
+    CrossThreadPianoRollData() = default;
 
     // copy constructor
-    PianoRollData(const PianoRollData& other) {
+    CrossThreadPianoRollData(const CrossThreadPianoRollData& other) {
         std::lock_guard<std::mutex> lock(mutex);
         displayedSequence = other.displayedSequence;
         should_repaint = other.should_repaint;
@@ -848,7 +848,7 @@ struct PianoRollData {
     }
 
     // copy assignment operator
-    PianoRollData& operator=(const PianoRollData& other) {
+    CrossThreadPianoRollData& operator=(const CrossThreadPianoRollData& other) {
         std::lock_guard<std::mutex> lock(mutex);
         displayedSequence = other.displayedSequence;
         should_repaint = other.should_repaint;
@@ -950,18 +950,18 @@ struct VisualizersData {
 
     VisualizersData(std::vector<std::string> param_ids) {
         for (auto& param_id: param_ids) {
-            (pianoRolls)[label2ParamID(param_id)] = PianoRollData();
+            (pianoRolls)[label2ParamID(param_id)] = CrossThreadPianoRollData();
         }
     }
 
     // do not use this method in DPL thread!!
-    void setVisualizers(std::map<std::string, PianoRollData> pianoRolls_) {
+    void setVisualizers(std::map<std::string, CrossThreadPianoRollData> pianoRolls_) {
         std::lock_guard<std::mutex> lock(mutex);
         pianoRolls = pianoRolls_;
     }
 
     // do not use this method in DPL thread!!
-    PianoRollData* getVisualizerResources(const std::string& param_id) {
+    CrossThreadPianoRollData* getVisualizerResources(const std::string& param_id) {
         std::lock_guard<std::mutex> lock(mutex);
 
         if (!is_valid_param_id(param_id)) {
@@ -1058,7 +1058,7 @@ struct VisualizersData {
 
 private:
     std::mutex mutex;
-    std::map<std::string, PianoRollData> pianoRolls;
+    std::map<std::string, CrossThreadPianoRollData> pianoRolls;
 
     // check if param_id is valid
     bool is_valid_param_id(const std::string& visualizer_id) {

@@ -1349,12 +1349,12 @@ public:
                         }
                     }
 
-                    if (pianoRollData != nullptr) {
+                    if (crossThreadPianoRollData != nullptr) {
                         cout << "Setting sequence" << endl;
                         if (loadedMFile.getNumTracks() > 0) {
                             auto track = loadedMFile.getTrack(0);
                             cout << "Track size: " << track->getNumEvents() << endl;
-                            pianoRollData->setSequence(*track, true);
+                            crossThreadPianoRollData->setSequence(*track, true);
                         }
                     }   else {
                         cout << "visualizersData is null" << endl;
@@ -1377,8 +1377,8 @@ public:
         return false;
     }
 
-    void setPianoRollData(PianoRollData* pianoRollData_) {
-        pianoRollData = pianoRollData_;
+    void setPianoRollData(CrossThreadPianoRollData* crossThreadPianoRollData_) {
+        crossThreadPianoRollData = crossThreadPianoRollData_;
     }
 
     float getSequenceDuration() {
@@ -1386,7 +1386,7 @@ public:
     }
 private:
     std::vector<std::unique_ptr<NoteComponent>> noteComponents;
-    PianoRollData* pianoRollData{nullptr};
+    CrossThreadPianoRollData* crossThreadPianoRollData {nullptr};
     void setSequenceDuration() {
         // find the last note off event
         float max_time = 0;
@@ -1470,11 +1470,11 @@ public:
         playheadVisualizer.enableLooping(start_quarternotes, duration_quarternotes);
     }
 
-    void setpianoRollData(PianoRollData* pianoRollData_) {
-        pianoRollComponent.setPianoRollData(pianoRollData_);
-        pianoRollData = pianoRollData_;
+    void setpianoRollData(CrossThreadPianoRollData* crossThreadPianoRollData_) {
+        pianoRollComponent.setPianoRollData(crossThreadPianoRollData_);
+        crossThreadPianoRollData = crossThreadPianoRollData_;
 
-        auto seq = pianoRollData->getCurrentSequence();
+        auto seq = crossThreadPianoRollData->getCurrentSequence();
         pianoRollComponent.clear_noteComponents();
 
         seq.updateMatchedPairs();
@@ -1538,14 +1538,14 @@ public:
     // timer callback
     void timerCallback() override
     {
-        if (pianoRollData != nullptr)
+        if (crossThreadPianoRollData != nullptr)
         {
-            if (pianoRollData->shouldRepaint()
-                && !pianoRollData->userDroppedNewSequence())
+            if (crossThreadPianoRollData->shouldRepaint()
+                && !crossThreadPianoRollData->userDroppedNewSequence())
             {
                 pianoRollComponent.clear_noteComponents();
 
-                auto sequence = pianoRollData->getCurrentSequence();
+                auto sequence = crossThreadPianoRollData->getCurrentSequence();
                 sequence.sort();
                 sequence.updateMatchedPairs();
 
@@ -1635,7 +1635,7 @@ private:
         juce::Colours::grey};
     juce::Label noteInfoLabel; // displays the note name when the mouse hovers over a note
     bool needsPlayhead{false};
-    PianoRollData* pianoRollData{nullptr};
+    CrossThreadPianoRollData* crossThreadPianoRollData {nullptr};
     std::string paramID;
 
 };
