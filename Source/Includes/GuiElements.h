@@ -7,6 +7,7 @@
 
 #include "GuiParameters.h"
 #include "MidiDisplayWidget.h"
+#include "AudioDisplayWidget.h"
 
 using namespace std;
 

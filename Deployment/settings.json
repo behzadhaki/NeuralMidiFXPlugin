@@ -158,7 +158,7 @@
     },
 
     "StandaloneTransportPanel": {
-        "enable": true
+        "enable": false
     },
 
     "VirtualMidiOut": {

@@ -1243,7 +1243,7 @@ public:
         }
     }
 
-    bool isInterestedInFileDrag (const juce::StringArray& files) override
+    bool isInterestedInFileDrag (const juce::StringArray& /*files*/) override
     {
         // Check if the files are of a type you're interested in
         // Return true to indicate interest
@@ -1473,6 +1473,66 @@ public:
     void setpianoRollData(PianoRollData* pianoRollData_) {
         pianoRollComponent.setPianoRollData(pianoRollData_);
         pianoRollData = pianoRollData_;
+
+        auto seq = pianoRollData->getCurrentSequence();
+        pianoRollComponent.clear_noteComponents();
+
+        seq.updateMatchedPairs();
+
+        auto CompleteNotes = vector<pair<MidiMessage, MidiMessage>>();
+
+        for (int i = 0; i < seq.getNumEvents(); i++) {
+            auto event = seq.getEventPointer(i);
+            if (event->message.isNoteOn()) {
+                if (event->noteOffObject != nullptr) {
+                    pianoRollComponent.add_complete_noteComponent(
+                        event->message.getNoteNumber(),
+                        event->message.getTimeStamp(),
+                        event->message.getFloatVelocity(),
+                        event->noteOffObject->message.getTimeStamp() -
+                        event->message.getTimeStamp(),
+                        &noteInfoLabel);
+
+                    CompleteNotes.push_back(
+                        pair<MidiMessage, MidiMessage>(
+                            event->message, event->noteOffObject->message));
+                } else {
+                    pianoRollComponent.add_hanging_noteOnComponent(
+                        event->message.getNoteNumber(),
+                        event->message.getTimeStamp(),
+                        event->message.getFloatVelocity(),
+                        &noteInfoLabel);
+                }
+
+            }
+        }
+
+        for (int i = 0; i < seq.getNumEvents(); i++) {
+            auto event = seq.getEventPointer(i);
+            // find note offs that don't have a corresponding note on
+            if (event->message.isNoteOff()) {
+                // check if message already in CompleteNotes
+                bool found = false;
+                for (auto& pair : CompleteNotes) {
+                    if (pair.second.getNoteNumber() == event->message.getNoteNumber()
+                        && pair.second.getChannel() == event->message.getChannel() &&
+                        pair.second.getTimeStamp() == event->message.getTimeStamp()) {
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found) {
+                    pianoRollComponent.add_hanging_noteOffComponent(
+                        event->message.getNoteNumber(),
+                        event->message.getTimeStamp(),
+                        event->message.getFloatVelocity(),
+                        &noteInfoLabel);
+                }
+
+            }
+        }
+
     }
 
     // timer callback
@@ -1566,7 +1626,7 @@ public:
     }
 
 private:
-    juce::MidiFile midiFile;
+//    juce::MidiFile midiFile;
 
     PlayheadVisualizer playheadVisualizer;
     PianoRollComponent pianoRollComponent;
