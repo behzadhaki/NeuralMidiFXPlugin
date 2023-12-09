@@ -1729,8 +1729,14 @@ private:
 
         auto numSamples = (float) waveform_buffer.getNumSamples();
 
+        // for long audio files, only draw every 100th sample
+        auto sample_draw_interval = 10;
+        if (numSamples > 100000) {
+            sample_draw_interval = 100;
+        }
+
         // add every 100th sample to the path
-        for (int i = 0; i < waveform_buffer.getNumSamples(); i += 10) {
+        for (int i = 0; i < waveform_buffer.getNumSamples(); i += sample_draw_interval) {
             float x = (float)i / numSamples * (float)getWidth();
             float y = (1.0f + waveform_buffer.getSample(0, i)) / 2.0 * (float)getHeight();
             if (i == 0) {
