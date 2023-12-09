@@ -30,20 +30,44 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
     // ----------------------------------------------------------------------------------
     auto tabList = UIObjects::Tabs::tabList;
 
-    int count = 0;
-    std::vector<std::string> param_ids;
+    // populate midiVisualizersData
+    {
+        int count = 0;
+        std::vector<std::string> param_ids;
 
-    for (auto tab_list: tabList) {
-        auto midiVisualizers = std::get<6>(tab_list);
-        for (auto midiVisualizerJson: midiVisualizers) {
-            param_ids.push_back(label2ParamID(midiVisualizerJson["label"].get<std::string>()));
-            count++;
+        for (auto tab_list: tabList)
+        {
+            auto midiVisualizers = std::get<6>(tab_list);
+            for (auto midiVisualizerJson: midiVisualizers)
+            {
+                param_ids.push_back(
+                    label2ParamID(midiVisualizerJson["label"].get<std::string>()));
+                count++;
+            }
         }
-    }
-    visualizersData = std::make_unique<VisualizersData>(param_ids);
 
-    visualizersData->displayNoteOn(param_ids[0], 32, 0.2, 11);
-    visualizersData->displayNoteOff(param_ids[0], 32, 12);
+        midiVisualizersData = std::make_unique<MidiVisualizersData>(param_ids);
+    }
+
+    // populate audioVisualizersData
+    {
+        int count = 0;
+        std::vector<std::string> param_ids;
+
+        for (auto tab_list: tabList)
+        {
+            auto audioVisualizers = std::get<7>(tab_list);
+            for (auto audioVisualizerJson: audioVisualizers)
+            {
+                param_ids.push_back(
+                    label2ParamID(audioVisualizerJson["label"].get<std::string>()));
+                count++;
+            }
+        }
+
+        audioVisualizersData = std::make_unique<AudioVisualizersData>(param_ids);
+    }
+
 
     //       Make_unique pointers for Queues
     // ----------------------------------------------------------------------------------
@@ -76,12 +100,13 @@ NeuralMidiFXPluginProcessor::NeuralMidiFXPluginProcessor() : apvts(
     //       give access to resources && run threads
     // ----------------------------------------------------------------------------------
     deploymentThread->startThreadUsingProvidedResources(
-            NMP2DPL_Event_Que.get(),
-            APVM2DPL_GuiParams_Que.get(),
-            DPL2NMP_GenerationEvent_Que.get(),
-            GUI2DPL_DroppedMidiFile_Que.get(),
-            realtimePlaybackInfo.get(),
-        visualizersData.get());
+        NMP2DPL_Event_Que.get(),
+        APVM2DPL_GuiParams_Que.get(),
+        DPL2NMP_GenerationEvent_Que.get(),
+        GUI2DPL_DroppedMidiFile_Que.get(),
+        realtimePlaybackInfo.get(),
+        midiVisualizersData.get(),
+        audioVisualizersData.get());
 
 
     // give access to resources && run threads

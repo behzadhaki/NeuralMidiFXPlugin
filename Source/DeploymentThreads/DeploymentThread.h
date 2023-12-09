@@ -37,7 +37,8 @@ public:
         LockFreeQueue<GenerationEvent, queue_settings::DPL2NMP_que_size> *DPL2NMP_GenerationEvent_Que_ptr_,
         LockFreeQueue<juce::MidiFile, 4>* GUI2DPL_DroppedMidiFile_Que_ptr_,
         RealTimePlaybackInfo *realtimePlaybackInfo_ptr_,
-        VisualizersData *visualizerData_ptr_);
+        MidiVisualizersData* visualizerData_ptr_,
+        AudioVisualizersData* audioVisualizersData_ptr_);
 
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 3 . start run() thread by calling startThread().
@@ -53,7 +54,9 @@ public:
         std::optional<EventFromHost> & new_event_from_host,
         bool did_any_gui_params_change,
         bool new_preset_loaded_since_last_call,
-        bool new_midi_file_dropped_on_visualizers);
+        bool new_midi_file_dropped_on_visualizers,
+        bool new_audio_file_dropped_on_visualizers);
+
     // ============================================================================================================
 
     // ============================================================================================================
@@ -122,7 +125,8 @@ private:
     // You can update the DeploymentData struct in CustomStructs.h if you need any additional data
     DPLData DPLdata {};
 
-    VisualizersData *visualizerData{};
+    MidiVisualizersData* midiVisualizersData {};
+    AudioVisualizersData* audioVisualizersData {};
 };
 
 

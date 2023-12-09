@@ -10,7 +10,7 @@
 
 using namespace std;
 
-class InputMidiPianoRollComponent : public juce::Component,
+/*class InputMidiPianoRollComponent : public juce::Component,
                                     public juce::FileDragAndDropTarget
 {
 public:
@@ -346,7 +346,7 @@ public:
         return true;
     }
 
-    void filesDropped (const juce::StringArray& files, int /*x*/, int /*y*/) override
+    void filesDropped (const juce::StringArray& files, int *//*x*//*, int *//*y*//*) override
     {
         for (auto& file : files)
         {
@@ -845,9 +845,9 @@ public:
         repaint();
     }
 
-    /*void setLength(float length) {
+    *//*void setLength(float length) {
 
-    }*/
+    }*//*
 
     void setPlayheadPos(float pos, float length) {
         if (pos != playhead_pos) {
@@ -1243,7 +1243,7 @@ public:
         }
     }
 
-    bool isInterestedInFileDrag (const juce::StringArray& /*files*/) override
+    bool isInterestedInFileDrag (const juce::StringArray& files) override
     {
         // Check if the files are of a type you're interested in
         // Return true to indicate interest
@@ -1377,8 +1377,8 @@ public:
         return false;
     }
 
-    void setPianoRollData(CrossThreadPianoRollData* crossThreadPianoRollData_) {
-        crossThreadPianoRollData = crossThreadPianoRollData_;
+    void setPianoRollData(CrossThreadPianoRollData* pianoRollData_) {
+        crossThreadPianoRollData = pianoRollData_;
     }
 
     float getSequenceDuration() {
@@ -1386,7 +1386,7 @@ public:
     }
 private:
     std::vector<std::unique_ptr<NoteComponent>> noteComponents;
-    CrossThreadPianoRollData* crossThreadPianoRollData {nullptr};
+    CrossThreadPianoRollData* crossThreadPianoRollData{nullptr};
     void setSequenceDuration() {
         // find the last note off event
         float max_time = 0;
@@ -1408,8 +1408,8 @@ private:
 class MidiVisualizer: public juce::Component, juce::Timer {
 
 public:
-    /*bool AllowToDragInMidi{true};
-    bool AllowToDragOutAsMidi{true};*/
+    *//*bool AllowToDragInMidi{true};
+    bool AllowToDragOutAsMidi{true};*//*
 
     MidiVisualizer(bool needsPlayhead_,
                    string paramID_) {
@@ -1470,69 +1470,9 @@ public:
         playheadVisualizer.enableLooping(start_quarternotes, duration_quarternotes);
     }
 
-    void setpianoRollData(CrossThreadPianoRollData* crossThreadPianoRollData_) {
-        pianoRollComponent.setPianoRollData(crossThreadPianoRollData_);
-        crossThreadPianoRollData = crossThreadPianoRollData_;
-
-        auto seq = crossThreadPianoRollData->getCurrentSequence();
-        pianoRollComponent.clear_noteComponents();
-
-        seq.updateMatchedPairs();
-
-        auto CompleteNotes = vector<pair<MidiMessage, MidiMessage>>();
-
-        for (int i = 0; i < seq.getNumEvents(); i++) {
-            auto event = seq.getEventPointer(i);
-            if (event->message.isNoteOn()) {
-                if (event->noteOffObject != nullptr) {
-                    pianoRollComponent.add_complete_noteComponent(
-                        event->message.getNoteNumber(),
-                        event->message.getTimeStamp(),
-                        event->message.getFloatVelocity(),
-                        event->noteOffObject->message.getTimeStamp() -
-                        event->message.getTimeStamp(),
-                        &noteInfoLabel);
-
-                    CompleteNotes.push_back(
-                        pair<MidiMessage, MidiMessage>(
-                            event->message, event->noteOffObject->message));
-                } else {
-                    pianoRollComponent.add_hanging_noteOnComponent(
-                        event->message.getNoteNumber(),
-                        event->message.getTimeStamp(),
-                        event->message.getFloatVelocity(),
-                        &noteInfoLabel);
-                }
-
-            }
-        }
-
-        for (int i = 0; i < seq.getNumEvents(); i++) {
-            auto event = seq.getEventPointer(i);
-            // find note offs that don't have a corresponding note on
-            if (event->message.isNoteOff()) {
-                // check if message already in CompleteNotes
-                bool found = false;
-                for (auto& pair : CompleteNotes) {
-                    if (pair.second.getNoteNumber() == event->message.getNoteNumber()
-                        && pair.second.getChannel() == event->message.getChannel() &&
-                        pair.second.getTimeStamp() == event->message.getTimeStamp()) {
-                        found = true;
-                        break;
-                    }
-                }
-
-                if (!found) {
-                    pianoRollComponent.add_hanging_noteOffComponent(
-                        event->message.getNoteNumber(),
-                        event->message.getTimeStamp(),
-                        event->message.getFloatVelocity(),
-                        &noteInfoLabel);
-                }
-
-            }
-        }
-
+    void setpianoRollData(CrossThreadPianoRollData* pianoRollData_) {
+        pianoRollComponent.setPianoRollData(pianoRollData_);
+        crossThreadPianoRollData = pianoRollData_;
     }
 
     // timer callback
@@ -1626,7 +1566,7 @@ public:
     }
 
 private:
-//    juce::MidiFile midiFile;
+    juce::MidiFile midiFile;
 
     PlayheadVisualizer playheadVisualizer;
     PianoRollComponent pianoRollComponent;
@@ -1635,8 +1575,301 @@ private:
         juce::Colours::grey};
     juce::Label noteInfoLabel; // displays the note name when the mouse hovers over a note
     bool needsPlayhead{false};
-    CrossThreadPianoRollData* crossThreadPianoRollData {nullptr};
+    CrossThreadPianoRollData* crossThreadPianoRollData{nullptr};
     std::string paramID;
+
+};*/
+
+// the widget for drawing the wav form
+class AudioWaveformWidget : public juce::Component,
+                            public juce::FileDragAndDropTarget {
+public:
+    bool AllowToDragInAudio{true};
+    bool AllowToDragOutAsAudio{true};
+    juce::String label{"Audio Display"};
+    juce::Colour backgroundColour{juce::Colours::whitesmoke};
+
+    AudioWaveformWidget() {
+        setWantsKeyboardFocus(true);
+    }
+
+    void mouseDrag(const juce::MouseEvent& event) override
+    {
+        if (AllowToDragOutAsAudio)
+        {
+            // Save the audio file to a temporary file
+            juce::String fileName = juce::Uuid().toString() + ".wav";  // Random filename
+
+            juce::File outf(juce::File::getSpecialLocation(
+                                juce::File::SpecialLocationType::tempDirectory
+                                ).getChildFile(fileName));
+
+            juce::TemporaryFile tempf(outf);
+            {
+                auto p_os = std::make_unique<juce::FileOutputStream>(tempf.getFile());
+                if (p_os->openedOk())
+                {
+                    juce::WavAudioFormat wavFormat;
+                    std::unique_ptr<juce::AudioFormatWriter> writer;
+                    writer.reset(wavFormat.createWriterFor(p_os.get(), sampleRate, waveform_buffer.getNumChannels(), 16, {}, 0));
+
+                    if (writer != nullptr)
+                    {
+                        bool writeSuccess = writer->writeFromAudioSampleBuffer(waveform_buffer, 0, waveform_buffer.getNumSamples());
+                        if (!writeSuccess)
+                        {
+                            // Handle the error: Unable to write the buffer to the file
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        // Handle the error: Unable to create the WAV writer
+                        return;
+                    }
+
+                    // The AudioFormatWriter is now responsible for deleting the stream
+                    p_os.release();
+                }
+                else
+                {
+                    // Handle the error: Unable to open the file output stream
+                    return;
+                }
+            }
+
+            bool succeeded = tempf.overwriteTargetFileWithTemporary();
+            if (succeeded)
+            {
+                juce::DragAndDropContainer::performExternalDragDropOfFiles(
+                    {outf.getFullPathName()}, false);
+            }
+        }
+    }
+
+    bool isInterestedInFileDrag (const juce::StringArray& /*files*/) override
+    {
+        // Check if the files are of a type you're interested in
+        // Return true to indicate interest
+        return true;
+    }
+
+    void filesDropped (const juce::StringArray& files, int x, int y) override
+    {
+        if (!AllowToDragInAudio) { return; }
+
+        auto file = juce::File(files[0]);
+
+        if (file.exists())
+        {
+            // load the audio file
+            loadAudioFile(file);
+        }
+
+    }
+
+    void fileDragEnter (const juce::StringArray& files, int x, int y) override {
+
+    }
+    
+    void setAudioData(CrossThreadAudioVisualizerData* audioData_) {
+        crossThreadAudioVisualizerData = audioData_;
+    }
+
+    bool loadAudioFile(const juce::File& file) {
+        juce::AudioFormatManager formatManager;
+        formatManager.registerBasicFormats(); // Register all the basic formats (wav, aiff, etc.)
+
+        if (!file.existsAsFile()) {
+            // File does not exist
+            return false;
+        }
+
+        std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(file));
+        if (reader == nullptr) {
+            // The file is not an audio file
+            return false;
+        }
+
+        // Now we have a valid audio file, so let's prepare the buffer
+        waveform_buffer.clear();
+        waveform_buffer.setSize((int)reader->numChannels, (int)reader->lengthInSamples);
+        reader->read(&waveform_buffer, 0, (int)reader->lengthInSamples, 0, true, true);
+        sampleRate = reader->sampleRate;
+
+        return true;
+    }
+
+    double getSequenceDuration() {
+        return waveform_buffer.getNumSamples();
+    }
+
+private:
+    // keep waveform_buffer data
+    juce::AudioBuffer<float> waveform_buffer;
+    double sampleRate{44100};
+    CrossThreadAudioVisualizerData* crossThreadAudioVisualizerData{nullptr};
+    juce::String currentAudioFilePath; // Store the current audio file path here
+
+    // paints the waveform_buffer
+    void paint(juce::Graphics& g) override {
+        // ---------------------
+        // Draw background (12 notes
+        // ---------------------
+        g.fillAll(backgroundColour);
+
+        // ---------------------
+        // Display waveform_buffer data as a line graph
+        // ---------------------
+        auto area = getLocalBounds();
+
+        // draw the waveform_buffer
+        g.setColour(juce::Colours::black);
+        juce::Path waveformPath;
+
+        auto numSamples = (float) waveform_buffer.getNumSamples();
+
+        // add every 100th sample to the path
+        for (int i = 0; i < waveform_buffer.getNumSamples(); i += 10) {
+            float x = (float)i / numSamples * (float)getWidth();
+            float y = (1.0f + waveform_buffer.getSample(0, i)) / 2.0 * (float)getHeight();
+            if (i == 0) {
+                waveformPath.startNewSubPath(x, y);
+            } else {
+                waveformPath.lineTo(x, y);
+            }
+        }
+
+        g.strokePath(waveformPath, juce::PathStrokeType(0.24f));
+
+    }
 
 };
 
+class AudioPlayheadVisualizer : public juce::Component {
+public:
+    bool show_playhead{true};
+    juce::Colour playheadColour = juce::Colours::red;
+    float playhead_pos{0};
+    float disp_length{8};
+    float LoopStart{-1};
+    float LoopDuarion{-1};
+
+        void paint(juce::Graphics& g) override
+        {
+            if (show_playhead) {
+                g.setColour(playheadColour);
+                // Draw playhead
+                if (playhead_pos >= 0)
+                {
+                    auto x = playhead_pos / disp_length * (float)getWidth();
+                    g.drawLine(
+                        x, 0, x, (float) getHeight(), 2);
+                }
+            }
+        }
+
+        void resized() override
+        {
+            repaint();
+        }
+
+        // playhead pos is in samples only
+        void setPlayheadPos(int pos, int length) {
+            if (pos != playhead_pos) {
+                if (length != disp_length) {
+                    disp_length = length;
+                }
+                if (LoopStart >= 0 && LoopDuarion > 0) {
+                    pos = std::fmod(pos, LoopDuarion);
+                }
+
+                playhead_pos = pos;
+                repaint();
+            }
+        }
+
+        void enableLooping(int start_sample, int duration_samples) {
+            LoopStart = start_sample;
+            LoopDuarion = duration_samples;
+        }
+};
+
+
+class AudioVisualizer: public juce::Component, juce::Timer {
+public:
+    AudioVisualizer(bool needsPlayhead_,
+                    string paramID_) {
+        setInterceptsMouseClicks(false, true);
+        paramID = std::move(paramID_);
+        std::transform(paramID.begin(), paramID.end(), paramID.begin(), ::toupper);
+        needsPlayhead = needsPlayhead_;
+        addAndMakeVisible(audioWaveformWidget);
+        addAndMakeVisible(audioPlayheadVisualizer);
+
+        // start timer
+        startTimerHz(10);
+    }
+
+    void resized() override {
+        // 10% of the height for the playhead
+        // 90% of the height for the piano roll
+        auto area = getLocalBounds();
+
+       if (needsPlayhead) {
+            auto phead_height = area.getHeight() * 0.1;
+            audioWaveformWidget.setBounds(
+                area.removeFromTop(area.getHeight() * 0.9));
+            audioPlayheadVisualizer.setBounds(
+                area.removeFromTop(phead_height));
+       } else {
+            audioWaveformWidget.setBounds(area);
+       }
+
+    }
+
+    void paint(juce::Graphics& g) override {
+       g.fillAll(juce::Colours::black);
+    }
+
+    void enableDragInAudio(bool enable) {
+        audioWaveformWidget.AllowToDragInAudio = enable;
+    }
+
+    void enableDragOutAsAudio(bool enable) {
+        audioWaveformWidget.AllowToDragOutAsAudio = enable;
+    }
+
+    void enableLooping(float start_sample, float duration_samples) {
+        audioPlayheadVisualizer.enableLooping(start_sample, duration_samples);
+    }
+
+    void setAudioData(CrossThreadAudioVisualizerData* audioData_) {
+        audioWaveformWidget.setAudioData(audioData_);
+        crossThreadAudioVisualizerData = audioData_;
+    }
+
+    // timer callback
+    void timerCallback() override
+    {
+        if (crossThreadAudioVisualizerData != nullptr)
+        {}
+
+    }
+
+    std::string getParamID()
+    {
+        return paramID;
+    }
+
+    void updatePlayhead(double playhead_pos) {
+        audioPlayheadVisualizer.setPlayheadPos(playhead_pos, audioWaveformWidget.getSequenceDuration());
+    }
+
+private:
+    AudioWaveformWidget audioWaveformWidget;
+    AudioPlayheadVisualizer audioPlayheadVisualizer;
+    CrossThreadAudioVisualizerData* crossThreadAudioVisualizerData{nullptr};
+    bool needsPlayhead{false};
+    std::string paramID;
+};

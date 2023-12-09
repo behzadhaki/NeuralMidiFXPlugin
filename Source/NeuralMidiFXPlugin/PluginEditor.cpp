@@ -164,7 +164,7 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
         for (auto & mV : i->midiDisplayArray)
         {
             auto paramID = mV->getParamID();
-            auto vis_data = (NeuralMidiFXPluginProcessorPointer_->visualizersData.get());
+            auto vis_data = (NeuralMidiFXPluginProcessorPointer_->midiVisualizersData.get());
             mV->setpianoRollData(vis_data->getVisualizerResources(paramID));
         }
     }

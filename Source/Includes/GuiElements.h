@@ -27,6 +27,7 @@ public:
         hslidersList = std::get<4>(tabTuple);
         comboBoxesList = std::get<5>(tabTuple);
         midiDisplayList = std::get<6>(tabTuple);
+        audioDisplayList = std::get<7>(tabTuple);
 
         numButtons = buttonsList.size();
     }
@@ -124,6 +125,14 @@ public:
             addAndMakeVisible(newMidiVisualizer);
         }
 
+        for (const auto &audioDisplayJson: audioDisplayList) {
+            AudioVisualizer *newAudioVisualizer = generateAudioVisualizer(audioDisplayJson);
+            audioDisplayTopLeftCorners.emplace_back(audioDisplayJson["topLeftCorner"].get<std::string>()); // [0]
+            audioDisplayBottomRightCorners.emplace_back(audioDisplayJson["bottomRightCorner"].get<std::string>()); // [1]
+            audioDisplayArray.add(newAudioVisualizer);
+            addAndMakeVisible(newAudioVisualizer);
+        }
+
     }
 
     void resizeGuiElements(juce::Rectangle<int> area) {
@@ -155,6 +164,9 @@ public:
 
          // MidiDisplays
          resizeMidiDisplays();
+
+         // AudioDisplays
+         resizeAudioDisplays();
 
          repaint();
     }
@@ -238,6 +250,7 @@ public:
     juce::OwnedArray<juce::Label> comboBoxLabelArray;
 
     juce::OwnedArray<MidiVisualizer> midiDisplayArray;
+    juce::OwnedArray<AudioVisualizer> audioDisplayArray;
 
 private:
 
@@ -259,6 +272,8 @@ private:
     std::vector<std::string> comboBoxBottomRightCorners;
     std::vector<std::string> midiDisplayTopLeftCorners;
     std::vector<std::string> midiDisplayBottomRightCorners;
+    std::vector<std::string> audioDisplayTopLeftCorners;
+    std::vector<std::string> audioDisplayBottomRightCorners;
 
     std::vector<std::tuple<float, float, float, float, string, string>> componentBorders;
 
@@ -284,6 +299,7 @@ private:
     hslider_list hslidersList;
     comboBox_list comboBoxesList;
     midiDisplay_list midiDisplayList;
+    audioDisplay_list audioDisplayList;
 
     size_t numButtons;
 
@@ -419,6 +435,29 @@ private:
         }
 
         return newMidiVisualizer;
+    }
+
+    AudioVisualizer *generateAudioVisualizer(json audioDisplayJson) {
+        auto label = audioDisplayJson["label"].get<std::string>();
+        auto allowToDragOutAsAudioFile = audioDisplayJson["allowToDragOutAsAudio"].get<bool>();
+        auto allowToDragInAudioFile = audioDisplayJson["allowToDragInAudio"].get<bool>();
+        auto needsPlayhead = audioDisplayJson["needsPlayhead"].get<bool>();
+
+        auto *newAudioVisualizer = new AudioVisualizer{needsPlayhead, label};
+
+        newAudioVisualizer->enableDragInAudio(allowToDragInAudioFile);
+        newAudioVisualizer->enableDragOutAsAudio(allowToDragOutAsAudioFile);
+
+        if (audioDisplayJson.contains("PlayheadLoopDurationQuarterNotes")) {
+
+            auto playheadLoopDurationQuarterNotes = audioDisplayJson["PlayheadLoopDurationQuarterNotes"].get<float>();
+
+            newAudioVisualizer->enableLooping(
+                0.0f,
+                playheadLoopDurationQuarterNotes);
+        }
+
+        return newAudioVisualizer;
     }
 
     void resizeSliders() {
@@ -570,6 +609,33 @@ private:
             }
 
             midiDisplay_ix++;
+        }
+    }
+
+    void resizeAudioDisplays() {
+        int audioDisplay_ix = 0;
+        for (auto *comp: audioDisplayArray) {
+            auto [topLeftX, topLeftY] = coordinatesFromString(audioDisplayTopLeftCorners[audioDisplay_ix]);
+            auto [bottomRightX, bottomRightY] = coordinatesFromString(audioDisplayBottomRightCorners[audioDisplay_ix]);
+
+            auto area = getLocalBounds();
+
+            auto x = topLeftX - 2.0f;
+            auto y = topLeftY - 2.0f;
+            auto width = (bottomRightX - topLeftX) + 4.0f;
+            auto height = (bottomRightY - topLeftY) + 4.0f;
+
+            comp->setBounds(x, y, width, height);
+
+            if (UIObjects::Tabs::draw_borders_for_components) {
+                string tl_label = audioDisplayTopLeftCorners[audioDisplay_ix];
+                string br_label = audioDisplayBottomRightCorners[audioDisplay_ix];
+                auto border = std::tuple<float, float, float, float, string, string>(
+                    x, y, width, height, tl_label, br_label);
+                componentBorders.emplace_back(border);
+            }
+
+            audioDisplay_ix++;
         }
     }
 

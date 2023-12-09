@@ -10,7 +10,8 @@ std::pair<bool, bool>
         std::optional<EventFromHost> & new_event_from_host,
         bool gui_params_changed_since_last_call,
         bool new_preset_loaded_since_last_call,
-        bool new_midi_file_dropped_on_visualizers) {
+        bool new_midi_file_dropped_on_visualizers,
+        bool new_audio_file_dropped_on_visualizers) {
 
 // flags to keep track if any new data is generated and should
     // be sent to the main thread
@@ -43,9 +44,10 @@ std::pair<bool, bool>
 
     // ===============================================================================
     if (new_midi_file_dropped_on_visualizers) {
-        auto ids = visualizerData->get_visualizer_ids_with_user_dropped_new_sequences();
+        auto ids =
+            midiVisualizersData->get_visualizer_ids_with_user_dropped_new_sequences();
         for (const auto& id : ids) {
-            auto new_sequence = visualizerData->get_visualizer_data(id);
+            auto new_sequence = midiVisualizersData->get_visualizer_data(id);
             if (new_sequence != std::nullopt) {
                 for (const auto& event : *new_sequence) {
                     cout << event.getDescription().str() << endl;
@@ -57,10 +59,10 @@ std::pair<bool, bool>
     // ===============================================================================
     // displaying contents in a visualizer
     // ===============================================================================
-    visualizerData->clear_visualizer_data("MidiDisplay 1");
-    visualizerData->displayNoteOn("MidiDisplay 1", 32, 0.1, 0.5);
-    visualizerData->displayNoteOff("MidiDisplay 1", 32, 0.5);
-    visualizerData->displayNoteWithDuration("MidiDisplay 1", 31, 0.1, 0.5, 0.9);
+    midiVisualizersData->clear_visualizer_data("MidiDisplay 1");
+    midiVisualizersData->displayNoteOn("MidiDisplay 1", 32, 0.1, 0.5);
+    midiVisualizersData->displayNoteOff("MidiDisplay 1", 32, 0.5);
+    midiVisualizersData->displayNoteWithDuration("MidiDisplay 1", 31, 0.1, 0.5, 0.9);
 
     // your implementation goes here
     return {newPlaybackPolicyShouldBeSent, newPlaybackSequenceGeneratedAndShouldBeSent};

@@ -38,8 +38,10 @@ using button_list = std::vector<json>;
 using hslider_list = std::vector<json>;
 using comboBox_list = std::vector<json>;
 using midiDisplay_list = std::vector<json>;
+using audioDisplay_list = std::vector<json>;
 
-using tab_tuple = std::tuple<std::string, slider_list, rotary_list, button_list, hslider_list, comboBox_list, midiDisplay_list>;
+using tab_tuple = std::tuple<std::string, slider_list, rotary_list, button_list, hslider_list, comboBox_list, midiDisplay_list, audioDisplay_list>;
+
 
 inline json load_settings_json() {
 
@@ -81,6 +83,7 @@ inline std::vector<tab_tuple> parse_to_tabList() {
         hslider_list tabhsliders;
         comboBox_list tabComboBoxes;
         midiDisplay_list tabMidiDisplays;
+        audioDisplay_list tabAudioDisplays;
 
         // check if sliders exist
         if (tabJson.contains("sliders")) {
@@ -88,21 +91,8 @@ inline std::vector<tab_tuple> parse_to_tabList() {
                 // check if slider is vertical or horizontal
                 // vertical if it has no "horizontal" key or if it is false
                 if (!sliderJson.contains("horizontal") || !sliderJson["horizontal"].get<bool>()) {
-                    /*std::string sliderLabel = sliderJson["label"].get<std::string>();
-                    double sliderMin = sliderJson["min"];
-                    double sliderMax = sliderJson["max"];
-                    double sliderDefaultVal = sliderJson["default"];
-                    std::string sliderTopLeftCorner = sliderJson["topLeftCorner"].get<std::string>();
-                    std::string sliderBottomRightCorner = sliderJson["bottomRightCorner"].get<std::string>();
-                    slider_json sliderTuple = {sliderLabel, sliderMin, sliderMax, sliderDefaultVal, sliderTopLeftCorner, sliderBottomRightCorner};*/
                     tabSliders.push_back(sliderJson);
                 } else {
-                    /*std::string sliderLabel = sliderJson["label"].get<std::string>();
-                    double sliderMin = sliderJson["min"];
-                    double sliderMax = sliderJson["max"];
-                    double sliderDefaultVal = sliderJson["default"];
-                    std::string sliderTopLeftCorner = sliderJson["topLeftCorner"].get<std::string>();
-                    std::string sliderBottomRightCorner = sliderJson["bottomRightCorner"].get<std::string>();*/
                     tabhsliders.push_back(sliderJson);
                 }
             }
@@ -111,14 +101,6 @@ inline std::vector<tab_tuple> parse_to_tabList() {
         // check if rotaries exist
         if (tabJson.contains("rotaries")) {
             for (const auto& rotaryJson: tabJson["rotaries"]) {
-                /*std::string rotaryLabel = rotaryJson["label"].get<std::string>();
-                double rotaryMin = rotaryJson["min"];
-                double rotaryMax = rotaryJson["max"];
-                double rotaryDefaultVal = rotaryJson["default"];
-                std::string rotaryTopLeftCorner = rotaryJson["topLeftCorner"].get<std::string>();
-                std::string rotaryBottomRightCorner = rotaryJson["bottomRightCorner"].get<std::string>();
-
-                rotary_json rotaryTuple = {rotaryLabel, rotaryMin, rotaryMax, rotaryDefaultVal, rotaryTopLeftCorner, rotaryBottomRightCorner};*/
                 tabRotaries.push_back(rotaryJson);
             }
         }
@@ -126,11 +108,6 @@ inline std::vector<tab_tuple> parse_to_tabList() {
         // check if buttons exist
         if (tabJson.contains("buttons")) {
             for (const auto& buttonJson: tabJson["buttons"]) {
-                /*std::string buttonLabel = buttonJson["label"].get<std::string>();
-                bool buttonIsToggle = buttonJson["isToggle"];
-                std::string buttonTopLeftCorner = buttonJson["topLeftCorner"].get<std::string>();
-                std::string buttonBottomRightCorner =  buttonJson["bottomRightCorner"];
-                button_json buttonTuple = {buttonLabel, buttonIsToggle, buttonTopLeftCorner, buttonBottomRightCorner};*/
                 tabButtons.push_back(buttonJson);
             }
         }
@@ -138,32 +115,24 @@ inline std::vector<tab_tuple> parse_to_tabList() {
         // check if comboBoxes exist
         if (tabJson.contains("comboBoxes")) {
             for (const auto& comboBoxJson: tabJson["comboBoxes"]) {
-                /*std::string comboBoxLabel = comboBoxJson["label"].get<std::string>();
-                std::vector<std::string> comboBoxOptions = comboBoxJson["options"].get<std::vector<std::string>>();
-                std::string comboBoxTopLeftCorner = comboBoxJson["topLeftCorner"].get<std::string>();
-                std::string comboBoxBottomRightCorner =  comboBoxJson["bottomRightCorner"];
-                comboBox_json comboBoxTuple = {comboBoxLabel, comboBoxOptions, comboBoxTopLeftCorner, comboBoxBottomRightCorner};*/
                 tabComboBoxes.push_back(comboBoxJson);
             }
         }
 
         if (tabJson.contains("MidiDisplays")) {
             for (const auto& midiDisplayJson: tabJson["MidiDisplays"]) {
-                /*std::string midiDisplayLabel = midiDisplayJson["label"].get<std::string>();
-                bool allowToDragInMidi = midiDisplayJson["allowToDragInMidi"];
-                bool allowToDragOutAsMidi = midiDisplayJson["allowToDragOutAsMidi"];
-                bool needsPlayhead = midiDisplayJson["needsPlayhead"];
-                std::string midiDisplayTopLeftCorner = midiDisplayJson["topLeftCorner"].get<std::string>();
-                std::string midiDisplayBottomRightCorner =  midiDisplayJson["bottomRightCorner"];
-
-                midiDisplay_json midiDisplayTuple = {
-                        midiDisplayLabel, allowToDragInMidi, allowToDragOutAsMidi, needsPlayhead,
-                        midiDisplayTopLeftCorner, midiDisplayBottomRightCorner};*/
                 tabMidiDisplays.push_back(midiDisplayJson);
             }
         }
 
-        tab_tuple tabTuple = {tabName, tabSliders, tabRotaries, tabButtons, tabhsliders, tabComboBoxes, tabMidiDisplays};
+        if (tabJson.contains("AudioDisplays")) {
+            for (const auto& audioDisplayJson: tabJson["AudioDisplays"]) {
+                tabAudioDisplays.push_back(audioDisplayJson);
+            }
+        }
+
+
+        tab_tuple tabTuple = {tabName, tabSliders, tabRotaries, tabButtons, tabhsliders, tabComboBoxes, tabMidiDisplays, tabAudioDisplays};
         tabList.push_back(tabTuple);
 
     }

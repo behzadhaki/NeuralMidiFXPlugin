@@ -138,7 +138,26 @@
                     ]
                 },
                 {
-                    "name": "Tab 4"
+                    "name": "Tab 4",
+                    "AudioDisplays": [
+                        {
+                            "label": "AudioDisplay 1",
+                            "topLeftCorner": "Bb",
+                            "bottomRightCorner": "Jh",
+                            "allowToDragOutAsAudio": true,
+                            "allowToDragInAudio": true,
+                            "needsPlayhead": true
+                        },
+                        {
+                            "label": "AudioDisplay 2",
+                            "topLeftCorner": "Jh",
+                            "bottomRightCorner": "Ro",
+                            "allowToDragOutAsAudio": true,
+                            "allowToDragInAudio": true,
+                            "needsPlayhead": true,
+                            "PlayheadLoopDurationSamples": 44100
+                        }
+                    ]
                 }
             ]
         },

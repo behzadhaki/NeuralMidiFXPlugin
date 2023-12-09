@@ -15,7 +15,8 @@ void DeploymentThread::startThreadUsingProvidedResources(
     LockFreeQueue<GenerationEvent, queue_settings::DPL2NMP_que_size> *DPL2NMP_GenerationEvent_Que_ptr_,
     LockFreeQueue<juce::MidiFile, 4>* GUI2DPL_DroppedMidiFile_Que_ptr_,
     RealTimePlaybackInfo *realtimePlaybackInfo_ptr_,
-    VisualizersData *visualizerData_ptr_)
+    MidiVisualizersData* visualizerData_ptr_,
+    AudioVisualizersData* audioVisualizersData_ptr_)
 {
 
 
@@ -24,7 +25,8 @@ void DeploymentThread::startThreadUsingProvidedResources(
     DPL2NMP_GenerationEvent_Que_ptr = DPL2NMP_GenerationEvent_Que_ptr_;
     GUI2DPL_DroppedMidiFile_Que_ptr = GUI2DPL_DroppedMidiFile_Que_ptr_;
     realtimePlaybackInfo = realtimePlaybackInfo_ptr_;
-    visualizerData = visualizerData_ptr_;
+    midiVisualizersData = visualizerData_ptr_;
+    audioVisualizersData = audioVisualizersData_ptr_;
 
     // Start the thread. This function internally calls run() method. DO NOT CALL run() DIRECTLY.
     // ---------------------------------------------------------------------------------------------
@@ -93,15 +95,33 @@ void DeploymentThread::run() {
 
         // check if a new midi file dropped on the visualizer
         midiFileDroppedOnVisualizer = false;
-        if (visualizerData != nullptr) {
-            auto changed_visualizers = visualizerData->get_visualizer_ids_with_user_dropped_new_sequences();
+        if (midiVisualizersData != nullptr) {
+            auto changed_visualizers =
+                midiVisualizersData->get_visualizer_ids_with_user_dropped_new_sequences();
             if (changed_visualizers.size() > 0) {
                 midiFileDroppedOnVisualizer = true;
             }
             /*
-            for (auto& [key, value] : *visualizerData) {
+            for (auto& [key, value] : *midiVisualizersData) {
                 if (value.userDroppedNewSequence()) {
                     midiFileDroppedOnVisualizer = true;
+                    break;
+                }
+            }*/
+        }
+
+        // check if a new audio file dropped on the visualizer
+        bool audioFileDroppedOnVisualizer = false;
+        if (audioVisualizersData != nullptr) {
+            auto changed_visualizers =
+                audioVisualizersData->get_visualizer_ids_with_user_dropped_new_audio();
+            if (changed_visualizers.size() > 0) {
+                audioFileDroppedOnVisualizer = true;
+            }
+            /*
+            for (auto& [key, value] : *audioVisualizersData) {
+                if (value.userDroppedNewSequence()) {
+                    audioFileDroppedOnVisualizer = true;
                     break;
                 }
             }*/
@@ -111,13 +131,14 @@ void DeploymentThread::run() {
         // try to lock mutex, if not possible, skip the rest of the loop
         bool newPresAvail = CustomPresetData->hasTensorDataChanged();
 
-        if (new_event_from_DAW.has_value() || gui_params.changed() || newPresAvail || midiFileDroppedOnVisualizer) {
+        if (new_event_from_DAW.has_value() || gui_params.changed() || newPresAvail || midiFileDroppedOnVisualizer || audioFileDroppedOnVisualizer) {
             new_midi_event_dropped_manually = std::nullopt;
             chrono_timed_deploy.registerStartTime();
             auto status = deploy(
                 new_midi_event_dropped_manually, new_event_from_DAW,
                 gui_params.changed(), newPresAvail,
-                midiFileDroppedOnVisualizer);
+                midiFileDroppedOnVisualizer,
+                audioFileDroppedOnVisualizer);
 
             shouldSendNewPlaybackPolicy = status.first;
             shouldSendNewPlaybackSequence = status.second;
@@ -162,7 +183,7 @@ void DeploymentThread::run() {
                     auto isLast = (i == track->getNumEvents() - 1);
                     new_midi_event_dropped_manually = MidiFileEvent(msg_, isFirst, isLast);
                     new_event_from_DAW = std::nullopt;
-                    auto status =  deploy(new_midi_event_dropped_manually, new_event_from_DAW, false, false, false);
+                    auto status =  deploy(new_midi_event_dropped_manually, new_event_from_DAW, false, false, false, false);
                     shouldSendNewPlaybackPolicy = status.first;
                     shouldSendNewPlaybackSequence = status.second;
 

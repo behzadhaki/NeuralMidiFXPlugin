@@ -946,9 +946,9 @@ private:
 };
 
 
-struct VisualizersData {
-
-    VisualizersData(std::vector<std::string> param_ids) {
+struct MidiVisualizersData
+{
+    MidiVisualizersData(std::vector<std::string> param_ids) {
         for (auto& param_id: param_ids) {
             (pianoRolls)[label2ParamID(param_id)] = CrossThreadPianoRollData();
         }
@@ -1067,6 +1067,153 @@ private:
             cout << "visualizer_id " << visualizer_id << " is not valid" << endl;
             cout << "Select a valid param_id from the list below:" << endl;
             for (auto& [key, value] : pianoRolls) {
+                cout << key << endl;
+            }
+        }
+        return stat;
+    }
+
+};
+
+
+struct CrossThreadAudioVisualizerData
+{
+    CrossThreadAudioVisualizerData() = default;
+
+    CrossThreadAudioVisualizerData(const CrossThreadAudioVisualizerData& other) {
+        std::lock_guard<std::mutex> lock(mutex);
+        displayedAudioBuffer = other.displayedAudioBuffer;
+        sample_rate = other.sample_rate;
+        should_repaint = other.should_repaint;
+    }
+
+    CrossThreadAudioVisualizerData& operator=(const CrossThreadAudioVisualizerData& other) {
+        std::lock_guard<std::mutex> lock(mutex);
+        displayedAudioBuffer = other.displayedAudioBuffer;
+        sample_rate = other.sample_rate;
+        should_repaint = other.should_repaint;
+        return *this;
+    }
+
+    void setAudioBuffer(juce::AudioBuffer<float> audioBuffer_, double sample_rate_,
+                        bool isDraggedIn = false) {
+        std::lock_guard<std::mutex> lock(mutex);
+        displayedAudioBuffer = audioBuffer_;
+        sample_rate = sample_rate_;
+        should_repaint = true;
+        user_dropped_new_audio = isDraggedIn;
+    }
+
+    // call this to access the audio buffer and sample rate
+    std::pair<juce::AudioBuffer<float>, double> getAudioBuffer() {
+        std::lock_guard<std::mutex> lock(mutex);
+        user_dropped_new_audio = false;
+        should_repaint = false;
+        return {displayedAudioBuffer, sample_rate};
+    }
+
+    bool didUserDroppedNewAudio() {
+        std::lock_guard<std::mutex> lock(mutex);
+        return user_dropped_new_audio;
+    }
+
+private:
+    std::mutex mutex;
+    juce::AudioBuffer<float> displayedAudioBuffer {};
+    float sample_rate{44100};
+    bool should_repaint{false};
+    bool user_dropped_new_audio{false};
+
+};
+
+
+struct AudioVisualizersData
+{
+    AudioVisualizersData(std::vector<std::string> param_ids) {
+        for (auto& param_id: param_ids) {
+            (audioVisualizers)[label2ParamID(param_id)] =
+                CrossThreadAudioVisualizerData();
+        }
+    }
+
+    // do not use this method in DPL thread!!
+    void setVisualizers(std::map<std::string, CrossThreadAudioVisualizerData> audioVisualizers_) {
+        std::lock_guard<std::mutex> lock(mutex);
+        audioVisualizers = audioVisualizers_;
+    }
+
+    // do not use this method in DPL thread!!
+    CrossThreadAudioVisualizerData* getVisualizerResources(const std::string& param_id) {
+        std::lock_guard<std::mutex> lock(mutex);
+
+        if (!is_valid_param_id(param_id)) {
+            return nullptr;
+        } else {
+            return &(audioVisualizers)[label2ParamID(param_id)];
+        }
+    }
+
+    // get the list of visualizer ids on which the user dropped a new sequence
+    std::vector<std::string> get_visualizer_ids_with_user_dropped_new_audio() {
+        std::lock_guard<std::mutex> lock(mutex);
+        std::vector<std::string> visualizers_with_new_audio;
+        for (auto& [key, value] : audioVisualizers) {
+            if (value.didUserDroppedNewAudio()) {
+                visualizers_with_new_audio.push_back(key);
+            }
+        }
+        return visualizers_with_new_audio;
+    }
+
+    // returns the audio buffer for the visualizer
+    std::optional<std::pair<juce::AudioBuffer<float>, double>> get_visualizer_data(const std::string& param_id) {
+        std::lock_guard<std::mutex> lock(mutex);
+        if (!is_valid_param_id(param_id)) {
+            return std::nullopt;
+        } else {
+            auto [audio_buffer, sample_rate] = (audioVisualizers)[label2ParamID(param_id)].getAudioBuffer();
+            if (audio_buffer.getNumSamples() == 0) {
+                return std::nullopt;
+            } else {
+                return std::make_pair(audio_buffer, sample_rate);
+            }
+        }
+    }
+
+    void clear_visualizer_data(const std::string& visualizer_id) {
+        std::lock_guard<std::mutex> lock(mutex);
+        // if visualizer_id is not valid, do nothing
+        if (!is_valid_param_id(visualizer_id)) {
+            return;
+        }
+        (audioVisualizers)[label2ParamID(visualizer_id)].setAudioBuffer(
+            juce::AudioBuffer<float>(), 44100);
+    }
+
+    bool display_audio(
+        const string&  visualizer_id, juce::AudioBuffer<float> audioBuffer_, double sample_rate_) {
+        std::lock_guard<std::mutex> lock(mutex);
+        // if visualizer_id is not valid, do nothing
+        if (!is_valid_param_id(visualizer_id)) {
+            return false;
+        } else {
+            (audioVisualizers)[label2ParamID(visualizer_id)].setAudioBuffer(
+                audioBuffer_, sample_rate_);
+            return true;
+        }
+    }
+
+private:
+    std::mutex mutex;
+    std::map<std::string, CrossThreadAudioVisualizerData> audioVisualizers;
+
+    // check if param_id is valid
+    bool is_valid_param_id(const std::string& visualiser_id) {
+        auto stat = audioVisualizers.find(label2ParamID(visualiser_id)) != audioVisualizers.end();
+        if (!stat) {
+            cout << "visualiser_id " << visualiser_id << " is not valid" << endl;
+            cout << "Select a valid param_id from the list below:" << endl;
+            for (auto& [key, value] : audioVisualizers) {
                 cout << key << endl;
             }
         }

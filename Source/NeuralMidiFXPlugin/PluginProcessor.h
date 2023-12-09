@@ -205,7 +205,10 @@ public:
     unique_ptr<StandAloneParams> standAloneParams;
 
     // CrossThreadPianoRollData
-    unique_ptr<VisualizersData> visualizersData{};
+    unique_ptr<MidiVisualizersData> midiVisualizersData {};
+
+    // CrossThreadAudioVisualizerData
+    unique_ptr<AudioVisualizersData> audioVisualizersData {};
 
 private:
     // =========  Queues for communicating Between the main threads in processor  ===============
