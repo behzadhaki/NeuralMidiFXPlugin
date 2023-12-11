@@ -72,10 +72,8 @@ public:
     // ============================================================================================================
     unique_ptr<CustomPresetDataDictionary>
         CustomPresetData; // data stored here will be saved automatically when the plugin is saved/loaded/preset changed
-//    mutable std::mutex  preset_loaded_mutex;
-//    bool newPresetLoaded{false};
-
-
+    //    mutable std::mutex  preset_loaded_mutex;
+    //    bool newPresetLoaded{false};
 
 private:
     // ============================================================================================================

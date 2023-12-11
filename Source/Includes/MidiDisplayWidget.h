@@ -814,9 +814,6 @@ private:
 /// --------------------- MIDI IO VISUALIZER ---------------------
 
 
-
-
-
 class PlayheadVisualizer : public juce::Component {
 public:
     bool show_playhead{true};
