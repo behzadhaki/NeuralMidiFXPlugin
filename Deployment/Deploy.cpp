@@ -64,6 +64,38 @@ std::pair<bool, bool>
     midiVisualizersData->displayNoteOff("MidiDisplay 1", 32, 0.5);
     midiVisualizersData->displayNoteWithDuration("MidiDisplay 1", 31, 0.1, 0.5, 0.9);
 
+    // ===============================================================================
+    if (audioVisualizersData == nullptr) {
+        cout << clr::red << "[DPL] Audio Visualizers Data is Null" << endl;
+    }
+
+    if (new_audio_file_dropped_on_visualizers) {
+        auto ids = audioVisualizersData->get_visualizer_ids_with_user_dropped_new_audio();
+        for (const auto& id : ids) {
+            auto new_audios = audioVisualizersData->get_visualizer_data(id);
+            if (new_audios != std::nullopt) {
+                auto [audio, fs] = *new_audios;
+                cout << "Audio File Dropped on Visualizer: " << id << endl;
+                cout << "Audio File Length In Samples: " << audio.getNumSamples() << endl;
+            }
+        }
+    }
+
+    // ===============================================================================
+    // displaying contents in a visualizer
+    // ===============================================================================
+    audioVisualizersData->clear_visualizer_data("AudioDisplay 1");
+    float fs = 44100;
+    int duration_samples = int(fs * 10.0f);
+    juce::AudioBuffer<float> audioBuffer(1, duration_samples);
+    // populate audioBuffer with 10 cycles of a sine wave
+    for (int i = 0; i < duration_samples; i++) {
+        audioBuffer.setSample(0, i, std::sin(i * 2 * M_PI / fs));
+    }
+
+    audioVisualizersData->display_audio("AudioDisplay 1", audioBuffer, fs);
+    cout << "Displayed Audio in AudioDisplay 1" << endl;
+
     // your implementation goes here
     return {newPlaybackPolicyShouldBeSent, newPlaybackSequenceGeneratedAndShouldBeSent};
 }

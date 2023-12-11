@@ -1697,7 +1697,19 @@ public:
         reader->read(&waveform_buffer, 0, (int)reader->lengthInSamples, 0, true, true);
         sampleRate = reader->sampleRate;
 
+        // place the content in crossThreadAudioVisualizerData so that
+        // the DPL thread can access it
+        if (crossThreadAudioVisualizerData != nullptr) {
+            crossThreadAudioVisualizerData->setAudioBuffer(waveform_buffer, sampleRate, true);
+        }
+
         return true;
+    }
+
+    void update_waveform_buffer(juce::AudioBuffer<float> waveform_buffer_, double sampleRate_) {
+        waveform_buffer = std::move(waveform_buffer_);
+        sampleRate = sampleRate_;
+        repaint();
     }
 
     double getSequenceDuration() {
@@ -1859,7 +1871,17 @@ public:
     void timerCallback() override
     {
         if (crossThreadAudioVisualizerData != nullptr)
-        {}
+        {
+            if (crossThreadAudioVisualizerData->shouldRepaint()
+                && !crossThreadAudioVisualizerData->didUserDroppedNewAudio()) {
+                    cout << "accessing deployer thread data" << endl;
+                    auto [waveform_buffer, sampleRate] =
+                        crossThreadAudioVisualizerData->getAudioBuffer();
+                    audioWaveformWidget.update_waveform_buffer(waveform_buffer,
+                                                               sampleRate);
+                    resized();
+            }
+        }
 
     }
 
@@ -1875,6 +1897,9 @@ public:
 private:
     AudioWaveformWidget audioWaveformWidget;
     AudioPlayheadVisualizer audioPlayheadVisualizer;
+
+    // all visualizers' data will be stored here.
+    // thread safe access/updates via editor and/or DPL thread
     CrossThreadAudioVisualizerData* crossThreadAudioVisualizerData{nullptr};
     bool needsPlayhead{false};
     std::string paramID;

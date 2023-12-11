@@ -1117,6 +1117,18 @@ struct CrossThreadAudioVisualizerData
         return user_dropped_new_audio;
     }
 
+    bool shouldRepaint() {
+        std::lock_guard<std::mutex> lock(mutex);
+        auto val = should_repaint;
+        should_repaint = false;
+        return val;
+    }
+
+    float getSampleRate() {
+        std::lock_guard<std::mutex> lock(mutex);
+        return sample_rate;
+    }
+
 private:
     std::mutex mutex;
     juce::AudioBuffer<float> displayedAudioBuffer {};

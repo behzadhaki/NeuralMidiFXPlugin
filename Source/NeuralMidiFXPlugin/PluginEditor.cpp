@@ -169,6 +169,17 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
         }
     }
 
+    // provide resources for audio visualizers
+    for (auto & i : paramComponentVector)
+    {
+        for (auto & aV : i->audioDisplayArray)
+        {
+            auto paramID = aV->getParamID();
+            auto vis_data = (NeuralMidiFXPluginProcessorPointer_->audioVisualizersData.get());
+            aV->setAudioData(vis_data->getVisualizerResources(paramID));
+        }
+    }
+
     resized();
 }
 

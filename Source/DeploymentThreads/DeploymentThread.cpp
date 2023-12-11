@@ -118,13 +118,7 @@ void DeploymentThread::run() {
             if (changed_visualizers.size() > 0) {
                 audioFileDroppedOnVisualizer = true;
             }
-            /*
-            for (auto& [key, value] : *audioVisualizersData) {
-                if (value.userDroppedNewSequence()) {
-                    audioFileDroppedOnVisualizer = true;
-                    break;
-                }
-            }*/
+
         }
 
         // scope lock mutex deploymentThread->preset_loaded_mutex
