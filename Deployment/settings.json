@@ -1,0 +1,187 @@
+{
+    "UI": {
+        "Tabs": {
+            "show_grid": true,
+            "draw_borders_for_components": true,
+            "tabList": [
+                {
+                    "name": "Tab 1",
+                    "sliders": [
+                        {
+                            "label": "Slider 1",
+                            "min": 0.0,
+                            "max": 1.0,
+                            "default": 0.0,
+                            "topLeftCorner": "Av",
+                            "bottomRightCorner": "Cz",
+                            "horizontal": true
+                        }
+                    ],
+                    "rotaries": [
+                        {
+                            "label": "Rotary 1",
+                            "min": 0.0,
+                            "max": 1.0,
+                            "default": 0.5,
+                            "topLeftCorner": "Vc",
+                            "bottomRightCorner": "Xk"
+                        },
+                        {
+                            "label": "Rotary 2",
+                            "min": 0.0,
+                            "max": 4.0,
+                            "default": 1.5,
+                            "topLeftCorner": "Iq",
+                            "bottomRightCorner": "Qz"
+                        }
+                    ],
+                    "buttons": [
+                        {
+                            "label": "TriggerButton 1",
+                            "isToggle": false,
+                            "topLeftCorner": "Wv",
+                            "bottomRightCorner": "Zz"
+                        }
+                    ],
+                    "MidiDisplays": [
+                        {
+                            "label": "MidiDisplay 1",
+                            "topLeftCorner": "Bb",
+                            "bottomRightCorner": "Jh",
+                            "allowToDragOutAsMidi": true,
+                            "allowToDragInMidi": true,
+                            "needsPlayhead": true
+                        },
+                        {
+                            "label": "MidiDisplay 2",
+                            "topLeftCorner": "Jh",
+                            "bottomRightCorner": "Ro",
+                            "allowToDragOutAsMidi": true,
+                            "allowToDragInMidi": true,
+                            "needsPlayhead": true,
+                            "PlayheadLoopDurationQuarterNotes": 4.0
+                        }
+                    ]
+                },
+                {
+                    "name": "Tab 2",
+                    "sliders": [
+                        {
+                            "label": "Test 1",
+                            "min": 0.0,
+                            "max": 1.0,
+                            "default": 0.0,
+                            "topLeftCorner": "Aa",
+                            "bottomRightCorner": "Ff"
+                        },
+                        {
+                            "label": "Gibberish",
+                            "min": 0.0,
+                            "max": 25.0,
+                            "default": 11.0,
+                            "topLeftCorner": "Ff",
+                            "bottomRightCorner": "Ll"
+                        }
+                    ],
+                    "rotaries": [
+                        {
+                            "label": "Rotary 1B",
+                            "min": 0.0,
+                            "max": 1.0,
+                            "default": 0.5,
+                            "topLeftCorner": "Ll",
+                            "bottomRightCorner": "Pp"
+                        },
+                        {
+                            "label": "Test 2B",
+                            "min": 0.0,
+                            "max": 4.0,
+                            "default": 1.5,
+                            "topLeftCorner": "Pp",
+                            "bottomRightCorner": "Tt"
+                        }
+                    ],
+                    "buttons": [
+                        {
+                            "label": "ToggleButton 1",
+                            "isToggle": true,
+                            "topLeftCorner": "Tt",
+                            "bottomRightCorner": "Zz"
+                        }
+                    ]
+                },
+                {
+                    "name": "Tab 3",
+                    "sliders": [
+                        {
+                            "label": "Generation Playback Delay",
+                            "min": 0.0,
+                            "max": 10.0,
+                            "default": 0.0,
+                            "topLeftCorner": "Aa",
+                            "bottomRightCorner": "Zk",
+                            "horizontal": true
+
+                        }
+                    ],
+                    "comboBoxes": [
+                        {
+                            "label": "ComboBox 1",
+                            "options": [
+                                "Item 1",
+                                "Item 2",
+                                "Item 3"
+                            ],
+                            "topLeftCorner": "Av",
+                            "bottomRightCorner": "Zz"
+                        }
+                    ]
+                },
+                {
+                    "name": "Tab 4",
+                    "AudioDisplays": [
+                        {
+                            "label": "AudioDisplay 1",
+                            "topLeftCorner": "Bb",
+                            "bottomRightCorner": "Jh",
+                            "allowToDragOutAsAudio": true,
+                            "allowToDragInAudio": true,
+                            "needsPlayhead": true
+                        },
+                        {
+                            "label": "AudioDisplay 2",
+                            "topLeftCorner": "Jh",
+                            "bottomRightCorner": "Ro",
+                            "allowToDragOutAsAudio": true,
+                            "allowToDragInAudio": true,
+                            "needsPlayhead": true,
+                            "PlayheadLoopDurationSamples": 44100
+                        }
+                    ]
+                }
+            ]
+        },
+
+        "MidiInVisualizer": {
+            "enable": true,
+            "allowToDragInMidi": true,
+            "visualizeIncomingMidiFromHost": true,
+            "deletePreviousIncomingMidiMessagesOnBackwardPlayhead": true,
+            "deletePreviousIncomingMidiMessagesOnRestart": true
+        },
+        "GeneratedContentVisualizer": {
+            "enable": true,
+            "allowToDragOutAsMidi": true
+        }
+
+    },
+
+    "StandaloneTransportPanel": {
+        "enable": false
+    },
+
+    "VirtualMidiOut": {
+        "enable": true
+    }
+
+}

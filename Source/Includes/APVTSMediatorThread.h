@@ -5,7 +5,7 @@
 #pragma once
 
 #include "shared_plugin_helpers/shared_plugin_helpers.h"
-#include "../../Configs_HostEvents.h"
+#include "../../Deployment/Configs_HostEvents.h"
 #include "GuiParameters.h"
 #include "LockFreeQueue.h"
 
@@ -33,10 +33,6 @@ class APVTSMediatorThread: public juce::Thread
 public:
     juce::StringArray paths;
 
-    // I want to declare these as private, but if I do it lower down it doesn't work..
-    size_t numSliders{};
-    size_t numRotaries{};
-
 
     // ============================================================================================================
     // ===          Preparing Thread for Running
@@ -44,27 +40,21 @@ public:
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 1 . Construct
     // ------------------------------------------------------------------------------------------------------------
-    APVTSMediatorThread() : juce::Thread("APVTSMediatorThread") {}
+    explicit APVTSMediatorThread(CustomPresetDataDictionary *prst) :
+        juce::Thread("APVTSMediatorThread"), CustomPresetData(prst) {}
 
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 2 . give access to resources needed to communicate with other threads
     // ------------------------------------------------------------------------------------------------------------
     void startThreadUsingProvidedResources(
             juce::AudioProcessorValueTreeState *APVTSPntr_,
-            LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2ITP_GuiParams_QuePntr_,
-            LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2MDL_GuiParams_QuePntr_,
-            LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2PPP_GuiParams_QuePntr_) {
+            LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2DPL_GuiParams_QuePntr_) {
 
         // Resources Provided from NMP
         APVTSPntr = APVTSPntr_;
-        APVM2ITP_GuiParams_QuePntr = APVM2ITP_GuiParams_QuePntr_;
-        APVM2MDL_GuiParams_QuePntr = APVM2MDL_GuiParams_QuePntr_;
-        APVM2PPP_GuiParams_QuePntr = APVM2PPP_GuiParams_QuePntr_;
+        APVM2DPL_GuiParams_QuePntr = APVM2DPL_GuiParams_QuePntr_;
 
         guiParamsPntr = make_unique<GuiParams>(APVTSPntr_);
-        // Get UIObjects in settings.h
-        auto tabList = UIObjects::Tabs::tabList;
-        size_t numTabs = tabList.size();
 
         startThread();
     }
@@ -78,13 +68,25 @@ public:
         // notify if the thread is still running
         bool bExit = threadShouldExit();
 
+        // check selected preset
+        int prev_selectedPreset = -1;
         while (!bExit) {
             if (APVTSPntr != nullptr) {
                 if (guiParamsPntr->update(APVTSPntr)) {
-                    // guiParamsPntr->print();
-                    APVM2ITP_GuiParams_QuePntr->push(*guiParamsPntr);
-                    APVM2MDL_GuiParams_QuePntr->push(*guiParamsPntr);
-                    APVM2PPP_GuiParams_QuePntr->push(*guiParamsPntr);
+                    if (APVM2DPL_GuiParams_QuePntr != nullptr) {
+                        APVM2DPL_GuiParams_QuePntr->push(*guiParamsPntr);
+                    }
+                }
+
+                // check if selected preset has changed
+                auto selectedPreset = (int) *APVTSPntr->getRawParameterValue(label2ParamID("Preset"));
+                if (selectedPreset != prev_selectedPreset) {
+                    // if selected preset has changed, send a message to the deployment thread
+                    // to load the new preset
+                    prev_selectedPreset = selectedPreset;
+
+                    load_preset(selectedPreset);
+
                 }
 
                 bExit = threadShouldExit();
@@ -93,9 +95,42 @@ public:
                 sleep(thread_configurations::APVTSMediatorThread::waitTimeBtnIters);
             }
         }
+
+
     }
     // ============================================================================================================
+    void load_preset(const int preset_idx) {
+        // XML file paths
+        std::string fp = stripQuotes(default_preset_dir) + path_separator + std::to_string(preset_idx) + ".apvts";
+        std::string fp_data = stripQuotes(default_preset_dir) + path_separator + std::to_string(preset_idx) + ".preset_data";
 
+        // Step 1: Read the XML from the file
+        auto xml = juce::XmlDocument::parse(juce::File(fp));
+
+        // Step 2: Get the ValueTree from the XML
+        if (xml != nullptr)
+        {
+            juce::ValueTree xmlState = juce::ValueTree::fromXml(*xml);
+
+            if (xml->hasTagName(APVTSPntr->state.getType()))
+            {
+                APVTSPntr->replaceState(juce::ValueTree::fromXml(*xml));
+
+                auto filePath = xml->getStringAttribute("filePath");
+                // Handle the file path as needed
+
+                // cout << "Loading preset from: " << filePath << endl;
+                auto tensormap = load_tensor_map(filePath.toStdString());
+
+                CustomPresetData->copy_from_map(tensormap);
+
+                // cout << "Loaded tensor map: [x1] = " << *CustomPresetData->tensor("x1") << endl;
+                CustomPresetData->printTensorMap();
+            }
+
+        }
+
+}
 
     // ============================================================================================================
     // ===          Preparing Thread for Stopping
@@ -116,22 +151,14 @@ public:
     }
 
 private:
+    CustomPresetDataDictionary *CustomPresetData;
 
     // ============================================================================================================
     // ===          Output Queues for Receiving/Sending Data
     // ============================================================================================================
-    LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2ITP_GuiParams_QuePntr{nullptr};
-    LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2MDL_GuiParams_QuePntr{nullptr};
-    LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2PPP_GuiParams_QuePntr{nullptr};
+    LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2DPL_GuiParams_QuePntr{nullptr};
 
     unique_ptr<GuiParams> guiParamsPntr;
-
-//    // ============================================================================================================
-//    // ===          pointer to NeuralMidiFXPluginProcessor
-//    // ============================================================================================================
-//    InputTensorPreparatorThread *inputThread{nullptr};
-//    ModelThread *modelThread{nullptr};
-//    PlaybackPreparatorThread *playbackPreparatorThread{nullptr};
 
     // ============================================================================================================
     // ===          Pointer to APVTS hosted in the Main Processor

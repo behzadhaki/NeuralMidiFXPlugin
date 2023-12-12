@@ -1,6 +1,8 @@
-project(NeuralMidiFXPlugin VERSION 0.0.1)
+project(NMFx_SingleThread VERSION 0.0.1)
 
-set (BaseTargetName NeuralMidiFXPlugin)
+set (BaseTargetName NMFx_SingleThread)
+
+add_definitions(-DPROJECT_NAME="${BaseTargetName}")
 
 # --------------------------------------------
 #---- Torch Installation ---------------------
@@ -102,21 +104,18 @@ juce_add_plugin("${BaseTargetName}"
         PLUGIN_MANUFACTURER_CODE Juce                #
         PLUGIN_CODE NMFx                             # MUST BE UNIQUE!! If similar to other plugins, conflicts will occur
         FORMATS AU VST3 Standalone
-        PRODUCT_NAME "NeuralMidiFXPlugin")           # Replace with your plugin title
+        PRODUCT_NAME "NMFx_SingleThread")           # Replace with your plugin title
 
 # Include the libtorch setup file
 #include(libtorch_setup.cmake)
 
 target_sources(${BaseTargetName} PRIVATE
-        Source/PluginProcessor.cpp
-        Source/PluginEditor.cpp
-        Source/DeploymentThreads/InputTensorPreparatorThread.cpp
-        ITP_Deploy.cpp
-        Source/DeploymentThreads/ModelThread.cpp
-        MDL_Deploy.cpp
-        Source/DeploymentThreads/PlaybackPreparatorThread.cpp
-        PPP_Deploy.cpp
-        Source/Includes/colored_cout.cpp
+        ../Source/NeuralMidiFXPlugin/PluginProcessor.cpp
+        ../Source/NeuralMidiFXPlugin/processBlock.cpp
+        ../Source/NeuralMidiFXPlugin/PluginEditor.cpp
+        ../Source/DeploymentThreads/DeploymentThread.cpp
+        ../Source/Includes/colored_cout.cpp
+        Deploy.cpp
         )
 
 target_compile_definitions(${BaseTargetName}
@@ -151,12 +150,38 @@ target_include_directories(${BaseTargetName} PRIVATE "${TORCH_INCLUDE_DIRS}")
 # Copying the TorchScripts directory and all its contents
 if(WIN32)
     file(COPY "${CMAKE_SOURCE_DIR}/TorchScripts" DESTINATION "C:/${BaseTargetName}")
+    set(TARGET_DIR "C:\\${BaseTargetName}")
     add_definitions(-DDEFAULT_MODEL_DIR="C:\\${BaseTargetName}\\TorchScripts\\Models")
     add_definitions(-DDEFAULT_PROCESSING_SCRIPTS_DIR="C:\\${BaseTargetName}\\TorchScripts\\ProcessingScripts")
+    set(DEFAULT_PRESET_DIR "C:\\${BaseTargetName}\\Presets")
+    add_definitions(-DDEFAULT_PRESET_DIR="C:\\${BaseTargetName}\\Presets")
+    message(STATUS "BaseTargetName (Windows): ${BaseTargetName}")
+
 elseif(APPLE)
     set(TARGET_DIR "$ENV{HOME}/Library/${BaseTargetName}")
     file(COPY "${CMAKE_SOURCE_DIR}/TorchScripts" DESTINATION "${TARGET_DIR}")
     add_definitions(-DDEFAULT_MODEL_DIR="${TARGET_DIR}/TorchScripts/Models")
     add_definitions(-DDEFAULT_PROCESSING_SCRIPTS_DIR="${TARGET_DIR}/TorchScripts/ProcessingScripts")
-
+    set(DEFAULT_PRESET_DIR "${TARGET_DIR}/Presets")
+    add_definitions(-DDEFAULT_PRESET_DIR="${TARGET_DIR}/Presets")
+    message(STATUS "BaseTargetName (MacOS): ${BaseTargetName}")
 endif()
+
+# Provide a path to settings.json file
+# Define DEFAULT_SETTINGS_FILE_PATH
+set(DEFAULT_SETTINGS_PATH "${CMAKE_SOURCE_DIR}/Deployment/settings.json")
+
+
+# No need for platform-specific path formatting
+add_definitions(-DDEFAULT_SETTINGS_FILE_PATH="${DEFAULT_SETTINGS_PATH}")
+
+# Create PRESET_DIR if it does not exist
+if(NOT EXISTS "${DEFAULT_PRESET_DIR}")
+    # print message
+    message(STATUS "Creating Preset Directory...")
+    file(MAKE_DIRECTORY "${DEFAULT_PRESET_DIR}")
+endif()
+
+message(STATUS "Preset Directory: ${DEFAULT_PRESET_DIR}")
+message(STATUS "BaseTargetName: ${BaseTargetName}")
+message(STATUS "Target Directory: ${TARGET_DIR}")

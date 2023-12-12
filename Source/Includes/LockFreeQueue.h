@@ -5,8 +5,8 @@
 
 // #include <utility>
 
-#include "../../Configs_HostEvents.h"
-#include "../../Configs_GUI.h"
+#include "../../Deployment/Configs_HostEvents.h"
+#include "Configs_Parser.h"
 
 #include <torch/script.h> // One-stop header.
 
@@ -21,7 +21,6 @@ using namespace std;
 template<typename T, int queue_size>
 class LockFreeQueue {
 private:
-    //juce::ScopedPointer<juce::AbstractFifo> lockFreeFifo;   depreciated!!
     std::unique_ptr<juce::AbstractFifo> lockFreeFifo;
     juce::Array<std::unique_ptr<T>> data;
 
@@ -29,11 +28,10 @@ private:
     int num_reads = 0;
     int num_writes = 0;
     T latest_written_data{};
-    bool writingActive = false;
 
 public:
     LockFreeQueue() {
-        // lockFreeFifo = new juce::AbstractFifo(queue_size);   depreciated!!
+
         lockFreeFifo = std::unique_ptr<juce::AbstractFifo>(
                 new juce::AbstractFifo(queue_size));
 
@@ -50,16 +48,9 @@ public:
     }
 
     void push(T writeData) {
-        // check if this object is null
-        if (this == nullptr) {
-            DBG(" [******] You've forgotten to Initialize the LockFreeQueue object! "
-                "");
-            assert(false && " You've forgotten to Initialize the LockFreeQueue object! "
-                            "Double check the processor constructor !!");
 
-        }
         int start1, start2, blockSize1, blockSize2;
-        writingActive = true;
+
         lockFreeFifo->prepareToWrite(
                 1, start1, blockSize1,
                 start2, blockSize2);
@@ -68,7 +59,7 @@ public:
         latest_written_data = writeData;
         num_writes += 1;
         lockFreeFifo->finishedWrite(1);
-        writingActive = false;
+
     }
 
     T pop() {
@@ -117,10 +108,6 @@ public:
 
     }
 
-    int getNumberOfReads() {
-        return num_reads;
-    }
-
     int getNumberOfWrites() {
         return num_writes;
     }
@@ -133,9 +120,6 @@ public:
         return latest_written_data;
     }
 
-    bool isWritingInProgress() {
-        return writingActive;
-    }
 };
 
 

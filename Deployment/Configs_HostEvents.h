@@ -8,8 +8,8 @@
 // ==================        EventFromHost Communication Settings        ================
 // ======================================================================================
 /*
- * You can send Events to ITP at different frequencies with different
- *      intentions, depending on the usecase intended. The type and frequency of providing
+ * You can send Events to DPL at different frequencies with different
+ *      intentions, depending on the use case intended. The type and frequency of providing
  *      these events is determined below.
  *
  *      Examples:
@@ -48,7 +48,7 @@
  *
  */
 namespace event_communication_settings {
-    // set to true, if you need to send the metadata for a new buffer to the ITP thread
+    // set to true, if you need to send the metadata for a new buffer to the DPL thread
     constexpr bool SendEventAtBeginningOfNewBuffers_FLAG{true};
     constexpr bool SendEventForNewBufferIfMetadataChanged_FLAG{true};     // only sends if metadata changes
 
@@ -73,21 +73,13 @@ namespace event_communication_settings {
 // ======================================================================================
 // ==================       Thread  Settings                  ============================
 // ======================================================================================
-namespace thread_configurations::InputTensorPreparator {
-    // waittime between iterations in ms
-    constexpr double waitTimeBtnIters{0.5};
-}
-namespace thread_configurations::Model {
-    // waittime between iterations in ms
-    constexpr double waitTimeBtnIters{0.5};
-}
-namespace thread_configurations::PlaybackPreparator {
-    // waittime between iterations in ms
-    constexpr double waitTimeBtnIters{0.5};
+namespace thread_configurations::SingleMidiThread {
+// wait time between iterations in ms
+constexpr double waitTimeBtnIters{0.5};
 }
 
 namespace thread_configurations::APVTSMediatorThread {
-    // waittime between iterations in ms
+    // wait time between iterations in ms
     constexpr double waitTimeBtnIters{0.5};
 }
 // ======================================================================================
@@ -97,10 +89,8 @@ namespace thread_configurations::APVTSMediatorThread {
  *  if the queue is full, the producer thread will overwrite the oldest element
  */
 namespace queue_settings {
-    constexpr int NMP2ITP_que_size{512};
-    constexpr int ITP2MDL_que_size{512};
-    constexpr int MDL2PPP_que_size{512};
-    constexpr int PPP2NMP_que_size{512};
+    constexpr int NMP2DPL_que_size{512};    // same as NMP2DPL que size
+    constexpr int DPL2NMP_que_size{512};    // same as DPL2NMP que size
     constexpr int APVM_que_size{32};
 }
 

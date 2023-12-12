@@ -5,11 +5,8 @@
 #pragma once
 
 #include <torch/script.h> // One-stop header.
-#include "../Includes/GuiParameters.h"
-#include "../Includes/InputEvent.h"
-# include "../../CustomStructs.h"
-#include "../../CustomStructs.h"
-
+#include "GuiParameters.h"
+#include "InputEvent.h"
 
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)

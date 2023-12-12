@@ -1,6 +1,5 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-#include "../Configs_GUI.h"
 
 inline double mapToLoopRange(double value, double loopStart, double loopEnd) {
 
@@ -18,15 +17,71 @@ inline double mapToLoopRange(double value, double loopStart, double loopEnd) {
     return mappedValue;
 }
 
+static string label2ParamID_(const string &label) {
+    // capitalize label
+    string paramID = label;
+    std::transform(paramID.begin(), paramID.end(), paramID.begin(), ::toupper);
+    return paramID;
+}
+
 NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& NeuralMidiFXPluginProcessorPointer)
     : AudioProcessorEditor(&NeuralMidiFXPluginProcessorPointer),
     tabs (juce::TabbedButtonBar::Orientation::TabsAtTop)
 {
-    NeuralMidiFXPluginProcessorPointer_ = &NeuralMidiFXPluginProcessorPointer;
 
-    // Set window size
+    NeuralMidiFXPluginProcessorPointer_ = &NeuralMidiFXPluginProcessorPointer;
+    presetManagerWidget = std::make_unique<PresetTableComponent>(
+        NeuralMidiFXPluginProcessorPointer.apvts,
+        NeuralMidiFXPluginProcessorPointer.deploymentThread->CustomPresetData.get());
+
+    // Set window sizes
     setResizable (true, true);
     setSize (800, 600);
+
+    // if standalone, add play, record, tempo, meter controls to the top
+    if (UIObjects::StandaloneTransportPanel::enable) {
+        playButton.setButtonText("Play/Stop");
+        playButtonAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
+            NeuralMidiFXPluginProcessorPointer.apvts, label2ParamID_("IsPlayingStandalone"), playButton);
+        playButton.setClickingTogglesState(true);
+        playButton.setColour(juce::TextButton::ColourIds::buttonOnColourId, juce::Colours::lightblue);
+        playButton.setColour(juce::TextButton::ColourIds::textColourOnId, juce::Colours::black);
+        addAndMakeVisible(playButton);
+
+        recordButton.setButtonText("Record");
+        recordButtonAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
+            NeuralMidiFXPluginProcessorPointer.apvts, label2ParamID_("IsRecordingStandalone"), recordButton);
+        recordButton.setClickingTogglesState(true);
+        recordButton.setColour(juce::TextButton::ColourIds::buttonOnColourId, juce::Colours::red);
+        recordButton.setColour(juce::TextButton::ColourIds::textColourOnId, juce::Colours::black);
+        addAndMakeVisible(recordButton);
+
+        tempoSlider.setSliderStyle(juce::Slider::SliderStyle::LinearHorizontal);
+        tempoSlider.setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
+                                    tempoSlider.getTextBoxWidth(), int(tempoSlider.getHeight()*.3));
+        tempoSliderAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+            NeuralMidiFXPluginProcessorPointer.apvts, label2ParamID_("TempoStandalone"), tempoSlider);
+        tempoSlider.setTextValueSuffix(juce::String("Tempo"));
+        addAndMakeVisible(tempoSlider);
+
+        numeratorSlider.setSliderStyle(juce::Slider::SliderStyle::LinearHorizontal);
+        numeratorSlider.setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
+                                        numeratorSlider.getTextBoxWidth(), int(numeratorSlider.getHeight()*.3));
+        numeratorSliderAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+            NeuralMidiFXPluginProcessorPointer.apvts, label2ParamID_("TimeSigNumeratorStandalone"), numeratorSlider);
+        numeratorSlider.setTextValueSuffix(juce::String("Num"));
+        addAndMakeVisible(numeratorSlider);
+
+        denominatorSlider.setSliderStyle(juce::Slider::SliderStyle::LinearHorizontal);
+        denominatorSlider.setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
+                                          denominatorSlider.getTextBoxWidth(), int(denominatorSlider.getHeight()*.3));
+        denominatorSliderAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+            NeuralMidiFXPluginProcessorPointer.apvts, label2ParamID_("TimeSigDenominatorStandalone"), denominatorSlider);
+        denominatorSlider.setTextValueSuffix(juce::String("Den"));
+        addAndMakeVisible(denominatorSlider);
+
+    }
+
 
     // Iteratively generate tabs. For each tab, a parent UI component of  will be created.
     for (int i = 0; i < numTabs; i++)
@@ -46,6 +101,12 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
                     paramComponentPtr, true);
     }
 
+    // add preset manager tab
+    addAndMakeVisible(*presetManagerWidget);
+//    tabs.addTab("Preset Manager", juce::Colours::lightgrey,
+//                &presetManagerWidget, true);
+
+
     addAndMakeVisible(tabs);
 
     NMP2GUI_IncomingMessageSequence = NeuralMidiFXPluginProcessorPointer.NMP2GUI_IncomingMessageSequence.get();
@@ -62,14 +123,14 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
 
     if (UIObjects::MidiInVisualizer::enable) {
         inputPianoRoll = std::make_unique<InputMidiPianoRollComponent>(
-            NeuralMidiFXPluginProcessorPointer.GUI2ITP_DroppedMidiFile_Que.get(),
+            NeuralMidiFXPluginProcessorPointer.GUI2DPL_DroppedMidiFile_Que.get(),
             seq_);
         len = std::max(len, inputPianoRoll->getLength());
     }
 
     if (UIObjects::GeneratedContentVisualizer::enable) {
         outputPianoRoll = std::make_unique<OutputMidiPianoRollComponent>(
-            NeuralMidiFXPluginProcessorPointer.PPP2GUI_GenerationMidiFile_Que.get());
+            NeuralMidiFXPluginProcessorPointer.DPL2GUI_GenerationMidiFile_Que.get());
         len = std::max(len, outputPianoRoll->getLength());
     }
 
@@ -87,23 +148,86 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
     setInterceptsMouseClicks(false, true);
 
     startTimer(50);
+
+    // iterate through all the tabs and set the tabbed component to the first tab
+    for (int i = 0; i < (numTabs+1); i++)
+    {
+        tabs.setCurrentTabIndex(i);
+        tabs.resized();
+        tabs.setInterceptsMouseClicks(false, true);
+    }
+    tabs.setCurrentTabIndex(0);
+
+    // provide resources for midi visualizers
+    for (auto & i : paramComponentVector)
+    {
+        for (auto & mV : i->midiDisplayArray)
+        {
+            auto paramID = mV->getParamID();
+            auto vis_data = (NeuralMidiFXPluginProcessorPointer_->midiVisualizersData.get());
+            mV->setpianoRollData(vis_data->getVisualizerResources(paramID));
+        }
+    }
+
+    // provide resources for audio visualizers
+    for (auto & i : paramComponentVector)
+    {
+        for (auto & aV : i->audioDisplayArray)
+        {
+            auto paramID = aV->getParamID();
+            auto vis_data = (NeuralMidiFXPluginProcessorPointer_->audioVisualizersData.get());
+            aV->setAudioData(vis_data->getVisualizerResources(paramID));
+        }
+    }
+
     resized();
-
-}
-
-NeuralMidiFXPluginEditor::~NeuralMidiFXPluginEditor()
-{
-    //ButtonsWidget->removeListener(this);
-    // ModelSelectorWidget->removeListener(this);
 }
 
 void NeuralMidiFXPluginEditor::resized()
 {
     auto area = getLocalBounds();
     setBounds(area);
+    int preset_manager_width = int(area.getWidth() * .17);
 
-    auto proll_height = int(area.getHeight() * .1);
-    auto gap = int(area.getHeight() * .03);
+    int standalone_control_height;
+    int proll_height;
+    int gap;
+
+    // place preset manager at the top
+    area.removeFromLeft(int(area.getWidth() * .02));
+    presetManagerWidget->setBounds(area.removeFromLeft(preset_manager_width));
+    area.removeFromLeft(int(area.getWidth() * .02));
+
+    // check if standalone
+    if (UIObjects::StandaloneTransportPanel::enable) {
+        standalone_control_height = int(area.getHeight() * .1);
+        proll_height = int(area.getHeight() * .1);
+        gap = int(area.getHeight() * .03);
+    } else {
+        standalone_control_height = 0;
+        proll_height = int(area.getHeight() * .1);
+        gap = int(area.getHeight() * .03);
+    }
+
+    if (UIObjects::StandaloneTransportPanel::enable) {
+        auto controlArea = area.removeFromTop(standalone_control_height);
+        auto cAreaGap = controlArea.getHeight() * .05;
+        int width = int(controlArea.getWidth() * .2);
+
+        // leave a gap above and below the standalone controls
+        area.removeFromTop((int) cAreaGap);
+        area.removeFromBottom((int) cAreaGap);
+
+        // layout the standalone controls
+        playButton.setBounds(controlArea.removeFromLeft(width));
+        recordButton.setBounds(controlArea.removeFromLeft(width));
+        tempoSlider.setBounds(controlArea.removeFromLeft(width));
+        numeratorSlider.setBounds(controlArea.removeFromLeft(width));
+        denominatorSlider.setBounds(controlArea.removeFromLeft(width));
+
+    }
+
+
 
     if (outputPianoRoll != nullptr){
         outputPianoRoll->setBounds(area.removeFromBottom(proll_height));
@@ -119,9 +243,9 @@ void NeuralMidiFXPluginEditor::resized()
 
     tabs.setBounds(area);
     area.removeFromBottom(gap);
-    for (int i = 0; i < paramComponentVector.size(); i++)
+    for (auto & i : paramComponentVector)
     {
-        paramComponentVector[i]->resizeGuiElements(area);
+        i->resizeGuiElements(area);
     }
 
 }
@@ -160,9 +284,9 @@ void NeuralMidiFXPluginEditor::timerCallback()
         newContent = true;
 
         if (policy_->getLoopDuration() > 0) {
-            NeuralMidiFXPluginProcessorPointer_->playbckAnchorMutex.lock();
+            NeuralMidiFXPluginProcessorPointer_->playbackAnchorMutex.lock();
             LoopStart = NeuralMidiFXPluginProcessorPointer_->TimeAnchor.inQuarterNotes();
-            NeuralMidiFXPluginProcessorPointer_->playbckAnchorMutex.unlock();
+            NeuralMidiFXPluginProcessorPointer_->playbackAnchorMutex.unlock();
             LoopEnd = LoopStart + policy_->getLoopDuration();
             LoopingEnabled = true;
         } else {
@@ -180,6 +304,7 @@ void NeuralMidiFXPluginEditor::timerCallback()
 
     auto playhead_pos_ = NeuralMidiFXPluginProcessorPointer_->generationsToDisplay.getPlayheadPos();
     if (playhead_pos_ != std::nullopt){
+
         if (*playhead_pos_ != playhead_pos) {
             playhead_pos = *playhead_pos_;
             newPlayheadPos = true;
@@ -207,6 +332,16 @@ void NeuralMidiFXPluginEditor::timerCallback()
                 outputPianoRoll->displayMidiMessageSequence(adjusted_playhead_pos);
             } else {
                 outputPianoRoll->displayMidiMessageSequence(playhead_pos);
+            }
+        }
+
+        // update playhead for user specified midi visualizers
+        for (auto & i : paramComponentVector)
+        {
+            for (auto & mV : i->midiDisplayArray)
+            {
+                auto paramID = mV->getParamID();
+                mV->updatePlayhead(playhead_pos);
             }
         }
     }
@@ -263,27 +398,3 @@ void NeuralMidiFXPluginEditor::timerCallback()
 
 }
 
-bool NeuralMidiFXPluginEditor::isInterestedInFileDrag (const juce::StringArray& files)
-{
-    for (auto& file : files)
-        if (file.endsWith (".mid") || file.endsWith (".midi"))
-            return true;
-
-    return false;
-}
-
-void NeuralMidiFXPluginEditor::filesDropped (const juce::StringArray& files, int /*x*/, int /*y*/)
-{
-    for (auto& file : files)
-    {
-        if (file.endsWith(".mid") || file.endsWith(".midi"))
-        {
-            juce::File midiFileToLoad(file);
-            if (inputPianoRoll->loadMidiFile(midiFileToLoad))
-            {
-                repaint();
-                break;
-            }
-        }
-    }
-}

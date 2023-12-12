@@ -7,7 +7,7 @@
 #include "shared_plugin_helpers/shared_plugin_helpers.h"
 #include "GuiParameters.h"
 #include "chrono_timer.h"
-#include "../../Configs_HostEvents.h"
+#include "../../Deployment/Configs_HostEvents.h"
 #include <utility>
 #include <mutex>
 
@@ -206,11 +206,11 @@ struct BufferMetaData {
     }
 
     bool operator==(const BufferMetaData &e) const {
-        return (qpm == e.qpm) && (numerator == e.numerator) && (denominator == e.denominator) && 
-               (isPlaying == e.isPlaying) && (isRecording == e.isRecording) && 
-               (isLooping == e.isLooping) && 
-               (loop_start_in_ppq == e.loop_start_in_ppq) && (loop_end_in_ppq == e.loop_end_in_ppq) && 
-               (sample_rate == e.sample_rate) && 
+        return (qpm == e.qpm) && (numerator == e.numerator) && (denominator == e.denominator) &&
+               (isPlaying == e.isPlaying) && (isRecording == e.isRecording) &&
+               (isLooping == e.isLooping) &&
+               (loop_start_in_ppq == e.loop_start_in_ppq) && (loop_end_in_ppq == e.loop_end_in_ppq) &&
+               (sample_rate == e.sample_rate) &&
                (buffer_size_in_samples == e.buffer_size_in_samples);
     }
 
@@ -696,7 +696,7 @@ public:
 
     // if no sample rate is provided, use Time() method instead
     // it's your responsibility to keep track of the sample rate and qpm
-    // (provided as EventFromHost in the **deploy** method of the InputTensorPreparator -ITP-
+    // (provided as EventFromHost in the **deploy** method of the InputTensorPreparator -DPL-
     // thread)
     std::stringstream getDescription(double sample_rate, double qpm) const {
         auto time_in_samples = ppq_to_samples (sample_rate, qpm);
@@ -721,7 +721,7 @@ public:
         }
     }
 
-    std::stringstream getDescription(){
+    std::stringstream getDescription() const{
         std::stringstream ss;
         ss << "++ ";
         ss << " | message:    " << message.getDescription();
@@ -743,7 +743,7 @@ public:
 
     // if no sample rate is provided, use Time() method instead
     // it's your responsibility to keep track of the sample rate and qpm
-    // (provided as EventFromHost in the **deploy** method of the InputTensorPreparator -ITP-
+    // (provided as EventFromHost in the **deploy** method of the InputTensorPreparator -DPL-
     // thread)
     time_ Time(double sample_rate, double qpm) const {
         auto time_in_samples = ppq_to_samples (sample_rate, qpm);
@@ -783,7 +783,8 @@ private:
     juce::MidiMessage message{};
 
     // The actual time of the event. If event is a midiMessage, this time stamp
-    // can be different from the starting time stam of the buffer found in bufferMetaData.time_in_* fields
+    // can be different from the starting time stam of the buffer found
+    // in bufferMetaData.time_in_* fields
     double time_in_ppq{-1};
 
     long ppq_to_samples (double sample_rate, double qpm) const {
@@ -831,4 +832,404 @@ public:
         std::lock_guard<std::mutex> lock(mutex);
         return bufferMetaData;
     }
+};
+
+
+struct CrossThreadPianoRollData
+{
+    CrossThreadPianoRollData() = default;
+
+    // copy constructor
+    CrossThreadPianoRollData(const CrossThreadPianoRollData& other) {
+        std::lock_guard<std::mutex> lock(mutex);
+        displayedSequence = other.displayedSequence;
+        should_repaint = other.should_repaint;
+        user_dropped_new_sequence = other.user_dropped_new_sequence;
+    }
+
+    // copy assignment operator
+    CrossThreadPianoRollData& operator=(const CrossThreadPianoRollData& other) {
+        std::lock_guard<std::mutex> lock(mutex);
+        displayedSequence = other.displayedSequence;
+        should_repaint = other.should_repaint;
+        user_dropped_new_sequence = other.user_dropped_new_sequence;
+        return *this;
+    }
+
+    // call this to empty out the content of the piano roll
+    void clear() {
+        std::lock_guard<std::mutex> lock(mutex);
+        displayedSequence.clear();
+        should_repaint = true;
+        user_dropped_new_sequence = false;
+    }
+
+    // call this to set the content of the piano roll
+    // isDraggedIn is true if the user dragged in a new sequence
+    // if you call this from DPL thread, set this to false
+    void setSequence(const juce::MidiMessageSequence& sequence, bool isDraggedIn = false) {
+        std::lock_guard<std::mutex> lock(mutex);
+        displayedSequence.clear();
+        should_repaint = true;
+        user_dropped_new_sequence = false;
+        displayedSequence = sequence;
+        should_repaint = true;
+        user_dropped_new_sequence = isDraggedIn;
+    }
+
+    void addNoteOn(int channel, int noteNumber, float velocity, double time) {
+        std::lock_guard<std::mutex> lock(mutex);
+        displayedSequence.addEvent(
+            juce::MidiMessage::noteOn(channel, noteNumber, velocity),
+            time);
+        user_dropped_new_sequence = false;
+        should_repaint = true;
+    }
+
+    void addNoteOff(int channel, int noteNumber, double time) {
+        std::lock_guard<std::mutex> lock(mutex);
+        displayedSequence.addEvent(
+            juce::MidiMessage::noteOff(channel, noteNumber),
+            time);
+        user_dropped_new_sequence = false;
+        should_repaint = true;
+    }
+
+    void addNoteWithDuration(
+        int channel, int noteNumber, float velocity, double time, double duration)	{
+        std::lock_guard<std::mutex> lock(mutex);
+        displayedSequence.addEvent(
+            juce::MidiMessage::noteOn(channel, noteNumber, velocity),
+            time);
+        displayedSequence.addEvent(
+            juce::MidiMessage::noteOff(channel, noteNumber),
+            time + duration);
+        user_dropped_new_sequence = false;
+        should_repaint = true;
+    }
+
+    vector<MidiFileEvent> getMidiFileEvents() {
+            std::lock_guard<std::mutex> lock(mutex);
+            vector<MidiFileEvent> events;
+            for (int i = 0; i < displayedSequence.getNumEvents(); ++i) {
+                auto e = displayedSequence.getEventPointer(i);
+                auto& m = e->message;
+                events.emplace_back(
+                    m, i == 0, i == displayedSequence.getNumEvents() - 1);
+            }
+            should_repaint = false;
+            user_dropped_new_sequence = false;
+            return events;
+    }
+
+    juce::MidiMessageSequence getCurrentSequence() {
+        std::lock_guard<std::mutex> lock(mutex);
+        user_dropped_new_sequence = false;
+        return displayedSequence;
+    }
+
+    bool shouldRepaint() {
+        std::lock_guard<std::mutex> lock(mutex);
+        return should_repaint;
+    }
+
+    bool userDroppedNewSequence() {
+        std::lock_guard<std::mutex> lock(mutex);
+        return user_dropped_new_sequence;
+    }
+
+private:
+    std::mutex mutex;
+    juce::MidiMessageSequence displayedSequence;
+    bool user_dropped_new_sequence{false};
+    bool should_repaint{false};
+};
+
+
+struct MidiVisualizersData
+{
+    MidiVisualizersData(std::vector<std::string> param_ids) {
+        for (auto& param_id: param_ids) {
+            (pianoRolls)[label2ParamID(param_id)] = CrossThreadPianoRollData();
+        }
+    }
+
+    // do not use this method in DPL thread!!
+    void setVisualizers(std::map<std::string, CrossThreadPianoRollData> pianoRolls_) {
+        std::lock_guard<std::mutex> lock(mutex);
+        pianoRolls = pianoRolls_;
+    }
+
+    // do not use this method in DPL thread!!
+    CrossThreadPianoRollData* getVisualizerResources(const std::string& param_id) {
+        std::lock_guard<std::mutex> lock(mutex);
+
+        if (!is_valid_param_id(param_id)) {
+            return nullptr;
+        } else {
+            return &(pianoRolls)[label2ParamID(param_id)];
+        }
+    }
+
+    // get the list of visualizer ids on which the user dropped a new sequence
+    std::vector<std::string> get_visualizer_ids_with_user_dropped_new_sequences() {
+        std::lock_guard<std::mutex> lock(mutex);
+        std::vector<std::string> visualizers_with_new_sequences;
+        for (auto& [key, value] : pianoRolls) {
+            if (value.userDroppedNewSequence()) {
+                visualizers_with_new_sequences.push_back(key);
+            }
+        }
+        return visualizers_with_new_sequences;
+    }
+
+    // returns the midi file events for the visualizer
+    std::optional<vector<MidiFileEvent>> get_visualizer_data(const std::string& param_id) {
+        std::lock_guard<std::mutex> lock(mutex);
+        if (!is_valid_param_id(param_id)) {
+            return std::nullopt;
+        } else {
+            auto mf_events = (pianoRolls)[label2ParamID(param_id)].getMidiFileEvents();
+            if (mf_events.empty()) {
+                return std::nullopt;
+            } else {
+                return mf_events;
+            }
+        }
+    }
+
+    void clear_visualizer_data(const std::string& visualizer_id) {
+        std::lock_guard<std::mutex> lock(mutex);
+        // if visualizer_id is not valid, do nothing
+        if (!is_valid_param_id(visualizer_id)) {
+            return;
+        }
+        (pianoRolls)[label2ParamID(visualizer_id)].clear();
+    }
+
+    void clear_all_visualizers() {
+        std::lock_guard<std::mutex> lock(mutex);
+        for (auto& [key, value] : pianoRolls) {
+            value.clear();
+        }
+    }
+
+    // returns true if successful
+    bool displayNoteOn(
+        const string&  visualizer_id, int noteNumber, float velocity, double time) {
+        std::lock_guard<std::mutex> lock(mutex);
+        // if visualizer_id is not valid, do nothing
+        if (!is_valid_param_id(visualizer_id)) {
+            return false;
+        } else {
+            (pianoRolls)[label2ParamID(visualizer_id)].addNoteOn(
+                0, noteNumber, velocity, time);
+            return true;
+        }
+    }
+
+    // returns true if successful
+    bool displayNoteOff(
+        const string& visualizer_id, int noteNumber, double time) {
+        std::lock_guard<std::mutex> lock(mutex);
+        // if visualizer_id is not valid, do nothing
+        if (!is_valid_param_id(visualizer_id)) {
+            return false;
+        } else {
+            (pianoRolls)[label2ParamID(visualizer_id)].addNoteOff(
+                0, noteNumber, time);
+            return true;
+        }
+    }
+
+    // returns true if successful
+    bool displayNoteWithDuration(
+        const string&  visualizer_id, int noteNumber, float velocity, double time, double duration) {
+        std::lock_guard<std::mutex> lock(mutex);
+        // if visualizer_id is not valid, do nothing
+        if (!is_valid_param_id(visualizer_id)) {
+            return false;
+        } else {
+            (pianoRolls)[label2ParamID(visualizer_id)].addNoteWithDuration(
+                0, noteNumber, velocity, time, duration);
+            return true;
+        }
+    }
+
+private:
+    std::mutex mutex;
+    std::map<std::string, CrossThreadPianoRollData> pianoRolls;
+
+    // check if param_id is valid
+    bool is_valid_param_id(const std::string& visualizer_id) {
+        auto stat = pianoRolls.find(label2ParamID(visualizer_id)) != pianoRolls.end();
+        if (!stat) {
+            cout << "visualizer_id " << visualizer_id << " is not valid" << endl;
+            cout << "Select a valid param_id from the list below:" << endl;
+            for (auto& [key, value] : pianoRolls) {
+                cout << key << endl;
+            }
+        }
+        return stat;
+    }
+
+};
+
+
+struct CrossThreadAudioVisualizerData
+{
+    CrossThreadAudioVisualizerData() = default;
+
+    CrossThreadAudioVisualizerData(const CrossThreadAudioVisualizerData& other) {
+        std::lock_guard<std::mutex> lock(mutex);
+        displayedAudioBuffer = other.displayedAudioBuffer;
+        sample_rate = other.sample_rate;
+        should_repaint = other.should_repaint;
+    }
+
+    CrossThreadAudioVisualizerData& operator=(const CrossThreadAudioVisualizerData& other) {
+        std::lock_guard<std::mutex> lock(mutex);
+        displayedAudioBuffer = other.displayedAudioBuffer;
+        sample_rate = other.sample_rate;
+        should_repaint = other.should_repaint;
+        return *this;
+    }
+
+    void setAudioBuffer(juce::AudioBuffer<float> audioBuffer_, double sample_rate_,
+                        bool isDraggedIn = false) {
+        std::lock_guard<std::mutex> lock(mutex);
+        displayedAudioBuffer = audioBuffer_;
+        sample_rate = sample_rate_;
+        should_repaint = true;
+        user_dropped_new_audio = isDraggedIn;
+    }
+
+    // call this to access the audio buffer and sample rate
+    std::pair<juce::AudioBuffer<float>, double> getAudioBuffer() {
+        std::lock_guard<std::mutex> lock(mutex);
+        user_dropped_new_audio = false;
+        should_repaint = false;
+        return {displayedAudioBuffer, sample_rate};
+    }
+
+    bool didUserDroppedNewAudio() {
+        std::lock_guard<std::mutex> lock(mutex);
+        return user_dropped_new_audio;
+    }
+
+    bool shouldRepaint() {
+        std::lock_guard<std::mutex> lock(mutex);
+        auto val = should_repaint;
+        should_repaint = false;
+        return val;
+    }
+
+    float getSampleRate() {
+        std::lock_guard<std::mutex> lock(mutex);
+        return sample_rate;
+    }
+
+private:
+    std::mutex mutex;
+    juce::AudioBuffer<float> displayedAudioBuffer {};
+    float sample_rate{44100};
+    bool should_repaint{false};
+    bool user_dropped_new_audio{false};
+
+};
+
+
+struct AudioVisualizersData
+{
+    AudioVisualizersData(std::vector<std::string> param_ids) {
+        for (auto& param_id: param_ids) {
+            (audioVisualizers)[label2ParamID(param_id)] =
+                CrossThreadAudioVisualizerData();
+        }
+    }
+
+    // do not use this method in DPL thread!!
+    void setVisualizers(std::map<std::string, CrossThreadAudioVisualizerData> audioVisualizers_) {
+        std::lock_guard<std::mutex> lock(mutex);
+        audioVisualizers = audioVisualizers_;
+    }
+
+    // do not use this method in DPL thread!!
+    CrossThreadAudioVisualizerData* getVisualizerResources(const std::string& param_id) {
+        std::lock_guard<std::mutex> lock(mutex);
+
+        if (!is_valid_param_id(param_id)) {
+            return nullptr;
+        } else {
+            return &(audioVisualizers)[label2ParamID(param_id)];
+        }
+    }
+
+    // get the list of visualizer ids on which the user dropped a new sequence
+    std::vector<std::string> get_visualizer_ids_with_user_dropped_new_audio() {
+        std::lock_guard<std::mutex> lock(mutex);
+        std::vector<std::string> visualizers_with_new_audio;
+        for (auto& [key, value] : audioVisualizers) {
+            if (value.didUserDroppedNewAudio()) {
+                visualizers_with_new_audio.push_back(key);
+            }
+        }
+        return visualizers_with_new_audio;
+    }
+
+    // returns the audio buffer for the visualizer
+    std::optional<std::pair<juce::AudioBuffer<float>, double>> get_visualizer_data(const std::string& param_id) {
+        std::lock_guard<std::mutex> lock(mutex);
+        if (!is_valid_param_id(param_id)) {
+            return std::nullopt;
+        } else {
+            auto [audio_buffer, sample_rate] = (audioVisualizers)[label2ParamID(param_id)].getAudioBuffer();
+            if (audio_buffer.getNumSamples() == 0) {
+                return std::nullopt;
+            } else {
+                return std::make_pair(audio_buffer, sample_rate);
+            }
+        }
+    }
+
+    void clear_visualizer_data(const std::string& visualizer_id) {
+        std::lock_guard<std::mutex> lock(mutex);
+        // if visualizer_id is not valid, do nothing
+        if (!is_valid_param_id(visualizer_id)) {
+            return;
+        }
+        (audioVisualizers)[label2ParamID(visualizer_id)].setAudioBuffer(
+            juce::AudioBuffer<float>(), 44100);
+    }
+
+    bool display_audio(
+        const string&  visualizer_id, juce::AudioBuffer<float> audioBuffer_, double sample_rate_) {
+        std::lock_guard<std::mutex> lock(mutex);
+        // if visualizer_id is not valid, do nothing
+        if (!is_valid_param_id(visualizer_id)) {
+            return false;
+        } else {
+            (audioVisualizers)[label2ParamID(visualizer_id)].setAudioBuffer(
+                audioBuffer_, sample_rate_);
+            return true;
+        }
+    }
+
+private:
+    std::mutex mutex;
+    std::map<std::string, CrossThreadAudioVisualizerData> audioVisualizers;
+
+    // check if param_id is valid
+    bool is_valid_param_id(const std::string& visualiser_id) {
+        auto stat = audioVisualizers.find(label2ParamID(visualiser_id)) != audioVisualizers.end();
+        if (!stat) {
+            cout << "visualiser_id " << visualiser_id << " is not valid" << endl;
+            cout << "Select a valid param_id from the list below:" << endl;
+            for (auto& [key, value] : audioVisualizers) {
+                cout << key << endl;
+            }
+        }
+        return stat;
+    }
+
 };
