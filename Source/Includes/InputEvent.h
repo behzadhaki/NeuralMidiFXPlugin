@@ -206,11 +206,11 @@ struct BufferMetaData {
     }
 
     bool operator==(const BufferMetaData &e) const {
-        return (qpm == e.qpm) && (numerator == e.numerator) && (denominator == e.denominator) && 
-               (isPlaying == e.isPlaying) && (isRecording == e.isRecording) && 
-               (isLooping == e.isLooping) && 
-               (loop_start_in_ppq == e.loop_start_in_ppq) && (loop_end_in_ppq == e.loop_end_in_ppq) && 
-               (sample_rate == e.sample_rate) && 
+        return (qpm == e.qpm) && (numerator == e.numerator) && (denominator == e.denominator) &&
+               (isPlaying == e.isPlaying) && (isRecording == e.isRecording) &&
+               (isLooping == e.isLooping) &&
+               (loop_start_in_ppq == e.loop_start_in_ppq) && (loop_end_in_ppq == e.loop_end_in_ppq) &&
+               (sample_rate == e.sample_rate) &&
                (buffer_size_in_samples == e.buffer_size_in_samples);
     }
 

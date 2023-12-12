@@ -272,3 +272,66 @@ void DeploymentThread::PrintMessage(const string& input)
     while (std::getline(ss, line)) { std::cout << clr::on_red << "[DPL] " << line << std::endl; }
 }
 
+bool DeploymentThread::load(std::string model_name_)
+{
+
+    // Creates the path depending on the OS
+    std::string model_path_ = stripQuotes(std::string(MDL_path::default_model_path)) +
+                              std::string(MDL_path::path_separator) +
+                              model_name_;
+
+
+    // If already tried the path, don't try again
+    if (model_path == model_path_) {
+        if (isModelLoaded) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    model_path = model_path_;
+
+    ifstream myFile;
+    myFile.open(model_path);
+    if (myFile.is_open()) {
+        cout << "Model file found at: " + model_path << " -- Trying to load model..." << endl;
+        myFile.close();
+        model = torch::jit::load(model_path);
+        isModelLoaded = true;
+        myFile.close();
+        return true;
+    } else {
+        cout << "Model file not found at: " + model_path << endl;
+        isModelLoaded = false;
+        return false;
+    }
+}
+
+void DeploymentThread::DisplayTensor(const torch::Tensor &tensor, const string Label,
+                                     bool display_content=false){
+
+    auto showMessage = [](const std::string& input) {
+        // if input is multiline, split it into lines and print each line separately
+        std::stringstream ss(input);
+        std::string line;
+
+        while (std::getline(ss, line)) {
+            std::cout << clr::blue << "[MDL] " << line << std::endl;
+        }
+    };
+
+    std::stringstream ss;
+    ss << "TENSOR:" << Label ;
+    ss << " | Tensor metadata: " ;
+    ss << " | Device: " << tensor.device();
+    ss << " | Size: " << tensor.sizes();
+    ss << " |  - Storage data pointer: " << tensor.storage().data_ptr();
+
+    if (display_content) {
+        ss << " | Tensor content:" << std::endl;
+        ss << tensor << std::endl;
+    }
+
+    showMessage(ss.str());
+}
