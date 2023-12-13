@@ -149,7 +149,6 @@ namespace UIObjects {
         const std::vector<tab_tuple> tabList = parse_to_tabList();
     }
 
-
     namespace MidiInVisualizer {
         // if you need the widget used for visualizing midi notes coming from host
         // set following to true
@@ -201,4 +200,139 @@ namespace UIObjects {
 
 
 }
+
+// ======================================================================================
+// ==================        EventFromHost Communication Settings        ================
+// ======================================================================================
+/*
+ * You can send Events to DPL at different frequencies with different
+ *      intentions, depending on the use case intended. The type and frequency of providing
+ *      these events is determined below.
+ *
+ *      Examples:
+ *      1. If you need these information at every buffer, then set
+ *
+ *      >> constexpr bool SendEventAtBeginningOfNewBuffers_FLAG{true};
+ *      >> constexpr bool SendEventForNewBufferIfMetadataChanged_FLAG{false};
+ *
+ *      2. Alternatively, you may want to access these information,
+ *      only when the metadata changes. In this case:
+ *
+ *      >> constexpr bool SendEventAtBeginningOfNewBuffers_FLAG{true};
+ *      >> constexpr bool SendEventForNewBufferIfMetadataChanged_FLAG{false};
+ *
+ *      3. If you need these information at every bar, then:
+ *
+ *      >> constexpr bool SendNewBarEvents_FLAG{true};
+ *
+ *      4. If you need these information at every specific time shift periods,
+ *      you can specify the time shift as a ratio of a quarter note. For instance,
+ *      if you want to access these information at every 8th note, then:
+ *
+ *      >>  constexpr bool SendTimeShiftEvents_FLAG{false};
+ *      >>  constexpr double delta_TimeShiftEventRatioOfQuarterNote{0.5};
+ *
+ *      5. If you only need this information, whenever a new midi message
+ *      (note on/off or cc) is received, you don't need to set any of the above,
+ *      since the metadata is embedded in any midi EventFromHost. Just remember to not
+ *      filter out the midi events.
+ *
+ *      >>  constexpr bool FilterNoteOnEvents_FLAG{false};
+ *      and/or
+ *      >>  constexpr bool FilterNoteOffEvents_FLAG{false};
+ *      and/orzX
+ *      >>  constexpr bool FilterCCEvents_FLAG{false};
+ *
+ */
+namespace event_communication_settings {
+// set to true, if you need to send the metadata for a new buffer to the DPL thread
+const bool SendEventAtBeginningOfNewBuffers_FLAG{
+    loaded_json["event_communication_settings"]["SendEventAtBeginningOfNewBuffers_FLAG"]};
+const bool SendEventForNewBufferIfMetadataChanged_FLAG{
+    loaded_json["event_communication_settings"]["SendEventForNewBufferIfMetadataChanged_FLAG"]
+};     // only sends if metadata changes
+
+// set to true if you need to notify the beginning of a new bar
+const bool SendNewBarEvents_FLAG{
+    loaded_json["event_communication_settings"]["SendNewBarEvents_FLAG"]};
+
+// set to true EventFromHost for every time_shift_event ratio of quarter notes
+const bool SendTimeShiftEvents_FLAG{
+    loaded_json["event_communication_settings"]["SendTimeShiftEvents_FLAG"]};
+const double delta_TimeShiftEventRatioOfQuarterNote{
+    loaded_json["event_communication_settings"]["delta_TimeShiftEventRatioOfQuarterNote"]
+}; // sends a time shift event every 8th note
+
+// Filter Note On Events if you don't need them
+const bool FilterNoteOnEvents_FLAG{
+    loaded_json["event_communication_settings"]["FilterNoteOnEvents_FLAG"]};
+
+// Filter Note Off Events if you don't need them
+const bool FilterNoteOffEvents_FLAG{
+    loaded_json["event_communication_settings"]["FilterNoteOffEvents_FLAG"]};
+
+// Filter CC Events if you don't need them
+const bool FilterCCEvents_FLAG{
+    loaded_json["event_communication_settings"]["FilterCCEvents_FLAG"]};
+};
+
+
+// ======================================================================================
+// ==================       Thread  Settings                  ============================
+// ======================================================================================
+namespace thread_configurations::SingleMidiThread {
+// wait time between iterations in ms
+const double waitTimeBtnIters{
+    loaded_json["deploy_method_min_wait_time_between_iterations"]};
+}
+
+namespace thread_configurations::APVTSMediatorThread {
+// wait time between iterations in ms
+const double waitTimeBtnIters{0.5};
+}
+// ======================================================================================
+// ==================       QUEUE  Settings                  ============================
+// ======================================================================================
+/* specifies the max number of elements that can be stored in the queue
+ *  if the queue is full, the producer thread will overwrite the oldest element
+ */
+namespace queue_settings {
+constexpr int NMP2DPL_que_size{512};    // same as NMP2DPL que size
+    // same as NMP2DPL que size
+constexpr int DPL2NMP_que_size{512};    // same as DPL2NMP que size
+    // same as DPL2NMP que size
+constexpr int APVM_que_size{4};    // same as APVM que size
+    // same as APVM que size
+};
+
+
+// ==============================================================================================
+// ==================       Debugging  Settings                  ================================
+// ==============================================================================================
+namespace debugging_settings::DeploymentThread {
+const bool print_received_gui_params{
+    loaded_json["debugging_settings"]["DeploymentThread"]["print_received_gui_params"]};                // print the received gui parameters
+const bool print_manually_dropped_midi_messages{
+    loaded_json["debugging_settings"]["DeploymentThread"]["print_manually_dropped_midi_messages"]
+};     // print the midi messages received from manually drag-dropped midi file
+const bool print_input_events{
+    loaded_json["debugging_settings"]["DeploymentThread"]["print_input_events"]};                        // print the input events
+const bool print_deploy_method_time{
+    loaded_json["debugging_settings"]["DeploymentThread"]["print_deploy_method_time"]};                    // print the time taken to deploy the model
+const bool disable_user_print_requests{
+    loaded_json["debugging_settings"]["DeploymentThread"]["disable_user_print_requests"]};                // disable all user requested prints
+}
+
+namespace debugging_settings::ProcessorThread {
+const bool print_start_stop_times{
+    loaded_json["debugging_settings"]["ProcessorThread"]["print_start_stop_times"]};                    // print start and stop times of the thread
+const bool print_new_buffer_started{
+    loaded_json["debugging_settings"]["ProcessorThread"]["print_new_buffer_started"]};                    // print the new buffer started
+const bool print_generation_policy_reception{
+    loaded_json["debugging_settings"]["ProcessorThread"]["print_generation_policy_reception"]};            // print generation policy received from DPL
+const bool print_generation_stream_reception{
+    loaded_json["debugging_settings"]["ProcessorThread"]["print_generation_stream_reception"]};            // print generation stream received from DPL
+const bool disableAllPrints{
+    loaded_json["debugging_settings"]["ProcessorThread"]["disableAllPrints"]};                            // disable all prints
+};
 

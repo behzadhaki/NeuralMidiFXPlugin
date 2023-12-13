@@ -5,7 +5,6 @@
 #pragma once
 
 #include "shared_plugin_helpers/shared_plugin_helpers.h"
-#include "../../Deployment/Configs_HostEvents.h"
 #include "GuiParameters.h"
 #include "LockFreeQueue.h"
 

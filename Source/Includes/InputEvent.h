@@ -7,7 +7,6 @@
 #include "shared_plugin_helpers/shared_plugin_helpers.h"
 #include "GuiParameters.h"
 #include "chrono_timer.h"
-#include "../../Deployment/Configs_HostEvents.h"
 #include <utility>
 #include <mutex>
 

@@ -1274,10 +1274,8 @@ public:
                     }
 
                     if (crossThreadPianoRollData != nullptr) {
-                        cout << "Setting sequence" << endl;
                         if (loadedMFile.getNumTracks() > 0) {
                             auto track_ = loadedMFile.getTrack(0);
-                            cout << "Track size: " << track_->getNumEvents() << endl;
                             crossThreadPianoRollData->setSequence(*track_, true);
                         }
                     }   else {
