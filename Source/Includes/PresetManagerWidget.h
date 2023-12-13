@@ -44,20 +44,20 @@ public:
 
     }
 
-    void paint(juce::Graphics& g) override
+    void paint(juce::Graphics& ) override
     {
         // make background light grey
         presetTables[0].setColour(juce::ListBox::backgroundColourId, juce::Colours::lightgrey);
 
     }
 
-    void paintRowBackground(juce::Graphics& g, int rowNumber, int /*width*/, int /*height*/, bool rowIsSelected) override
+    void paintRowBackground(juce::Graphics& g, int /*rowNumber*/, int /*width*/, int /*height*/, bool rowIsSelected) override
     {
         if (rowIsSelected)
             g.fillAll(juce::Colours::lightblue);
     }
 
-    void paintCell(juce::Graphics& g, int rowNumber, int columnId, int width, int height, bool /*rowIsSelected*/) override
+    void paintCell(juce::Graphics& g, int rowNumber, int /*columnId*/, int width, int height, bool /*rowIsSelected*/) override
     {
         g.setColour(juce::Colours::black);
         g.drawText(presetNames[rowNumber], 2, 0, width - 4, height, juce::Justification::centredLeft, true);

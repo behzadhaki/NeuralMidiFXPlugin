@@ -240,7 +240,7 @@ DeploymentThread::~DeploymentThread()
 
 void DeploymentThread::DisplayEvent(const EventFromHost& event,
                                     bool compact_mode,
-                                    double event_count)
+                                    double /*event_count*/)
 {
     auto showMessage = [](const std::string& input) {
         // if input is multiline, split it into lines && print each line separately

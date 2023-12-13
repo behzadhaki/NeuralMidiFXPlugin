@@ -205,21 +205,31 @@ struct PlaybackSequence {
 
     // adds a note on event to the sequence
     void addNoteOn(int channel, int noteNumber, float velocity, double time) {
+        channel = channel % 16 + 1; // make sure channel is between 1 and 16
+        velocity = velocity > 1 ? 1 : velocity; // make sure velocity is between 0 and 1
+        velocity = velocity < 0 ? 0 : velocity;
         messageSequence.addEvent(MidiMessage::noteOn(channel, noteNumber, velocity), time);
     }
 
     // adds a note off event to the sequence
     void addNoteOff(int channel, int noteNumber, float velocity, double time) {
+        channel = channel % 16 + 1; // make sure channel is between 1 and 16
+        velocity = velocity > 1 ? 1 : velocity; // make sure velocity is between 0 and 1
+        velocity = velocity < 0 ? 0 : velocity;
         messageSequence.addEvent(MidiMessage::noteOff(channel, noteNumber, velocity), time);
     }
 
     // adds a controller event to the sequence
     void addController(int channel, int controllerNumber, int controllerValue, double time) {
+        channel = channel % 16 + 1; // make sure channel is between 1 and 16
         messageSequence.addEvent(MidiMessage::controllerEvent(channel, controllerNumber, controllerValue), time);
     }
 
     // automatically creates note-on and note-off events for a note with a given duration
     void addNoteWithDuration(int channel, int noteNumber, float velocity, double time, double duration) {
+        channel = channel % 16 + 1; // make sure channel is between 1 and 16
+        velocity = velocity > 1 ? 1 : velocity; // make sure velocity is between 0 and 1
+        velocity = velocity < 0 ? 0 : velocity;
         messageSequence.addEvent(MidiMessage::noteOn(channel, noteNumber, velocity), time);
         messageSequence.addEvent(MidiMessage::noteOff(channel, noteNumber, velocity), time + duration);
         messageSequence.updateMatchedPairs();
@@ -280,7 +290,7 @@ struct PlaybackSequence {
         std::vector<paired_note> pairedNotes;
         int ix = 0;
         for (auto &event : messageSequence) {
-            auto message = messageSequence.getEventPointer(ix)->message;
+            auto message = event->message;
             if (message.isNoteOn()) {
                 paired_note note;
                 note.noteOn = noteOn_ge();

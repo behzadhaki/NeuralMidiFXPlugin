@@ -141,7 +141,7 @@ struct GuiParams {
 
     void print() {
         for (auto &parameter: Parameters) {
-            DBG(parameter.label << " " << parameter.value);
+            cout << parameter.label << " " << parameter.value << endl;
         }
     }
 

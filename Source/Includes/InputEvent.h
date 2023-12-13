@@ -879,6 +879,9 @@ struct CrossThreadPianoRollData
 
     void addNoteOn(int channel, int noteNumber, float velocity, double time) {
         std::lock_guard<std::mutex> lock(mutex);
+        channel = channel % 16 + 1; // make sure channel is between 1 and 16
+        velocity = velocity > 1 ? 1 : velocity; // make sure velocity is between 0 and 1
+        velocity = velocity < 0 ? 0 : velocity;
         displayedSequence.addEvent(
             juce::MidiMessage::noteOn(channel, noteNumber, velocity),
             time);
@@ -888,6 +891,7 @@ struct CrossThreadPianoRollData
 
     void addNoteOff(int channel, int noteNumber, double time) {
         std::lock_guard<std::mutex> lock(mutex);
+        channel = channel % 16 + 1; // make sure channel is between 1 and 16
         displayedSequence.addEvent(
             juce::MidiMessage::noteOff(channel, noteNumber),
             time);
@@ -898,6 +902,9 @@ struct CrossThreadPianoRollData
     void addNoteWithDuration(
         int channel, int noteNumber, float velocity, double time, double duration)	{
         std::lock_guard<std::mutex> lock(mutex);
+        channel = channel % 16 + 1; // make sure channel is between 1 and 16
+        velocity = velocity > 1 ? 1 : velocity; // make sure velocity is between 0 and 1
+        velocity = velocity < 0 ? 0 : velocity;
         displayedSequence.addEvent(
             juce::MidiMessage::noteOn(channel, noteNumber, velocity),
             time);
