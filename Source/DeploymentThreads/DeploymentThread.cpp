@@ -3,7 +3,6 @@
 //
 
 #include "DeploymentThread.h"
-#include "../Includes/TorchScriptAndPresetLoaders.h"
 
 DeploymentThread::DeploymentThread(): juce::Thread("BackgroundDPLThread") {
     CustomPresetData = make_unique<CustomPresetDataDictionary>();
@@ -56,9 +55,9 @@ void DeploymentThread::run() {
     chrono_timed_consecutive_pushes.registerStartTime();
     std::optional<EventFromHost> new_event_from_DAW {};
     std::optional<MidiFileEvent> new_midi_event_dropped_manually {};
-    bool shouldSendNewPlaybackPolicy{false};
-    bool shouldSendNewPlaybackSequence{false};
-    bool midiFileDroppedOnVisualizer{false};
+    bool shouldSendNewPlaybackPolicy;
+    bool shouldSendNewPlaybackSequence;
+    bool midiFileDroppedOnVisualizer;
 
     int cnt{0};
 
@@ -98,7 +97,7 @@ void DeploymentThread::run() {
         if (midiVisualizersData != nullptr) {
             auto changed_visualizers =
                 midiVisualizersData->get_visualizer_ids_with_user_dropped_new_sequences();
-            if (changed_visualizers.size() > 0) {
+            if (!changed_visualizers.empty()) {
                 midiFileDroppedOnVisualizer = true;
             }
             /*
@@ -115,7 +114,7 @@ void DeploymentThread::run() {
         if (audioVisualizersData != nullptr) {
             auto changed_visualizers =
                 audioVisualizersData->get_visualizer_ids_with_user_dropped_new_audio();
-            if (changed_visualizers.size() > 0) {
+            if (!changed_visualizers.empty()) {
                 audioFileDroppedOnVisualizer = true;
             }
 
@@ -261,7 +260,7 @@ void DeploymentThread::DisplayEvent(const EventFromHost& event,
     }
 }
 
-void DeploymentThread::PrintMessage(const string& input)
+[[maybe_unused]] void DeploymentThread::PrintMessage(const string& input)
 {
     using namespace debugging_settings::DeploymentThread;
     if (disable_user_print_requests) { return; }
@@ -272,7 +271,7 @@ void DeploymentThread::PrintMessage(const string& input)
     while (std::getline(ss, line)) { std::cout << clr::on_red << "[DPL] " << line << std::endl; }
 }
 
-bool DeploymentThread::load(std::string model_name_)
+bool DeploymentThread::load(const std::string& model_name_)
 {
 
     // Creates the path depending on the OS
@@ -308,7 +307,7 @@ bool DeploymentThread::load(std::string model_name_)
     }
 }
 
-void DeploymentThread::DisplayTensor(const torch::Tensor &tensor, const string Label,
+[[maybe_unused]] void DeploymentThread::DisplayTensor(const torch::Tensor &tensor, const string& Label,
                                      bool display_content=false){
 
     auto showMessage = [](const std::string& input) {

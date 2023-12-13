@@ -20,17 +20,17 @@ struct time_ {
     explicit time_(int64_t samples_, double seconds_, double ppq_) :
     seconds(seconds_), samples(samples_), ppq(ppq_) {}
 
-    double inSeconds() const { return seconds; }
-    int64_t inSamples() const { return samples; }
-    double inQuarterNotes() const { return ppq; }
+    [[nodiscard]] double inSeconds() const { return seconds; }
+    [[nodiscard]] int64_t inSamples() const { return samples; }
+    [[nodiscard]]  double inQuarterNotes() const { return ppq; }
 
     // unitType == 1 --> samples
     // unitType == 2 --> seconds
     // unitType == 3 --> quarter notes
-    double getTimeWithUnitType(int unitType) const {
+    [[nodiscard]] double getTimeWithUnitType(int unitType) const {
         switch (unitType) {
             case 1:
-                return inSamples();
+                return (double)inSamples();
             case 2:
                 return inSeconds();
             case 3:
@@ -117,7 +117,7 @@ private:
  *
  *
  * You can have access to these information at different frequencies,
- *      depending on the usecase intended. The frequency of accessing
+ *      depending on the use case intended. The frequency of accessing
  *      this information is determined by the settings in settings.h.
  *      Examples:
  *      1. If you need these information at every buffer, then set
@@ -166,8 +166,8 @@ struct BufferMetaData {
     double time_in_seconds{-1};
     double time_in_ppq{-1};
 
-    bool playhead_force_moved_forward{false};
-    bool playhead_force_moved_backward{false};
+    [[maybe_unused]] bool playhead_force_moved_forward{false};
+    [[maybe_unused]] bool playhead_force_moved_backward{false};
 
     bool isLooping{false};
     double loop_start_in_ppq{-1};
@@ -275,7 +275,7 @@ struct BufferMetaData {
  *      >> constexpr bool SendEventAtBeginningOfNewBuffers_FLAG{true};
  *      >> constexpr bool SendEventForNewBufferIfMetadataChanged_FLAG{true};
  *
- *                  If first flag is false, this event wont be available at all.
+ *                  If first flag is false, this event won't be available at all.
  *
  * - New Bar EventFromHost: Can be available at arrival of every new bar, if the flag is set:
  *
@@ -294,7 +294,7 @@ struct BufferMetaData {
  * -
  */
 
-using chrono_time = std::chrono::time_point<std::chrono::system_clock>;
+// using chrono_time = std::chrono::time_point<std::chrono::system_clock>;
 
 // any event from the host is wrapped in this class
 class EventFromHost
@@ -329,7 +329,7 @@ public:
 
         if (Pinfo) {
             auto frame_start_time_in_samples = bufferMetaData.time_in_samples;
-            auto message_start_in_samples = Pinfo->getTimeInSamples() ? int64_t(message_.getTimeStamp()) : -1;
+            auto message_start_in_samples = Pinfo->getTimeInSamples() ? int64_t(message.getTimeStamp()) : -1;
             time_in_samples = frame_start_time_in_samples + message_start_in_samples;
 
             auto frame_start_time_in_seconds = bufferMetaData.time_in_seconds;
@@ -406,45 +406,45 @@ public:
 
     [[nodiscard]] int Type() const { return type; }
 
-    bool isFirstBufferEvent() const { return type == 1; }
+    [[nodiscard]] bool isFirstBufferEvent() const { return type == 1; }
 
-    bool isPlaybackStoppedEvent() const { return type == -1; }
+    [[nodiscard]] bool isPlaybackStoppedEvent() const { return type == -1; }
 
-    bool isNewBufferEvent() const { return type == 2; }
+    [[nodiscard]] bool isNewBufferEvent() const { return type == 2; }
 
-    bool isNewBarEvent() const { return type == 3; }
+    [[nodiscard]] bool isNewBarEvent() const { return type == 3; }
 
-    bool isNewTimeShiftEvent() const { return type == 4; }
+    [[nodiscard]] bool isNewTimeShiftEvent() const { return type == 4; }
 
-    bool isMidiMessageEvent() const { return type == 10; }
+    [[nodiscard]] bool isMidiMessageEvent() const { return type == 10; }
 
-    bool isNoteOnEvent() const { return message.isNoteOn() && isMidiMessageEvent(); }
+    [[nodiscard]]  bool isNoteOnEvent() const { return message.isNoteOn() && isMidiMessageEvent(); }
 
-    bool isNoteOffEvent() const { return message.isNoteOff() && isMidiMessageEvent(); }
+    [[nodiscard]]  bool isNoteOffEvent() const { return message.isNoteOff() && isMidiMessageEvent(); }
 
-    bool isCCEvent() const { return message.isController() && isMidiMessageEvent(); }
+    [[nodiscard]] bool isCCEvent() const { return message.isController() && isMidiMessageEvent(); }
 
-    int getNoteNumber() const {
+    [[nodiscard]] int getNoteNumber() const {
         assert ((isNoteOnEvent() || isNoteOffEvent()) && "Can only get note number for note on/off events");
         return message.getNoteNumber();
     }
 
-    float getVelocity() const {
+    [[nodiscard]] float getVelocity() const {
         assert ((isNoteOnEvent() || isNoteOffEvent()) && "Can only get velocity for note on/off events");
         return message.getFloatVelocity();
     }
 
-    int getCCNumber() const {
+    [[maybe_unused]] [[nodiscard]] int getCCNumber() const {
         assert (isCCEvent() && "Can only get CC number for CC events");
         return message.getControllerNumber();
     }
 
-    float getCCValue() const {
+    [[maybe_unused]] [[nodiscard]] float getCCValue() const {
         assert (isCCEvent() && "Can only get CC value for CC events");
-        return message.getControllerValue();
+        return (float) message.getControllerValue();
     }
 
-    int getChannel() const {
+    [[nodiscard]] int getChannel() const {
         assert (isMidiMessageEvent() && "Can only get channel for midi events");
         return message.getChannel();
     }
@@ -459,7 +459,7 @@ public:
         return tmp_sec;
     }
 
-    std::stringstream getDescriptionOfChangedFeatures(
+    [[nodiscard]] std::stringstream getDescriptionOfChangedFeatures(
             const EventFromHost& other, bool ignore_time_changes_for_new_buffer_events) const {
         std::stringstream ss;
         ss << "++ ";
@@ -498,13 +498,13 @@ public:
             ss << " | lp_end_ppq: " << bufferMetaData.loop_end_in_ppq;
         }
         if (bufferMetaData.bar_count != other.bufferMetaData.bar_count) {
-            ss << " | bar_ccnt: " << bufferMetaData.bar_count;
+            ss << " | bar_cnt: " << bufferMetaData.bar_count;
         }
         if (bufferMetaData.sample_rate != other.bufferMetaData.sample_rate) {
             ss << " | sr: " << bufferMetaData.sample_rate;
         }
         if (bufferMetaData.buffer_size_in_samples != other.bufferMetaData.buffer_size_in_samples) {
-            ss << " | smpls_in_bfr: " << bufferMetaData.buffer_size_in_samples;
+            ss << " | samples_in_bfr: " << bufferMetaData.buffer_size_in_samples;
         }
         if (!(ignore_time_changes_for_new_buffer_events && isNewBufferEvent())) {
             if (time_in_samples != other.time_in_samples) {
@@ -529,7 +529,7 @@ public:
         }
     }
 
-    std::stringstream getDescription() const {
+    [[nodiscard]]  std::stringstream getDescription() const {
         std::stringstream ss;
         ss << "++ ";
         if (isFirstBufferEvent()) { ss << " | First Buffer"; }
@@ -546,10 +546,10 @@ public:
         ss << " | isLp: " << bufferMetaData.isLooping;
         ss << " | lp_str_ppq: " << bufferMetaData.loop_start_in_ppq;
         ss << " | lp_end_ppq: " << bufferMetaData.loop_end_in_ppq;
-        ss << " | bar_ccnt: " << bufferMetaData.bar_count;
+        ss << " | bar_cnt: " << bufferMetaData.bar_count;
         ss << " | last_bar_ppq: " << bufferMetaData.ppq_position_of_last_bar_start;
         ss << " | sr: " << bufferMetaData.sample_rate;
-        ss << " | smpls_in_bfr: " << bufferMetaData.buffer_size_in_samples;
+        ss << " | samples_in_bfr: " << bufferMetaData.buffer_size_in_samples;
         ss << " | time_in_samples: " << time_in_samples;
         ss << " | time_in_seconds: " << time_in_seconds;
         ss << " | time_in_ppq: " << time_in_ppq;
@@ -567,46 +567,46 @@ public:
     }
 
     // getter methods
-    double qpm() const { return bufferMetaData.qpm; }
-    double numerator() const { return bufferMetaData.numerator; }
-    double denominator() const { return bufferMetaData.denominator; }
-    bool isPlaying() const { return bufferMetaData.isPlaying; }
-    bool isRecording() const { return bufferMetaData.isRecording; }
+    [[maybe_unused]][[nodiscard]] double qpm() const { return bufferMetaData.qpm; }
+    [[maybe_unused]][[nodiscard]] double numerator() const { return bufferMetaData.numerator; }
+    [[maybe_unused]][[nodiscard]]  double denominator() const { return bufferMetaData.denominator; }
+    [[maybe_unused]][[nodiscard]] bool isPlaying() const { return bufferMetaData.isPlaying; }
+    [[maybe_unused]][[nodiscard]] bool isRecording() const { return bufferMetaData.isRecording; }
 
-    time_ BufferStartTime() const {
+    [[nodiscard]] time_ BufferStartTime() const {
         return time_(bufferMetaData.time_in_samples,
                      bufferMetaData.time_in_seconds,
                      bufferMetaData.time_in_ppq);
     }
 
-    time_ Time() const {
+    [[nodiscard]]  time_ Time() const {
         return time_(time_in_samples,
                      time_in_seconds,
                      time_in_ppq);
     }
 
-    bool isLooping() const { return bufferMetaData.isLooping; }
-    double loopStart() const {
+    [[maybe_unused]][[nodiscard]] bool isLooping() const { return bufferMetaData.isLooping; }
+    [[maybe_unused]][[nodiscard]] double loopStart() const {
         return bufferMetaData.loop_start_in_ppq;
     }
-    double loopEnd() const { return bufferMetaData.loop_end_in_ppq; }
+    [[maybe_unused]][[nodiscard]] double loopEnd() const { return bufferMetaData.loop_end_in_ppq; }
 
-    int64_t barCount() const { return bufferMetaData.bar_count; }
-    time_ lastBarPos() const
+    [[maybe_unused]][[nodiscard]] int64_t barCount() const { return bufferMetaData.bar_count; }
+    [[maybe_unused]][[nodiscard]] time_ lastBarPos() const
     {
         auto l_bar_ppq = bufferMetaData.ppq_position_of_last_bar_start;
         auto buffer_start = BufferStartTime();
         auto l_bar_sec =
             buffer_start.inSeconds()
             + (l_bar_ppq - buffer_start.inQuarterNotes()) / 60.0 * bufferMetaData.qpm;
-        auto l_bar_samples = buffer_start.inSamples()
+        auto l_bar_samples = double(buffer_start.inSamples())
                              + (l_bar_ppq - buffer_start.inQuarterNotes())
                                    / bufferMetaData.qpm * 60.0
                                    * bufferMetaData.sample_rate;
-        return time_(l_bar_samples, l_bar_sec, l_bar_ppq);
+        return time_((std::int64_t) l_bar_samples, l_bar_sec, l_bar_ppq);
     }
 
-    time_ time_from(EventFromHost e) {
+    [[maybe_unused]] [[nodiscard]] time_ time_from(const EventFromHost& e) const {
         return time_(time_in_samples - e.time_in_samples,
                      time_in_seconds - e.time_in_seconds,
                      time_in_ppq - e.time_in_ppq);
@@ -614,7 +614,7 @@ public:
 
     void setIsPlaying(bool isPlaying) { bufferMetaData.isPlaying = isPlaying; }
 
-    BufferMetaData getBufferMetaData() const { return bufferMetaData; }
+    [[maybe_unused]] [[nodiscard]] BufferMetaData getBufferMetaData() const { return bufferMetaData; }
 
     void registerAccess() { chrono_timed.registerEndTime(); }
 
@@ -625,7 +625,7 @@ private:
     BufferMetaData bufferMetaData;
 
     // The actual time of the event. If event is a midiMessage, this time stamp
-    // can be different from the starting time stam of the buffer found in bufferMetaData.time_in_* fields
+    // can be different from the starting time stamp of the buffer found in bufferMetaData.time_in_* fields
     int64_t time_in_samples{-1};
     double time_in_seconds{-1};
     double time_in_ppq{-1};
@@ -655,41 +655,41 @@ public:
         _isLastEvent = isLastEvent_;
     }
 
-    bool isFirstMessage() const { return _isFirstEvent; }
-    bool isLastMessage() const { return _isLastEvent; }
+    [[nodiscard]] bool isFirstMessage() const { return _isFirstEvent; }
+    [[nodiscard]] bool isLastMessage() const { return _isLastEvent; }
 
-    bool isNoteOnEvent() const { return message.isNoteOn(); }
+    [[nodiscard]]  bool isNoteOnEvent() const { return message.isNoteOn(); }
 
-    bool isNoteOffEvent() const { return message.isNoteOff(); }
+    [[nodiscard]] bool isNoteOffEvent() const { return message.isNoteOff(); }
 
-    bool isCCEvent() const { return message.isController(); }
+    [[nodiscard]] bool isCCEvent() const { return message.isController(); }
 
-    int getNoteNumber() const {
+    [[nodiscard]] int getNoteNumber() const {
         assert ((isNoteOnEvent() || isNoteOffEvent()) && "Can only get note number for note on/off events");
         return message.getNoteNumber();
     }
 
-    float getVelocity() const {
+    [[nodiscard]] float getVelocity() const {
         assert ((isNoteOnEvent() || isNoteOffEvent()) && "Can only get velocity for note on/off events");
         return message.getFloatVelocity();
     }
 
-    int getCCNumber() const {
+    [[maybe_unused]] [[nodiscard]] int getCCNumber() const {
         assert (isCCEvent() && "Can only get CC number for CC events");
         return message.getControllerNumber();
     }
 
-    float getCCValue() const {
+    [[maybe_unused]] [[nodiscard]] float getCCValue() const {
         assert (isCCEvent() && "Can only get CC value for CC events");
-        return message.getControllerValue();
+        return (float) message.getControllerValue();
     }
 
-    static double n_samples_to_ppq(double audioSamplePos, double qpm, double sample_rate) {
+    [[maybe_unused]] [[nodiscard]] static double n_samples_to_ppq(double audioSamplePos, double qpm, double sample_rate) {
         auto tmp_ppq = audioSamplePos * qpm / (60 * sample_rate);
         return tmp_ppq;
     }
 
-    static double n_samples_to_sec(double audioSamplePos, double sample_rate) {
+    [[maybe_unused]] [[nodiscard]] static double n_samples_to_sec(double audioSamplePos, double sample_rate) {
         auto tmp_sec = audioSamplePos / sample_rate;
         return tmp_sec;
     }
@@ -698,7 +698,7 @@ public:
     // it's your responsibility to keep track of the sample rate and qpm
     // (provided as EventFromHost in the **deploy** method of the InputTensorPreparator -DPL-
     // thread)
-    std::stringstream getDescription(double sample_rate, double qpm) const {
+    [[maybe_unused]] [[nodiscard]] std::stringstream getDescription(double sample_rate, double qpm) const {
         auto time_in_samples = ppq_to_samples (sample_rate, qpm);
         auto time_in_seconds = ppq_to_seconds (qpm);
         std::stringstream ss;
@@ -721,7 +721,7 @@ public:
         }
     }
 
-    std::stringstream getDescription() const{
+    [[maybe_unused]] [[nodiscard]] std::stringstream getDescription() const{
         std::stringstream ss;
         ss << "++ ";
         ss << " | message:    " << message.getDescription();
@@ -745,7 +745,7 @@ public:
     // it's your responsibility to keep track of the sample rate and qpm
     // (provided as EventFromHost in the **deploy** method of the InputTensorPreparator -DPL-
     // thread)
-    time_ Time(double sample_rate, double qpm) const {
+    [[nodiscard]] time_ Time(double sample_rate, double qpm) const {
         auto time_in_samples = ppq_to_samples (sample_rate, qpm);
         auto time_in_seconds = ppq_to_seconds (qpm);
         return time_(time_in_samples,
@@ -754,12 +754,12 @@ public:
     }
 
 
-    double Time() const {
+    [[nodiscard]] double Time() const {
 
         return time_in_ppq;
     }
 
-    time_ time_from(const MidiFileEvent& e, double sample_rate, double qpm) {
+    [[maybe_unused]]  [[nodiscard]] time_ time_from(const MidiFileEvent& e, double sample_rate, double qpm) {
         auto time_in_samples = ppq_to_samples (sample_rate, qpm);
         auto time_in_seconds = ppq_to_seconds (qpm);
         auto other_time_in_samples = e.ppq_to_samples (sample_rate, qpm);
@@ -770,24 +770,24 @@ public:
                      time_in_ppq - e.time_in_ppq);
     }
 
-    double time_from(const MidiFileEvent& e) {
+    [[maybe_unused]] [[nodiscard]] double time_from(const MidiFileEvent& e) const {
 
 
         return time_in_ppq - e.time_in_ppq;
     }
 
-    void registerAccess() { chrono_timed.registerEndTime(); }
+    [[maybe_unused]] void registerAccess() { chrono_timed.registerEndTime(); }
 
 private:
 
     juce::MidiMessage message{};
 
     // The actual time of the event. If event is a midiMessage, this time stamp
-    // can be different from the starting time stam of the buffer found
+    // can be different from the starting time stamp of the buffer found
     // in bufferMetaData.time_in_* fields
     double time_in_ppq{-1};
 
-    long ppq_to_samples (double sample_rate, double qpm) const {
+    [[nodiscard]] long ppq_to_samples (double sample_rate, double qpm) const {
         if (time_in_ppq == -1) {
             return -1;
         } else {
@@ -795,7 +795,7 @@ private:
         }
     }
 
-    double ppq_to_seconds (double qpm) const {
+    [[nodiscard]] double ppq_to_seconds (double qpm) const {
         if (time_in_ppq == -1) {
             return -1;
         } else {
@@ -952,19 +952,18 @@ private:
     bool should_repaint{false};
 };
 
-
 struct MidiVisualizersData
 {
-    MidiVisualizersData(std::vector<std::string> param_ids) {
+    explicit MidiVisualizersData(const std::vector<std::string>& param_ids) {
         for (auto& param_id: param_ids) {
             (pianoRolls)[label2ParamID(param_id)] = CrossThreadPianoRollData();
         }
     }
 
     // do not use this method in DPL thread!!
-    void setVisualizers(std::map<std::string, CrossThreadPianoRollData> pianoRolls_) {
+    [[maybe_unused]] void setVisualizers(std::map<std::string, CrossThreadPianoRollData> pianoRolls_) {
         std::lock_guard<std::mutex> lock(mutex);
-        pianoRolls = pianoRolls_;
+        pianoRolls = std::move(pianoRolls_);
     }
 
     // do not use this method in DPL thread!!
@@ -991,7 +990,7 @@ struct MidiVisualizersData
     }
 
     // returns the midi file events for the visualizer
-    std::optional<vector<MidiFileEvent>> get_visualizer_data(const std::string& param_id) {
+    [[maybe_unused]] std::optional<vector<MidiFileEvent>> get_visualizer_data(const std::string& param_id) {
         std::lock_guard<std::mutex> lock(mutex);
         if (!is_valid_param_id(param_id)) {
             return std::nullopt;
@@ -1005,7 +1004,7 @@ struct MidiVisualizersData
         }
     }
 
-    void clear_visualizer_data(const std::string& visualizer_id) {
+    [[maybe_unused]] void clear_visualizer_data(const std::string& visualizer_id) {
         std::lock_guard<std::mutex> lock(mutex);
         // if visualizer_id is not valid, do nothing
         if (!is_valid_param_id(visualizer_id)) {
@@ -1014,7 +1013,7 @@ struct MidiVisualizersData
         (pianoRolls)[label2ParamID(visualizer_id)].clear();
     }
 
-    void clear_all_visualizers() {
+    [[maybe_unused]] void clear_all_visualizers() {
         std::lock_guard<std::mutex> lock(mutex);
         for (auto& [key, value] : pianoRolls) {
             value.clear();
@@ -1022,7 +1021,7 @@ struct MidiVisualizersData
     }
 
     // returns true if successful
-    bool displayNoteOn(
+    [[maybe_unused]] bool displayNoteOn(
         const string&  visualizer_id, int noteNumber, float velocity, double time) {
         std::lock_guard<std::mutex> lock(mutex);
         // if visualizer_id is not valid, do nothing
@@ -1036,7 +1035,7 @@ struct MidiVisualizersData
     }
 
     // returns true if successful
-    bool displayNoteOff(
+    [[maybe_unused]]  bool displayNoteOff(
         const string& visualizer_id, int noteNumber, double time) {
         std::lock_guard<std::mutex> lock(mutex);
         // if visualizer_id is not valid, do nothing
@@ -1050,7 +1049,7 @@ struct MidiVisualizersData
     }
 
     // returns true if successful
-    bool displayNoteWithDuration(
+    [[maybe_unused]] bool displayNoteWithDuration(
         const string&  visualizer_id, int noteNumber, float velocity, double time, double duration) {
         std::lock_guard<std::mutex> lock(mutex);
         // if visualizer_id is not valid, do nothing
@@ -1105,8 +1104,8 @@ struct CrossThreadAudioVisualizerData
     void setAudioBuffer(juce::AudioBuffer<float> audioBuffer_, double sample_rate_,
                         bool isDraggedIn = false) {
         std::lock_guard<std::mutex> lock(mutex);
-        displayedAudioBuffer = audioBuffer_;
-        sample_rate = sample_rate_;
+        displayedAudioBuffer = std::move(audioBuffer_);
+        sample_rate = (float) sample_rate_;
         should_repaint = true;
         user_dropped_new_audio = isDraggedIn;
     }
@@ -1148,7 +1147,7 @@ private:
 
 struct AudioVisualizersData
 {
-    AudioVisualizersData(std::vector<std::string> param_ids) {
+    explicit AudioVisualizersData(const std::vector<std::string>& param_ids) {
         for (auto& param_id: param_ids) {
             (audioVisualizers)[label2ParamID(param_id)] =
                 CrossThreadAudioVisualizerData();
@@ -1156,9 +1155,9 @@ struct AudioVisualizersData
     }
 
     // do not use this method in DPL thread!!
-    void setVisualizers(std::map<std::string, CrossThreadAudioVisualizerData> audioVisualizers_) {
+    [[maybe_unused]] void setVisualizers(std::map<std::string, CrossThreadAudioVisualizerData> audioVisualizers_) {
         std::lock_guard<std::mutex> lock(mutex);
-        audioVisualizers = audioVisualizers_;
+        audioVisualizers = std::move(audioVisualizers_);
     }
 
     // do not use this method in DPL thread!!
@@ -1173,7 +1172,7 @@ struct AudioVisualizersData
     }
 
     // get the list of visualizer ids on which the user dropped a new sequence
-    std::vector<std::string> get_visualizer_ids_with_user_dropped_new_audio() {
+    [[maybe_unused]] std::vector<std::string> get_visualizer_ids_with_user_dropped_new_audio() {
         std::lock_guard<std::mutex> lock(mutex);
         std::vector<std::string> visualizers_with_new_audio;
         for (auto& [key, value] : audioVisualizers) {
@@ -1185,7 +1184,7 @@ struct AudioVisualizersData
     }
 
     // returns the audio buffer for the visualizer
-    std::optional<std::pair<juce::AudioBuffer<float>, double>> get_visualizer_data(const std::string& param_id) {
+    [[maybe_unused]] std::optional<std::pair<juce::AudioBuffer<float>, double>> get_visualizer_data(const std::string& param_id) {
         std::lock_guard<std::mutex> lock(mutex);
         if (!is_valid_param_id(param_id)) {
             return std::nullopt;
@@ -1199,7 +1198,7 @@ struct AudioVisualizersData
         }
     }
 
-    void clear_visualizer_data(const std::string& visualizer_id) {
+    [[maybe_unused]] void clear_visualizer_data(const std::string& visualizer_id) {
         std::lock_guard<std::mutex> lock(mutex);
         // if visualizer_id is not valid, do nothing
         if (!is_valid_param_id(visualizer_id)) {
@@ -1209,7 +1208,7 @@ struct AudioVisualizersData
             juce::AudioBuffer<float>(), 44100);
     }
 
-    bool display_audio(
+    [[maybe_unused]] bool display_audio(
         const string&  visualizer_id, juce::AudioBuffer<float> audioBuffer_, double sample_rate_) {
         std::lock_guard<std::mutex> lock(mutex);
         // if visualizer_id is not valid, do nothing
@@ -1217,7 +1216,7 @@ struct AudioVisualizersData
             return false;
         } else {
             (audioVisualizers)[label2ParamID(visualizer_id)].setAudioBuffer(
-                audioBuffer_, sample_rate_);
+                std::move(audioBuffer_), sample_rate_);
             return true;
         }
     }

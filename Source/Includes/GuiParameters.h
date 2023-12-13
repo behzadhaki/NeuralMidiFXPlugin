@@ -145,7 +145,7 @@ struct GuiParams {
         }
     }
 
-    bool changed() const {
+    [[nodiscard]] bool changed() const {
         return isChanged;
     }
 
@@ -153,7 +153,7 @@ struct GuiParams {
         isChanged = isChanged_;
     }
 
-    bool wasParamUpdated(const string &label) {
+    [[maybe_unused]] bool wasParamUpdated(const string &label) {
         for (auto &parameter: Parameters) {
             if (parameter.paramID == label2ParamID(label)) {
                 return parameter.isChanged;
@@ -161,7 +161,7 @@ struct GuiParams {
         }
     }
 
-    std::vector<string> getLabelsForUpdatedParams(){
+    [[maybe_unused]] std::vector<string> getLabelsForUpdatedParams(){
         std::vector<string> changedLabels;
         for (auto &parameter: Parameters) {
             if (parameter.isChanged) {
@@ -173,7 +173,7 @@ struct GuiParams {
 
     // only use this to get the value for a slider, rotary, || toggleable button
     // if label is invalid (i.e. not defined in Configs_GUI.h), then it returns 0
-    double getValueFor(const string &label) {
+    [[maybe_unused]] double getValueFor(const string &label) {
         for (auto &parameter: Parameters) {
             if (parameter.paramID == label2ParamID(label)) {
                 if (parameter.isRotary || parameter.isSlider || (parameter.isButton && parameter.isToggle)) {
@@ -188,7 +188,7 @@ struct GuiParams {
 
     // only use this to check whether the button was clicked (regardless of whether toggleable || not
     // if label is invalid (i.e. not defined in Configs_GUI.h), then it returns false
-    bool wasButtonClicked(const string &label) {
+    [[maybe_unused]] bool wasButtonClicked(const string &label) {
         for (auto &parameter: Parameters) {
             if (parameter.paramID == label2ParamID(label)) {
                 if (parameter.isButton) {
@@ -218,7 +218,7 @@ struct GuiParams {
         for (auto &parameter: Parameters) {
             if (parameter.paramID == label2ParamID(label)) {
                 if (parameter.isComboBox) {
-                    return parameter.comboBoxOptions[parameter.value];
+                    return parameter.comboBoxOptions[(size_t) parameter.value];
                 }
             }
         }

@@ -31,7 +31,7 @@ using namespace juce;
 
    Additional Policies:
    1. Clear generations after pause/stop
-   2. Repeat N times Assuming Generartions are T Time Units Long
+   2. Repeat N times Assuming Generations are T Time Units Long
 */
 
 
@@ -39,23 +39,23 @@ struct PlaybackPolicies {
 
     PlaybackPolicies() = default;
 
-    void SetPaybackPolicy_RelativeToNow() { PlaybackPolicy = 1; }
+    [[maybe_unused]] void SetPaybackPolicy_RelativeToNow() { PlaybackPolicy = 1; }
 
-    void SetPlaybackPolicy_RelativeToAbsoluteZero() { PlaybackPolicy = 2; }
+    [[maybe_unused]] void SetPlaybackPolicy_RelativeToAbsoluteZero() { PlaybackPolicy = 2; }
 
-    void SetPplaybackPolicy_RelativeToPlaybackStart() { PlaybackPolicy = 3; }
+    [[maybe_unused]] void SetPlaybackPolicy_RelativeToPlaybackStart() { PlaybackPolicy = 3; }
 
-    void SetTimeUnitIsAudioSamples() { TimeUnit = 1; }
+    [[maybe_unused]] void SetTimeUnitIsAudioSamples() { TimeUnit = 1; }
 
-    void SetTimeUnitIsSeconds() { TimeUnit = 2; }
+    [[maybe_unused]] void SetTimeUnitIsSeconds() { TimeUnit = 2; }
 
-    void SetTimeUnitIsPPQ() { TimeUnit = 3; }
+    [[maybe_unused]] void SetTimeUnitIsPPQ() { TimeUnit = 3; }
 
     // Deletes all previous events and uses the new stream
     // **ForceSendNoteOffsFirst** is used to kill all notes before starting the new stream
     // This is useful when the new stream is not a continuation of the previous stream
     // and there is a possibility of handing note ons from the previous stream
-    void SetOverwritePolicy_DeleteAllEventsInPreviousStreamAndUseNewStream(bool ForceSendNoteOffsFirst_)
+    [[maybe_unused]] void SetOverwritePolicy_DeleteAllEventsInPreviousStreamAndUseNewStream(bool ForceSendNoteOffsFirst_)
     {
         OverwritePolicy = 1;
         ForceSendNoteOffsFirst = ForceSendNoteOffsFirst_;
@@ -63,7 +63,7 @@ struct PlaybackPolicies {
 
     // Deletes all events after now (i.e. all previously received generations are kept,
     // (unless the timings of the events are after the timing at which this policy is set)
-    void SetOverwritePolicy_DeleteAllEventsAfterNow(bool ForceSendNoteOffsFirst_)
+    [[maybe_unused]] void SetOverwritePolicy_DeleteAllEventsAfterNow(bool ForceSendNoteOffsFirst_)
     {
         OverwritePolicy = 2;
         ForceSendNoteOffsFirst = ForceSendNoteOffsFirst_;
@@ -71,13 +71,13 @@ struct PlaybackPolicies {
 
     // Keeps all previous events (i.e. generations can be played on top of each other)
     // **ForceSendNoteOffsFirst** is used to kill all notes before appending the new stream
-    void SetOverwritePolicy_KeepAllPreviousEvents(bool ForceSendNoteOffsFirst_) {
+    [[maybe_unused]] void SetOverwritePolicy_KeepAllPreviousEvents(bool ForceSendNoteOffsFirst_) {
         OverwritePolicy = 3;
         ForceSendNoteOffsFirst = ForceSendNoteOffsFirst_;
     }
 
-    // previous generations are cleared after pause/stop so they can't be played again
-    void SetClearGenerationsAfterPauseStop(bool enable) {
+    // previous generations are cleared after pause/stop, so they can't be played again
+    [[maybe_unused]] void SetClearGenerationsAfterPauseStop(bool enable) {
         ClearGenerationsAfterPauseStop = enable;
     }
 
@@ -86,21 +86,21 @@ struct PlaybackPolicies {
     //    i.e. RelativeToNow, RelativeToAbsoluteZero, RelativeToPlaybackStart
     // FOR ANY TIMING POLICY USED, THE LOOP DURATION MUST BE SPECIFIED IN QUARTER NOTES
     //
-    void ActivateLooping(double LoopDurationInQuarterNotes) {
+    [[maybe_unused]] void ActivateLooping(double LoopDurationInQuarterNotes) {
         LoopDuration = LoopDurationInQuarterNotes;
     }
 
     //
-    void DisableLooping() {
+    [[maybe_unused]] void DisableLooping() {
         LoopDuration = -1;
     }
 
-    double getLoopDuration() const {
+    [[nodiscard]] double getLoopDuration() const {
         return LoopDuration;
     }
 
     // Checks if data is ready for transmission
-    bool IsReadyForTransmission() const {
+    [[nodiscard]] bool IsReadyForTransmission() const {
         assert (PlaybackPolicy != -1 && "PlaybackPolicy Not Set");
         assert (TimeUnit != -1 && "TimeUnit Not Set");
         assert (OverwritePolicy != -1 && "OverwritePolicy Not Set");
@@ -109,26 +109,26 @@ struct PlaybackPolicies {
     }
 
     // ============================================================================================================
-    bool IsPlaybackPolicy_RelativeToNow() const { return PlaybackPolicy == 1; }
-    bool IsPlaybackPolicy_RelativeToAbsoluteZero() const { return PlaybackPolicy == 2; }
-    bool IsPlaybackPolicy_RelativeToPlaybackStart() const { return PlaybackPolicy == 3; }
+    [[nodiscard]] bool IsPlaybackPolicy_RelativeToNow() const { return PlaybackPolicy == 1; }
+    [[nodiscard]]  bool IsPlaybackPolicy_RelativeToAbsoluteZero() const { return PlaybackPolicy == 2; }
+    [[nodiscard]] bool IsPlaybackPolicy_RelativeToPlaybackStart() const { return PlaybackPolicy == 3; }
 
-    bool IsTimeUnitIsAudioSamples() const { return TimeUnit == 1; }
-    bool IsTimeUnitIsSeconds() const { return TimeUnit == 2; }
-    bool IsTimeUnitIsPPQ() const { return TimeUnit == 3; }
-    int getTimeUnitIndex() const { return TimeUnit; }
+    [[nodiscard]] bool IsTimeUnitIsAudioSamples() const { return TimeUnit == 1; }
+    [[nodiscard]] bool IsTimeUnitIsSeconds() const { return TimeUnit == 2; }
+    [[nodiscard]] bool IsTimeUnitIsPPQ() const { return TimeUnit == 3; }
+    [[nodiscard]] int getTimeUnitIndex() const { return TimeUnit; }
 
-    bool IsOverwritePolicy_DeleteAllEventsInPreviousStreamAndUseNewStream() const { return OverwritePolicy == 1; }
-    bool IsOverwritePolicy_DeleteAllEventsAfterNow() const { return OverwritePolicy == 2; }
-    bool IsOverwritePolicy_KeepAllPreviousEvents() const { return OverwritePolicy == 3; }
-    bool shouldForceSendNoteOffs() const { return ForceSendNoteOffsFirst; }
+    [[nodiscard]] bool IsOverwritePolicy_DeleteAllEventsInPreviousStreamAndUseNewStream() const { return OverwritePolicy == 1; }
+    [[nodiscard]] bool IsOverwritePolicy_DeleteAllEventsAfterNow() const { return OverwritePolicy == 2; }
+    [[nodiscard]] bool IsOverwritePolicy_KeepAllPreviousEvents() const { return OverwritePolicy == 3; }
+    [[nodiscard]] bool shouldForceSendNoteOffs() const { return ForceSendNoteOffsFirst; }
 
-    bool getShouldClearGenerationsAfterPauseStop() const { return ClearGenerationsAfterPauseStop; }
+    [[nodiscard]] bool getShouldClearGenerationsAfterPauseStop() const { return ClearGenerationsAfterPauseStop; }
 
     // ============================================================================================================
-    int getPlaybackPolicyType () const { return PlaybackPolicy; }
-    int getTimeUnitType () const { return TimeUnit; }
-    int getOverwritePolicyType () const { return OverwritePolicy; }
+    [[maybe_unused]] [[nodiscard]] int getPlaybackPolicyType () const { return PlaybackPolicy; }
+    [[maybe_unused]] [[nodiscard]] int getTimeUnitType () const { return TimeUnit; }
+    [[maybe_unused]]  [[nodiscard]] int getOverwritePolicyType () const { return OverwritePolicy; }
 
 private:
     int PlaybackPolicy{-1};
@@ -145,7 +145,7 @@ struct noteOn_ge {
     float velocity;
     double time;
 
-    string getDescription() const {
+    [[nodiscard]] string getDescription() const {
         std::stringstream ss;
         ss << "Note On: " << "Channel: " << channel << " | Note Number: " << noteNumber << " | Velocity: " << velocity
            << " | Time: " << time;
@@ -159,7 +159,7 @@ struct noteOff_ge {
     float velocity;
     double time;
 
-    string getDescription() const {
+    [[nodiscard]] string getDescription() const {
         std::stringstream ss;
         ss << "Note Off: " << "Channel: " << channel << " | Note Number: " << noteNumber << " | Velocity: " << velocity
            << " | Time: " << time;
@@ -168,7 +168,7 @@ struct noteOff_ge {
 };
 
 struct paired_note {
-    noteOn_ge noteOn;
+    noteOn_ge noteOn{};
     double duration{0};
 };
 
@@ -178,7 +178,7 @@ struct controller_ge {
     int controllerValue;
     double time;
 
-    string getDescription() const {
+    [[nodiscard]] string getDescription() const {
         std::stringstream ss;
         ss << "Controller: " << "Channel: " << channel << " | Controller Number: " << controllerNumber << " | Controller Value: " << controllerValue
            << " | Time: " << time;
@@ -193,7 +193,7 @@ struct PlaybackSequence {
         messageSequence.clear();
     }
 
-    void clearStartingAt(double time) {
+    [[maybe_unused]] void clearStartingAt(double time) {
         int ix{0};
         for (auto &event : messageSequence) {
             if (event->message.getTimeStamp() >= time) {
@@ -204,7 +204,7 @@ struct PlaybackSequence {
     }
 
     // adds a note on event to the sequence
-    void addNoteOn(int channel, int noteNumber, float velocity, double time) {
+    [[maybe_unused]] void addNoteOn(int channel, int noteNumber, float velocity, double time) {
         channel = channel % 16 + 1; // make sure channel is between 1 and 16
         velocity = velocity > 1 ? 1 : velocity; // make sure velocity is between 0 and 1
         velocity = velocity < 0 ? 0 : velocity;
@@ -212,7 +212,7 @@ struct PlaybackSequence {
     }
 
     // adds a note off event to the sequence
-    void addNoteOff(int channel, int noteNumber, float velocity, double time) {
+    [[maybe_unused]] void addNoteOff(int channel, int noteNumber, float velocity, double time) {
         channel = channel % 16 + 1; // make sure channel is between 1 and 16
         velocity = velocity > 1 ? 1 : velocity; // make sure velocity is between 0 and 1
         velocity = velocity < 0 ? 0 : velocity;
@@ -220,13 +220,13 @@ struct PlaybackSequence {
     }
 
     // adds a controller event to the sequence
-    void addController(int channel, int controllerNumber, int controllerValue, double time) {
+    [[maybe_unused]] void addController(int channel, int controllerNumber, int controllerValue, double time) {
         channel = channel % 16 + 1; // make sure channel is between 1 and 16
         messageSequence.addEvent(MidiMessage::controllerEvent(channel, controllerNumber, controllerValue), time);
     }
 
     // automatically creates note-on and note-off events for a note with a given duration
-    void addNoteWithDuration(int channel, int noteNumber, float velocity, double time, double duration) {
+    [[maybe_unused]] void addNoteWithDuration(int channel, int noteNumber, float velocity, double time, double duration) {
         channel = channel % 16 + 1; // make sure channel is between 1 and 16
         velocity = velocity > 1 ? 1 : velocity; // make sure velocity is between 0 and 1
         velocity = velocity < 0 ? 0 : velocity;
@@ -236,12 +236,12 @@ struct PlaybackSequence {
     }
 
     // get NoteOn Info
-    std::vector<noteOn_ge> getNoteOnEvents()  {
+    [[maybe_unused]] std::vector<noteOn_ge> getNoteOnEvents()  {
         messageSequence.updateMatchedPairs();
         std::vector<noteOn_ge> noteOnEvents;
         for (auto &event : messageSequence) {
             if (event->message.isNoteOn()) {
-                noteOn_ge noteOn;
+                noteOn_ge noteOn{};
                 noteOn.channel = event->message.getChannel();
                 noteOn.noteNumber = event->message.getNoteNumber();
                 noteOn.velocity = event->message.getVelocity();
@@ -253,12 +253,12 @@ struct PlaybackSequence {
     }
 
     // get NoteOff Info
-    std::vector<noteOff_ge> getNoteOffEvents() {
+    [[maybe_unused]] std::vector<noteOff_ge> getNoteOffEvents() {
         messageSequence.updateMatchedPairs();
         std::vector<noteOff_ge> noteOffEvents;
         for (auto &event : messageSequence) {
             if (event->message.isNoteOff()) {
-                noteOff_ge noteOff;
+                noteOff_ge noteOff{};
                 noteOff.channel = event->message.getChannel();
                 noteOff.noteNumber = event->message.getNoteNumber();
                 noteOff.velocity = event->message.getVelocity();
@@ -269,12 +269,12 @@ struct PlaybackSequence {
         return noteOffEvents;
     }
 
-    std::vector<controller_ge> getControllerEvents() {
+    [[maybe_unused]] std::vector<controller_ge> getControllerEvents() {
         messageSequence.updateMatchedPairs();
         std::vector<controller_ge> controllerEvents;
         for (auto &event : messageSequence) {
             if (event->message.isController()) {
-                controller_ge controller;
+                controller_ge controller{};
                 controller.channel = event->message.getChannel();
                 controller.controllerNumber = event->message.getControllerNumber();
                 controller.controllerValue = event->message.getControllerValue();
@@ -285,7 +285,7 @@ struct PlaybackSequence {
         return controllerEvents;
     }
 
-    std::vector<paired_note> getPairedNotes() {
+    [[maybe_unused]] std::vector<paired_note> getPairedNotes() {
         messageSequence.updateMatchedPairs();
         std::vector<paired_note> pairedNotes;
         int ix = 0;
@@ -298,8 +298,7 @@ struct PlaybackSequence {
                 note.noteOn.noteNumber = message.getNoteNumber();
                 note.noteOn.velocity = message.getVelocity();
                 note.noteOn.time = message.getTimeStamp();
-                auto noteOfftime = messageSequence.getTimeOfMatchingKeyUp(ix);
-                note.duration =  noteOfftime - note.noteOn.time;
+                note.duration = messageSequence.getTimeOfMatchingKeyUp(ix) - note.noteOn.time;
                 pairedNotes.push_back(note);
             }
             ix++;
@@ -307,7 +306,7 @@ struct PlaybackSequence {
         return pairedNotes;
     }
 
-    juce::MidiMessageSequence getAsJuceMidMessageSequence() const {
+    [[nodiscard]] juce::MidiMessageSequence getAsJuceMidMessageSequence() const {
         return messageSequence;
     }
 
@@ -317,7 +316,6 @@ private:
 };
 
 /*
-
   Type:
    1. PlaybackPolicies --> notifies the plugin how to deal with the new stream of generations coming in next
    2. PlaybackSequence --> contains the new stream of generations to be played
@@ -341,13 +339,13 @@ struct GenerationEvent {
         playbackSequence = ps;
     }
 
-    bool IsNewPlaybackPolicyEvent() const { return type == 1; }
-    PlaybackPolicies getNewPlaybackPolicyEvent () const { return playbackPolicies; }
+    [[nodiscard]] bool IsNewPlaybackPolicyEvent() const { return type == 1; }
+    [[nodiscard]] PlaybackPolicies getNewPlaybackPolicyEvent () const { return playbackPolicies; }
 
-    bool IsNewPlaybackSequence() const { return type == 2; }
-    PlaybackSequence getNewPlaybackSequence() const { return playbackSequence; }
+    [[nodiscard]] bool IsNewPlaybackSequence() const { return type == 2; }
+    [[nodiscard]] PlaybackSequence getNewPlaybackSequence() const { return playbackSequence; }
 
-    juce::MidiMessageSequence getAsJuceMidMessageSequence() const {
+    [[maybe_unused]] [[nodiscard]] juce::MidiMessageSequence getAsJuceMidMessageSequence() const {
         return playbackSequence.getAsJuceMidMessageSequence();
     }
 private:

@@ -151,7 +151,7 @@ public:
 
     // draws midi notes on the component (piano roll)
     // maps the midi notes to the component's width and height
-    // pitch values are mapped to the y axis, and time values are mapped to the x axis
+    // pitch values are mapped to the y-axis, and time values are mapped to the x-axis
     // velocity values are mapped to the alpha value of the note color
     void paint(juce::Graphics& g) override
     {
@@ -191,7 +191,7 @@ public:
 
         juce::MidiMessageSequence displayedSequence{};
 
-        // add content of DraggedMidi and IncomingMidi to diplayMidi
+        // add content of DraggedMidi and IncomingMidi to displayMidi
         if (DraggedMidi.getNumTracks() > 0)
         {
             auto track = DraggedMidi.getTrack(0);
@@ -210,9 +210,9 @@ public:
             }
         }
 
-        juce::MidiFile diplayMidi = juce::MidiFile();
-        diplayMidi.setTicksPerQuarterNote(960);
-        diplayMidi.addTrack(displayedSequence);
+        juce::MidiFile displayMidi = juce::MidiFile();
+        displayMidi.setTicksPerQuarterNote(960);
+        displayMidi.addTrack(displayedSequence);
 
         juce::String fileName = juce::Uuid().toString() + ".mid";  // Random filename
 
@@ -224,7 +224,7 @@ public:
             auto p_os = std::make_unique<juce::FileOutputStream>(
                 tempf.getFile());
             if (p_os->openedOk()) {
-                diplayMidi.writeTo(*p_os, 0);
+                displayMidi.writeTo(*p_os, 0);
             }
         }
 
@@ -564,7 +564,7 @@ public:
 
     // draws midi notes on the component (piano roll)
     // maps the midi notes to the component's width and height
-    // pitch values are mapped to the y axis, and time values are mapped to the x axis
+    // pitch values are mapped to the y-axis, and time values are mapped to the x-axis
     // velocity values are mapped to the alpha value of the note color
     void paint(juce::Graphics& g) override
     {
@@ -747,7 +747,7 @@ public:
     float playhead_pos{0};
     float disp_length{8};
     float LoopStart{-1};
-    float LoopDuarion{-1};
+    float LoopDuration {-1};
 
     void paint(juce::Graphics& g) override
     {
@@ -777,8 +777,8 @@ public:
             if (length != disp_length) {
                 disp_length = length;
             }
-            if (LoopStart >= 0 && LoopDuarion > 0) {
-                pos = std::fmod(pos, LoopDuarion);
+            if (LoopStart >= 0 && LoopDuration > 0) {
+                pos = std::fmod(pos, LoopDuration);
             }
 
             playhead_pos = pos;
@@ -786,9 +786,9 @@ public:
         }
     }
 
-    void enableLooping(float start_quarternotes, float duration_quarternotes) {
-        LoopStart = start_quarternotes;
-        LoopDuarion = duration_quarternotes;
+    void enableLooping(float start_quarter_notes, float duration_quarter_notes) {
+        LoopStart = start_quarter_notes;
+        LoopDuration = duration_quarter_notes;
     }
 };
 
@@ -1107,7 +1107,7 @@ public:
 
     }
 
-    std::vector<std::unique_ptr<NoteComponent>>& get_noteComponents() {
+    [[maybe_unused]] std::vector<std::unique_ptr<NoteComponent>>& get_noteComponents() {
         return noteComponents;
     }
 
@@ -1116,9 +1116,9 @@ public:
         if (AllowToDragOutAsMidi)
         {
             // populate the midi file with the notes from the piano roll
-            auto mfile = juce::MidiFile();
+            auto midifile = juce::MidiFile();
             float ticksPerQuarterNote = 960;
-            mfile.setTicksPerQuarterNote((int) ticksPerQuarterNote);  \
+            midifile.setTicksPerQuarterNote((int) ticksPerQuarterNote);  \
             juce::MidiMessageSequence sequence;
 
             for (auto& noteComponent : noteComponents)
@@ -1141,8 +1141,7 @@ public:
 
             }
 
-
-            mfile.addTrack(sequence);
+            midifile.addTrack(sequence);
 
             // save the midi file to a temporary file
             juce::String fileName = juce::Uuid().toString() + ".mid";  // Random filename
@@ -1156,7 +1155,7 @@ public:
                 auto p_os = std::make_unique<juce::FileOutputStream>(
                     tempf.getFile());
                 if (p_os->openedOk()) {
-                    mfile.writeTo(*p_os, 0);
+                    midifile.writeTo(*p_os, 0);
                 }
             }
 
@@ -1306,7 +1305,7 @@ public:
         crossThreadPianoRollData = crossThreadPianoRollData_;
     }
 
-    float getSequenceDuration() const {
+    [[nodiscard]] float getSequenceDuration() const {
         return SequenceDuration;
     }
 private:
@@ -1392,11 +1391,11 @@ public:
         pianoRollComponent.AllowToDragOutAsMidi = enable;
     }
 
-    void enableLooping(float start_quarternotes, float duration_quarternotes) {
-        playheadVisualizer.enableLooping(start_quarternotes, duration_quarternotes);
+    void enableLooping(float start_quarter_notes, float duration_quarter_notes) {
+        playheadVisualizer.enableLooping(start_quarter_notes, duration_quarter_notes);
     }
 
-    void setpianoRollData(CrossThreadPianoRollData* crossThreadPianoRollData_) {
+    void setPianoRollData(CrossThreadPianoRollData* crossThreadPianoRollData_) {
         pianoRollComponent.setPianoRollData(crossThreadPianoRollData_);
         crossThreadPianoRollData = crossThreadPianoRollData_;
 

@@ -131,9 +131,9 @@ private:
     // ============================================================================================================
     torch::jit::script::Module model;
     bool isModelLoaded{false};
-    bool load(std::string model_name_);
+    bool load(const std::string& model_name_);
     std::string model_path;
-    void DisplayTensor(const torch::Tensor &tensor, const string Label,
+    void DisplayTensor(const torch::Tensor &tensor, const string& Label,
                        bool display_content);
 };
 
