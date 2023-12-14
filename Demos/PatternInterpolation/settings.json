@@ -1,0 +1,155 @@
+{
+    "UI": {
+        "Tabs": {
+            "show_grid": false,
+            "draw_borders_for_components": false,
+            "tabList": [
+                {
+                    "name": "RandomGeneration",
+                    "sliders": [],
+                    "rotaries": [],
+                    "buttons": [{
+                        "label": "Randomize",
+                        "isToggle": false,
+                        "topLeftCorner": "Kh",
+                        "bottomRightCorner": "Pm"
+                    }],
+                    "MidiDisplays": []
+                },
+                {
+                    "name": "Midi Mappings",
+                    "sliders": [],
+                    "rotaries": [
+                        {
+                            "label": "Kick",
+                            "min": 0,
+                            "max": 127,
+                            "default": 36,
+                            "topLeftCorner": "Cc",
+                            "bottomRightCorner": "Gi"
+                        },
+                        {
+                            "label": "Snare",
+                            "min": 0,
+                            "max": 127,
+                            "default": 38,
+                            "topLeftCorner": "Hc",
+                            "bottomRightCorner": "Li"
+                        },
+                        {
+                            "label": "ClosedHat",
+                            "min": 0,
+                            "max": 127,
+                            "default": 42,
+                            "topLeftCorner": "Pc",
+                            "bottomRightCorner": "Ti"
+                        },
+                        {
+                            "label": "OpenHat",
+                            "min": 0,
+                            "max": 127,
+                            "default": 46,
+                            "topLeftCorner": "Uc",
+                            "bottomRightCorner": "Yi"
+                        },
+                        {
+                            "label": "LowTom",
+                            "min": 0,
+                            "max": 127,
+                            "default": 41,
+                            "topLeftCorner": "Cm",
+                            "bottomRightCorner": "Gs"
+                        },
+                        {
+                            "label": "MidTom",
+                            "min": 0,
+                            "max": 127,
+                            "default": 48,
+                            "topLeftCorner": "Hm",
+                            "bottomRightCorner": "Ls"
+                        },
+                        {
+                            "label": "HighTom",
+                            "min": 0,
+                            "max": 127,
+                            "default": 45,
+                            "topLeftCorner": "Pm",
+                            "bottomRightCorner": "Ts"
+                        },
+                        {
+                            "label": "Crash",
+                            "min": 0,
+                            "max": 127,
+                            "default": 49,
+                            "topLeftCorner": "Um",
+                            "bottomRightCorner": "Ys"
+                        },
+                        {
+                            "label": "Ride",
+                            "min": 0,
+                            "max": 127,
+                            "default": 51,
+                            "topLeftCorner": "Lt",
+                            "bottomRightCorner": "Pz"
+                        }
+                    ],
+                    "buttons": [],
+                    "MidiDisplays": []
+                }
+            ]
+        },
+
+        "MidiInVisualizer": {
+            "enable": true,
+            "allowToDragInMidi": true,
+            "visualizeIncomingMidiFromHost": true,
+            "deletePreviousIncomingMidiMessagesOnBackwardPlayhead": true,
+            "deletePreviousIncomingMidiMessagesOnRestart": true
+        },
+        "GeneratedContentVisualizer": {
+            "enable": true,
+            "allowToDragOutAsMidi": true
+        }
+
+    },
+
+    "StandaloneTransportPanel": {
+        "enable": true
+    },
+
+    "VirtualMidiOut": {
+        "enable": true
+    },
+
+    "event_communication_settings": {
+        "SendEventAtBeginningOfNewBuffers_FLAG": false,
+        "SendEventForNewBufferIfMetadataChanged_FLAG": false,
+        "SendNewBarEvents_FLAG": false,
+        "SendTimeShiftEvents_FLAG": false,
+        "delta_TimeShiftEventRatioOfQuarterNote": 0.5,
+        "FilterNoteOnEvents_FLAG": false,
+        "FilterNoteOffEvents_FLAG": false,
+        "FilterCCEvents_FLAG": false
+    },
+
+    "deploy_method_min_wait_time_between_iterations": 0.5,
+
+    "debugging_settings": {
+        "DeploymentThread": {
+            "print_received_gui_params": false,
+            "print_manually_dropped_midi_messages": false,
+            "print_input_events": false,
+            "print_deploy_method_time": false,
+            "disable_user_print_requests": false
+        },
+        "ProcessorThread": {
+            "print_start_stop_times": false,
+            "print_new_buffer_started": false,
+            "print_generation_policy_reception": false,
+            "print_generation_stream_reception": false,
+            "disableAllPrints": true
+        }
+    }
+
+}
+
