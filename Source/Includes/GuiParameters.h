@@ -67,7 +67,8 @@ struct param {
         isRotary = false;
         isButton = true;
         isToggle = button_json["isToggle"].get<bool>();
-        isChanged = true; // first time update is always true
+        isChanged = isToggle; // only true if isToggle.
+        // We don't want to trigger the button if it's not a toggle
     }
 
     void InitializeCombobox(json comboBox_json) {
@@ -133,6 +134,7 @@ struct GuiParams {
         for (auto &parameter: Parameters) {
             if (parameter.update(apvtsPntr)) {
                 isChanged = true;
+                break;
             }
         }
         return isChanged;
@@ -191,7 +193,12 @@ struct GuiParams {
         for (auto &parameter: Parameters) {
             if (parameter.paramID == label2ParamID(label)) {
                 if (parameter.isButton) {
-                    return parameter.isChanged;
+                    if(parameter.isChanged) {
+                        parameter.isChanged = false;
+                        return true;
+                    } else {
+                        return false;
+                    }
                 }
             }
         }

@@ -20,7 +20,7 @@ void DeploymentThread::startThreadUsingProvidedResources(
 
 
     NMP2DPL_Event_Que_ptr = NMP2DPL_Event_Que_ptr_;
-    APVM2NMD_Parameters_Que_ptr = APVM2NMD_Parameters_Que_ptr_;
+    APVM2DPL_Parameters_Que_ptr = APVM2NMD_Parameters_Que_ptr_;
     DPL2NMP_GenerationEvent_Que_ptr = DPL2NMP_GenerationEvent_Que_ptr_;
     GUI2DPL_DroppedMidiFile_Que_ptr = GUI2DPL_DroppedMidiFile_Que_ptr_;
     realtimePlaybackInfo = realtimePlaybackInfo_ptr_;
@@ -64,9 +64,10 @@ void DeploymentThread::run() {
     while (!bExit) {
 
         if (readyToStop) { break; } // check if thread is ready to be stopped
-        if (APVM2NMD_Parameters_Que_ptr->getNumReady() > 0) {
+        if (APVM2DPL_Parameters_Que_ptr->getNumReady() > 0) {
             // print updated values for debugging
-            gui_params = APVM2NMD_Parameters_Que_ptr->pop(); // pop the latest parameters from the queue
+            gui_params = APVM2DPL_Parameters_Que_ptr
+                             ->pop(); // pop the latest parameters from the queue
             gui_params.registerAccess();                      // set the time when the parameters were accessed
 
             if (debugging_settings::DeploymentThread::print_received_gui_params) { // if set in Debugging.h
@@ -132,6 +133,7 @@ void DeploymentThread::run() {
                 gui_params.changed(), newPresAvail,
                 midiFileDroppedOnVisualizer,
                 audioFileDroppedOnVisualizer);
+            gui_params.setChanged(false);
 
             shouldSendNewPlaybackPolicy = status.first;
             shouldSendNewPlaybackSequence = status.second;

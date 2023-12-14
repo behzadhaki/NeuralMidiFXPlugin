@@ -13,7 +13,7 @@
 #include "../Includes/chrono_timer.h"
 #include "../Includes/GenerationEvent.h"
 #include "../Includes/TorchScriptAndPresetLoaders.h"
-#include "../../Deployment/DeploymentData.h"
+#include "Deployment/PluginCode/DeploymentData.h"
 #include "../Includes/MidiDisplayWidget.h"
 
 class DeploymentThread : public juce::Thread {
@@ -75,12 +75,12 @@ public:
 
 private:
     // ============================================================================================================
-    // ===          Deployment Data
+    // ===          1_RandomGeneration Data
     // ===        (If you need additional data for input processing, add them here)
     // ===  NOTE: All data needed by the model MUST be wrapped as ModelInput struct (modifiable in ModelInput.h)
     // ============================================================================================================
 
-    // Host Event Deployment Data
+    // Host Event 1_RandomGeneration Data
     EventFromHost last_event{};
     EventFromHost first_frame_metadata_event{};                      // keeps metadata of the first frame
     EventFromHost frame_metadata_event{};                            // keeps metadata of the next frame
@@ -88,7 +88,7 @@ private:
     EventFromHost
         last_complete_note_duration_event{};               // keeps metadata of the last beat passed
 
-    // Playback Deployment Data
+    // Playback 1_RandomGeneration Data
     PlaybackPolicies playbackPolicy;
     PlaybackSequence playbackSequence;
 
@@ -97,7 +97,8 @@ private:
     // ===          I/O Queues for Receiving/Sending Data
     // ============================================================================================================
     LockFreeQueue<EventFromHost, queue_settings::NMP2DPL_que_size> *NMP2DPL_Event_Que_ptr{};
-    LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2NMD_Parameters_Que_ptr{};
+    LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *
+        APVM2DPL_Parameters_Que_ptr {};
     LockFreeQueue<GenerationEvent, queue_settings::DPL2NMP_que_size> *DPL2NMP_GenerationEvent_Que_ptr{};
     LockFreeQueue<juce::MidiFile, 4>* GUI2DPL_DroppedMidiFile_Que_ptr{};
     RealTimePlaybackInfo *realtimePlaybackInfo{};
