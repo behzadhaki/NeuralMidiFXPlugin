@@ -22,27 +22,5 @@ juce_add_plugin("${BaseTargetName}"
 
 
 
-
-# ==============================================================================
-# DO NOT EDIT BELOW THIS LINE
-# ==============================================================================
-target_sources(${BaseTargetName} PRIVATE
-        ../shared_plugin_helpers/shared_plugin_helpers.cpp
-        ../Source/NeuralMidiFXPlugin/PluginProcessor.cpp
-        ../Source/NeuralMidiFXPlugin/processBlock.cpp
-        ../Source/NeuralMidiFXPlugin/PluginEditor.cpp
-        ../Source/DeploymentThreads/DeploymentThread.cpp
-        ../Source/Includes/colored_cout.cpp
-        Deploy.cpp
-        settings.json
-        )
-
-# Provide a path to settings.json file
-# Define DEFAULT_SETTINGS_FILE_PATH
-set(DEFAULT_SETTINGS_PATH "${CMAKE_SOURCE_DIR}/PluginCode/settings.json")
-message(STATUS "DEFAULT_SETTINGS_PATH: ${DEFAULT_SETTINGS_PATH}")
-
-# No need for platform-specific path formatting
-add_definitions(-DDEFAULT_SETTINGS_FILE_PATH="${DEFAULT_SETTINGS_PATH}")
-
+# DO NOT REMOVE THIS LINE
 include("../CMakeLists.wrapper.txt")
