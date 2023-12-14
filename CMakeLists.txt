@@ -51,7 +51,7 @@ if (${BUILD_JUCE_PROTOTYPE_EXAMPLES})
     #adding project folders:
 endif()
 
-add_subdirectory(Deployment/PluginCode)
+add_subdirectory(PluginCode)
 
 option(BUILD_UNIT_TESTS "Build JUCE prototype examples" ON)
 
