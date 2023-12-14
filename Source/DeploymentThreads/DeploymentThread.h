@@ -13,7 +13,7 @@
 #include "../Includes/chrono_timer.h"
 #include "../Includes/GenerationEvent.h"
 #include "../Includes/TorchScriptAndPresetLoaders.h"
-#include "Deployment/PluginCode/DeploymentData.h"
+#include "PluginCode/DeploymentData.h"
 #include "../Includes/MidiDisplayWidget.h"
 
 class DeploymentThread : public juce::Thread {
