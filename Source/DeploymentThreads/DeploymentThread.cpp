@@ -3,7 +3,6 @@
 //
 
 #include "DeploymentThread.h"
-#include "../Includes/TorchScriptAndPresetLoaders.h"
 
 DeploymentThread::DeploymentThread(): juce::Thread("BackgroundDPLThread") {
     CustomPresetData = make_unique<CustomPresetDataDictionary>();
@@ -21,7 +20,7 @@ void DeploymentThread::startThreadUsingProvidedResources(
 
 
     NMP2DPL_Event_Que_ptr = NMP2DPL_Event_Que_ptr_;
-    APVM2NMD_Parameters_Que_ptr = APVM2NMD_Parameters_Que_ptr_;
+    APVM2DPL_Parameters_Que_ptr = APVM2NMD_Parameters_Que_ptr_;
     DPL2NMP_GenerationEvent_Que_ptr = DPL2NMP_GenerationEvent_Que_ptr_;
     GUI2DPL_DroppedMidiFile_Que_ptr = GUI2DPL_DroppedMidiFile_Que_ptr_;
     realtimePlaybackInfo = realtimePlaybackInfo_ptr_;
@@ -56,18 +55,19 @@ void DeploymentThread::run() {
     chrono_timed_consecutive_pushes.registerStartTime();
     std::optional<EventFromHost> new_event_from_DAW {};
     std::optional<MidiFileEvent> new_midi_event_dropped_manually {};
-    bool shouldSendNewPlaybackPolicy{false};
-    bool shouldSendNewPlaybackSequence{false};
-    bool midiFileDroppedOnVisualizer{false};
+    bool shouldSendNewPlaybackPolicy;
+    bool shouldSendNewPlaybackSequence;
+    bool midiFileDroppedOnVisualizer;
 
     int cnt{0};
 
     while (!bExit) {
 
         if (readyToStop) { break; } // check if thread is ready to be stopped
-        if (APVM2NMD_Parameters_Que_ptr->getNumReady() > 0) {
+        if (APVM2DPL_Parameters_Que_ptr->getNumReady() > 0) {
             // print updated values for debugging
-            gui_params = APVM2NMD_Parameters_Que_ptr->pop(); // pop the latest parameters from the queue
+            gui_params = APVM2DPL_Parameters_Que_ptr
+                             ->pop(); // pop the latest parameters from the queue
             gui_params.registerAccess();                      // set the time when the parameters were accessed
 
             if (debugging_settings::DeploymentThread::print_received_gui_params) { // if set in Debugging.h
@@ -98,7 +98,7 @@ void DeploymentThread::run() {
         if (midiVisualizersData != nullptr) {
             auto changed_visualizers =
                 midiVisualizersData->get_visualizer_ids_with_user_dropped_new_sequences();
-            if (changed_visualizers.size() > 0) {
+            if (!changed_visualizers.empty()) {
                 midiFileDroppedOnVisualizer = true;
             }
             /*
@@ -115,7 +115,7 @@ void DeploymentThread::run() {
         if (audioVisualizersData != nullptr) {
             auto changed_visualizers =
                 audioVisualizersData->get_visualizer_ids_with_user_dropped_new_audio();
-            if (changed_visualizers.size() > 0) {
+            if (!changed_visualizers.empty()) {
                 audioFileDroppedOnVisualizer = true;
             }
 
@@ -133,6 +133,7 @@ void DeploymentThread::run() {
                 gui_params.changed(), newPresAvail,
                 midiFileDroppedOnVisualizer,
                 audioFileDroppedOnVisualizer);
+            gui_params.setChanged(false);
 
             shouldSendNewPlaybackPolicy = status.first;
             shouldSendNewPlaybackSequence = status.second;
@@ -240,7 +241,7 @@ DeploymentThread::~DeploymentThread()
 
 void DeploymentThread::DisplayEvent(const EventFromHost& event,
                                     bool compact_mode,
-                                    double event_count)
+                                    double /*event_count*/)
 {
     auto showMessage = [](const std::string& input) {
         // if input is multiline, split it into lines && print each line separately
@@ -261,7 +262,7 @@ void DeploymentThread::DisplayEvent(const EventFromHost& event,
     }
 }
 
-void DeploymentThread::PrintMessage(const string& input)
+[[maybe_unused]] void DeploymentThread::PrintMessage(const string& input)
 {
     using namespace debugging_settings::DeploymentThread;
     if (disable_user_print_requests) { return; }
@@ -272,7 +273,7 @@ void DeploymentThread::PrintMessage(const string& input)
     while (std::getline(ss, line)) { std::cout << clr::on_red << "[DPL] " << line << std::endl; }
 }
 
-bool DeploymentThread::load(std::string model_name_)
+bool DeploymentThread::load(const std::string& model_name_)
 {
 
     // Creates the path depending on the OS
@@ -308,7 +309,7 @@ bool DeploymentThread::load(std::string model_name_)
     }
 }
 
-void DeploymentThread::DisplayTensor(const torch::Tensor &tensor, const string Label,
+[[maybe_unused]] void DeploymentThread::DisplayTensor(const torch::Tensor &tensor, const string& Label,
                                      bool display_content=false){
 
     auto showMessage = [](const std::string& input) {

@@ -140,15 +140,15 @@ public:
         //reshape the entire component
         setSize(area.getWidth(), area.getHeight());
 
-        width = getWidth(); // Get the width of the component
-        height = getHeight(); // Get the height of the component
+        width = (float)getWidth(); // Get the width of the component
+        height = (float)getHeight(); // Get the height of the component
         marginWidth = 0.05f * width; // 5% margin on both sides
         marginHeight = 0.05f * height; // 5% margin on top and bottom
 
         gridWidth = width - 2 * marginWidth; // Width of the grid
         gridHeight = height - 2 * marginHeight; // Height of the grid
-        cellWidth = gridWidth / (gridSize - 1);
-        cellHeight = gridHeight / (gridSize - 1);
+        cellWidth = gridWidth / (float)(gridSize - 1);
+        cellHeight = gridHeight / (float)(gridSize - 1);
 
         // Sliders
         resizeSliders();
@@ -171,7 +171,7 @@ public:
          repaint();
     }
 
-    void paint(Graphics& g) {
+    void paint(Graphics& g) override {
 
         if (UIObjects::Tabs::show_grid) {
             // Draw the border around the grid
@@ -191,18 +191,20 @@ public:
 
                     // Label the first row
                     if (j == 0) {
-                        char labelX = 'A' + i;
+                        char labelX = char ('A' + i);
                         String label = String::charToString(labelX);
                         g.setColour(Colours::black);
-                        g.drawText(label, x - 10.0f, y - 16.0f, 20.0f, 12.0f, Justification::centred, true);
+                        g.drawText(label, int(x - 10.0f), int(y - 16.0f), 20.0f, 12.0f, Justification::centred, true);
                     }
 
                     // Label the first column
                     if (i == 0) {
-                        char labelY = 'a' + j;
+                        char labelY = char('a' + j);
                         String label = String::charToString(labelY);
                         g.setColour(Colours::black);
-                        g.drawText(label, x - 24.0f, y - 6.0f, 20.0f, 12.0f, Justification::centred, true);
+                        g.drawText(
+                            label, int(x - 24.0f), int(y - 6.0f),
+                            20.0f, 12.0f, Justification::centred, true);
                     }
                 }
             }
@@ -211,13 +213,15 @@ public:
 
         if (UIObjects::Tabs::draw_borders_for_components) {
             g.setColour(Colours::black);
-            for (auto border : componentBorders) {
-                auto [x, y, width, height, tl_label, br_label] = border;
+            for (const auto& border : componentBorders) {
+                auto [x, y, width_, height_, tl_label, br_label] = border;
+                width = width_;
+                height = height_;
                 g.drawRect(x, y, width, height, 2.0f);
                 if (UIObjects::Tabs::show_grid) {
                     // draw labels inside the component
-                    g.drawText(tl_label, x + 2.0f, y + 2.0f, 20.0f, 12.0f, Justification::centred, true);
-                    g.drawText(br_label, x + width - 22.0f, y + height - 14.0f, 20.0f, 12.0f, Justification::centred, true);
+                    g.drawText(tl_label, int(x + 2.0f), int(y + 2.0f), 20.0f, 12.0f, Justification::centred, true);
+                    g.drawText(br_label, int(x + width - 22.0f), int(y + height - 14.0f), 20.0f, 12.0f, Justification::centred, true);
                 }
             }
         }
@@ -228,7 +232,7 @@ public:
 
     void buttonClicked(juce::Button *button) override {
         // only need to increment button push count when
-        // button is not toggeleable
+        // button is not toggleable
         if (button -> isToggleable()) { return; }
         size_t count = 0;
         for (auto b_ : buttonArray) {
@@ -254,7 +258,7 @@ public:
 
 private:
 
-    // In Runtime, APVTS used only for untoggleable buttons
+    // In Runtime, APVTS used only for non-toggleable buttons
     juce::AudioProcessorValueTreeState *apvtsPointer{nullptr};
 
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>> sliderAttachmentArray;
@@ -278,15 +282,15 @@ private:
     std::vector<std::tuple<float, float, float, float, string, string>> componentBorders;
 
     int gridSize = 26; // Number of cells in each direction
-    float width; // Get the width of the component
-    float height; // Get the height of the component
-    float marginWidth; // 5% margin on both sides
-    float marginHeight; // 5% margin on top and bottom
+    float width {}; // Get the width of the component
+    float height {}; // Get the height of the component
+    float marginWidth {}; // 5% margin on both sides
+    float marginHeight {}; // 5% margin on top and bottom
 
-    float gridWidth; // Width of the grid
-    float gridHeight; // Height of the grid
-    float cellWidth;
-    float cellHeight;
+    float gridWidth {}; // Width of the grid
+    float gridHeight {}; // Height of the grid
+    float cellWidth {};
+    float cellHeight {};
 
     // Tuple of the current tab with all objects
     tab_tuple currentTab;
@@ -303,11 +307,10 @@ private:
 
     size_t numButtons;
 
-    juce::Rectangle<int> areaWithBleed;
     int deltaX{};
     int deltaY{};
 
-    juce::Slider *generateSlider(json sliderJson_, bool isHorizontal = false) {
+    static juce::Slider *generateSlider(json sliderJson_, bool isHorizontal = false) {
         auto *newSlider = new juce::Slider;
         if (isHorizontal) {
             newSlider->setSliderStyle(juce::Slider::SliderStyle::LinearHorizontal);
@@ -341,7 +344,7 @@ private:
         return newSlider;
     }
 
-    juce::Slider *generateRotary(json rotaryJson) {
+    static juce::Slider *generateRotary(json rotaryJson) {
         auto *newRotary = new juce::Slider;
         newRotary->setSliderStyle(juce::Slider::SliderStyle::RotaryHorizontalVerticalDrag);
 
@@ -395,7 +398,7 @@ private:
         return newButton;
     }
 
-    juce::ComboBox *generateComboBox(json comboBoxJson) {
+    static juce::ComboBox *generateComboBox(json comboBoxJson) {
         auto *newComboBox = new juce::ComboBox;
 
         // Obtain comboBox info including text
@@ -414,7 +417,7 @@ private:
         return newComboBox;
     }
 
-    MidiVisualizer *generateMidiVisualizer(json midiDisplayJson) {
+    static MidiVisualizer *generateMidiVisualizer(json midiDisplayJson) {
         auto label = midiDisplayJson["label"].get<std::string>();
         auto allowToDragOutAsMidiFile = midiDisplayJson["allowToDragOutAsMidi"].get<bool>();
         auto allowToDragInMidiFile = midiDisplayJson["allowToDragInMidi"].get<bool>();
@@ -437,7 +440,7 @@ private:
         return newMidiVisualizer;
     }
 
-    AudioVisualizer *generateAudioVisualizer(json audioDisplayJson) {
+    static AudioVisualizer *generateAudioVisualizer(json audioDisplayJson) {
         auto label = audioDisplayJson["label"].get<std::string>();
         auto allowToDragOutAsAudioFile = audioDisplayJson["allowToDragOutAsAudio"].get<bool>();
         auto allowToDragInAudioFile = audioDisplayJson["allowToDragInAudio"].get<bool>();
@@ -465,20 +468,17 @@ private:
         componentBorders.clear();
         for (auto *comp: sliderArray) {
             comp->setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
-                                  comp->getTextBoxWidth(), comp->getHeight()*.2);
+                                  comp->getTextBoxWidth(), int(comp->getHeight()*.2));
 
             auto [topLeftX, topLeftY] = coordinatesFromString(sliderTopLeftCorners[slider_ix]);
             auto [bottomRightX, bottomRightY] = coordinatesFromString(sliderBottomRightCorners[slider_ix]);
 
-            auto area = getLocalBounds();
-
-
             auto x = topLeftX - 2.0f;
             auto y = topLeftY - 2.0f;
-            auto width = (bottomRightX - topLeftX) + 4.0f;
-            auto height = (bottomRightY - topLeftY) + 4.0f;
+            width = (bottomRightX - topLeftX) + 4.0f;
+            height = (bottomRightY - topLeftY) + 4.0f;
 
-            comp->setBounds(x, y, width, height);
+            comp->setBounds((int)x, (int)y, (int)width, (int)height);
 
             if (UIObjects::Tabs::draw_borders_for_components) {
                 string tl_label = sliderTopLeftCorners[slider_ix];
@@ -497,21 +497,20 @@ private:
         for (auto *comp: rotaryArray)
         {
             comp->setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
-                                  comp->getTextBoxWidth(), comp->getHeight()*.2);
+                                  comp->getTextBoxWidth(),
+                                  int(comp->getHeight()*.2));
 
             auto [topLeftX, topLeftY] =
                 coordinatesFromString(rotaryTopLeftCorners[rotary_ix]);
             auto [bottomRightX, bottomRightY] =
                 coordinatesFromString(rotaryBottomRightCorners[rotary_ix]);
 
-            auto area = getLocalBounds();
-
             auto x = topLeftX - 2.0f;
             auto y = topLeftY - 2.0f;
-            auto width = (bottomRightX - topLeftX) + 4.0f;
-            auto height = (bottomRightY - topLeftY) + 4.0f;
+            width = (bottomRightX - topLeftX) + 4.0f;
+            height = (bottomRightY - topLeftY) + 4.0f;
 
-            comp->setBounds(x, y, width, height);
+            comp->setBounds((int)x, (int)y, (int)width, (int)height);
 
             if (UIObjects::Tabs::draw_borders_for_components) {
                 string tl_label = rotaryTopLeftCorners[rotary_ix];
@@ -531,14 +530,12 @@ private:
             auto [topLeftX, topLeftY] = coordinatesFromString(buttonTopLeftCorners[button_ix]);
             auto [bottomRightX, bottomRightY] = coordinatesFromString(buttonBottomRightCorners[button_ix]);
 
-            auto area = getLocalBounds();
-
             auto x = topLeftX - 2.0f;
             auto y = topLeftY - 2.0f;
-            auto width = (bottomRightX - topLeftX) + 4.0f;
-            auto height = (bottomRightY - topLeftY) + 4.0f;
+            width = (bottomRightX - topLeftX) + 4.0f;
+            height = (bottomRightY - topLeftY) + 4.0f;
 
-            comp->setBounds(x, y, width, height);
+            comp->setBounds((int)x, (int)y, (int)width, (int)height);
 
             if (UIObjects::Tabs::draw_borders_for_components) {
                 string tl_label = buttonTopLeftCorners[button_ix];
@@ -559,19 +556,17 @@ private:
             auto [topLeftX, topLeftY] = coordinatesFromString(comboBoxTopLeftCorners[comboBox_ix]);
             auto [bottomRightX, bottomRightY] = coordinatesFromString(comboBoxBottomRightCorners[comboBox_ix]);
 
-            auto area = getLocalBounds();
-
             auto x = topLeftX - 2.0f;
             auto y = topLeftY - 2.0f;
-            auto width = (bottomRightX - topLeftX) + 4.0f;
-            auto height = (bottomRightY - topLeftY) + 4.0f;
+            width = (bottomRightX - topLeftX) + 4.0f;
+            height = (bottomRightY - topLeftY) + 4.0f;
 
             // get the label for the comboBox
             auto label = comboBoxLabelArray[comboBox_ix];
-            label->setBounds(x, y, width/5, height); // 1/4 of the width of the comboBox
+            label->setBounds((int)x, (int)y, int(width/5), int(height)); // 1/4 of the width of the comboBox
 
             // get the comboBox
-            comp->setBounds(x + width/5, y, 4*width/5, height); // 4/5 of the width of the comboBox
+            comp->setBounds(int(x + width/5), (int)y, int(4*width/5), (int)height); // 4/5 of the width of the comboBox
 
             if (UIObjects::Tabs::draw_borders_for_components) {
                 string tl_label = comboBoxTopLeftCorners[comboBox_ix];
@@ -591,14 +586,12 @@ private:
             auto [topLeftX, topLeftY] = coordinatesFromString(midiDisplayTopLeftCorners[midiDisplay_ix]);
             auto [bottomRightX, bottomRightY] = coordinatesFromString(midiDisplayBottomRightCorners[midiDisplay_ix]);
 
-            auto area = getLocalBounds();
-
             auto x = topLeftX - 2.0f;
             auto y = topLeftY - 2.0f;
-            auto width = (bottomRightX - topLeftX) + 4.0f;
-            auto height = (bottomRightY - topLeftY) + 4.0f;
+            width = (bottomRightX - topLeftX) + 4.0f;
+            height = (bottomRightY - topLeftY) + 4.0f;
 
-            comp->setBounds(x, y, width, height);
+            comp->setBounds((int)x, (int)y, (int)width, (int)height);
 
             if (UIObjects::Tabs::draw_borders_for_components) {
                 string tl_label = midiDisplayTopLeftCorners[midiDisplay_ix];
@@ -618,14 +611,12 @@ private:
             auto [topLeftX, topLeftY] = coordinatesFromString(audioDisplayTopLeftCorners[audioDisplay_ix]);
             auto [bottomRightX, bottomRightY] = coordinatesFromString(audioDisplayBottomRightCorners[audioDisplay_ix]);
 
-            auto area = getLocalBounds();
-
             auto x = topLeftX - 2.0f;
             auto y = topLeftY - 2.0f;
-            auto width = (bottomRightX - topLeftX) + 4.0f;
-            auto height = (bottomRightY - topLeftY) + 4.0f;
+            width = (bottomRightX - topLeftX) + 4.0f;
+            height = (bottomRightY - topLeftY) + 4.0f;
 
-            comp->setBounds(x, y, width, height);
+            comp->setBounds((int)x, (int)y, (int)width, (int)height);
 
             if (UIObjects::Tabs::draw_borders_for_components) {
                 string tl_label = audioDisplayTopLeftCorners[audioDisplay_ix];
@@ -645,7 +636,7 @@ private:
             cout << "coordinate: " << coordinate << endl;
             throw std::runtime_error("Invalid coordinate format - select from Aa to Zz");
         }
-        const int gridSize = 26; // Number of cells in each direction
+        gridSize = 26; // Number of cells in each direction
 
         char letter_x = coordinate[0];
         char letter_y = coordinate[1];
@@ -653,17 +644,17 @@ private:
         if ((letter_x < 'A' || letter_x > 'Z') || (letter_y < 'a' || letter_y > 'z'))
             throw std::runtime_error("Invalid coordinate value");
 
-        const float width = getWidth(); // Get the width of the component
-        const float height = getHeight(); // Get the height of the component
-        const float marginWidth = 0.05f * width; // 5% margin on both sides
-        const float marginHeight = 0.05f * height; // 5% margin on top and bottom
-        const float gridWidth = width - 2 * marginWidth; // Width of the grid
-        const float gridHeight = height - 2 * marginHeight; // Height of the grid
-        const float cellWidth = gridWidth / (gridSize - 1);
-        const float cellHeight = gridHeight / (gridSize - 1);
+        width = (float)getWidth(); // Get the width of the component
+        height = (float)getHeight(); // Get the height of the component
+        marginWidth = 0.05f * width; // 5% margin on both sides
+        marginHeight = 0.05f * height; // 5% margin on top and bottom
+        gridWidth = width - 2 * marginWidth; // Width of the grid
+        gridHeight = height - 2 * marginHeight; // Height of the grid
+        cellWidth = gridWidth / (float)(gridSize - 1);
+        cellHeight = gridHeight / (float)(gridSize - 1);
 
-        float x = marginWidth + (letter_x - 'A') * cellWidth;
-        float y = marginHeight + (letter_y - 'a') * cellHeight;
+        float x = marginWidth + (float)(letter_x - 'A') * cellWidth;
+        float y = marginHeight + (float)(letter_y - 'a') * cellHeight;
 
         return {x, y};
     }

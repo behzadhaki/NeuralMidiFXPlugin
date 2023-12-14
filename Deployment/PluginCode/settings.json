@@ -177,11 +177,42 @@
     },
 
     "StandaloneTransportPanel": {
-        "enable": false
+        "enable": true
     },
 
     "VirtualMidiOut": {
         "enable": true
+    },
+
+    "event_communication_settings": {
+        "SendEventAtBeginningOfNewBuffers_FLAG": true,
+        "SendEventForNewBufferIfMetadataChanged_FLAG": true,
+        "SendNewBarEvents_FLAG": true,
+        "SendTimeShiftEvents_FLAG": false,
+        "delta_TimeShiftEventRatioOfQuarterNote": 0.5,
+        "FilterNoteOnEvents_FLAG": false,
+        "FilterNoteOffEvents_FLAG": false,
+        "FilterCCEvents_FLAG": false
+    },
+
+    "deploy_method_min_wait_time_between_iterations": 0.5,
+
+    "debugging_settings": {
+        "DeploymentThread": {
+            "print_received_gui_params": false,
+            "print_manually_dropped_midi_messages": false,
+            "print_input_events": false,
+            "print_deploy_method_time": false,
+            "disable_user_print_requests": false
+        },
+        "ProcessorThread": {
+            "print_start_stop_times": false,
+            "print_new_buffer_started": false,
+            "print_generation_policy_reception": false,
+            "print_generation_stream_reception": false,
+            "disableAllPrints": false
+        }
     }
 
 }
+

@@ -49,7 +49,6 @@ public:
                         }
                     }
                 }
-                full_repaint = true;
             }
         }
 
@@ -74,42 +73,7 @@ public:
                     }
                 }
             }
-            full_repaint = true;
         }
-    }
-
-    // generates and displays a random midi file (for testing purposes only)
-    // called from PluginEditor.cpp during initialization
-    void generateRandomMidiFile(int numNotes)
-    {
-        DraggedMidi = juce::MidiFile();
-        int ticksPerQuarterNote = 960;
-        DraggedMidi.setTicksPerQuarterNote(ticksPerQuarterNote);
-
-        juce::MidiMessageSequence sequence;
-
-        for (int i = 0; i < numNotes; ++i)
-        {
-            int noteNumber = juce::Random::getSystemRandom().nextInt(
-                {21, 108});
-            int velocity = juce::Random::getSystemRandom().nextInt(
-                {20, 127});
-            double startTime = juce::Random::getSystemRandom().nextDouble() * 10.0;
-            double noteDuration = juce::Random::getSystemRandom().nextDouble() *
-                                      2.0 + 0.5f; // duration in quarter notes
-
-            sequence.addEvent(juce::MidiMessage::noteOn(
-                                  1, noteNumber, juce::uint8(velocity)),
-                              startTime * ticksPerQuarterNote);
-            sequence.addEvent(juce::MidiMessage::noteOff(
-                                  1, noteNumber),
-                              (startTime + noteDuration) *
-                                  ticksPerQuarterNote);
-        }
-
-        DraggedMidi.addTrack(sequence);
-
-        repaint();
     }
 
     double getLength() {
@@ -143,7 +107,6 @@ public:
     void setLength(double length) {
         if (length != disp_length) {
             disp_length = length;
-            full_repaint = true;
             repaint();
         }
     }
@@ -177,7 +140,6 @@ public:
             }
         }
 
-        full_repaint = true;
     }
 
     // should manually call repaint() after calling this function
@@ -185,12 +147,11 @@ public:
         //        DraggedMidi = juce::MidiFile();
         int ticksPerQuarterNote = 960;
         playhead_pos = playhead_pos_quarter_notes * ticksPerQuarterNote;
-        full_repaint = false;
     }
 
     // draws midi notes on the component (piano roll)
     // maps the midi notes to the component's width and height
-    // pitch values are mapped to the y axis, and time values are mapped to the x axis
+    // pitch values are mapped to the y-axis, and time values are mapped to the x-axis
     // velocity values are mapped to the alpha value of the note color
     void paint(juce::Graphics& g) override
     {
@@ -205,24 +166,23 @@ public:
         calculateNotePositions();
 
 
-        drawNotes(g, *DraggedMidi.getTrack(0));
-        drawNotes(g, *IncomingMidi.getTrack(0));
+        drawNotes(g);
+        drawNotes(g);
 
         // Draw playhead
         if (playhead_pos >= 0)
         {
             g.setColour(juce::Colours::red);
             auto x = playhead_pos / disp_length * (float)getWidth();
-            g.drawLine(x, 0, x,
+            g.drawLine((float) x, .0f, (float) x,
                        (float) getHeight(), 2);
         }
 
-        full_repaint = false;
     }
 
     // call back function for drag and drop out of the component
     // should drag from component to file explorer or DAW if allowed
-    void mouseDrag(const juce::MouseEvent& event) override
+    void mouseDrag(const juce::MouseEvent& ) override
     {
         if (IncomingMidi.getNumTracks() <= 0 && DraggedMidi.getNumTracks() <= 0)
         {
@@ -231,7 +191,7 @@ public:
 
         juce::MidiMessageSequence displayedSequence{};
 
-        // add content of DraggedMidi and IncomingMidi to diplayMidi
+        // add content of DraggedMidi and IncomingMidi to displayMidi
         if (DraggedMidi.getNumTracks() > 0)
         {
             auto track = DraggedMidi.getTrack(0);
@@ -250,9 +210,9 @@ public:
             }
         }
 
-        juce::MidiFile diplayMidi = juce::MidiFile();
-        diplayMidi.setTicksPerQuarterNote(960);
-        diplayMidi.addTrack(displayedSequence);
+        juce::MidiFile displayMidi = juce::MidiFile();
+        displayMidi.setTicksPerQuarterNote(960);
+        displayMidi.addTrack(displayedSequence);
 
         juce::String fileName = juce::Uuid().toString() + ".mid";  // Random filename
 
@@ -264,7 +224,7 @@ public:
             auto p_os = std::make_unique<juce::FileOutputStream>(
                 tempf.getFile());
             if (p_os->openedOk()) {
-                diplayMidi.writeTo(*p_os, 0);
+                displayMidi.writeTo(*p_os, 0);
             }
         }
 
@@ -290,7 +250,6 @@ public:
         {
             if (DraggedMidi.readFrom(*stream))
             {
-                full_repaint = true;
                 // Successfully read the MIDI file, so repaint the component
 
                 // get the start time of the first note
@@ -341,7 +300,7 @@ public:
     }
 
 
-    bool isInterestedInFileDrag (const juce::StringArray& files) override
+    bool isInterestedInFileDrag (const juce::StringArray& ) override
     {
         return true;
     }
@@ -390,7 +349,6 @@ private:
 
     std::set<int> uniquePitches;
     std::map<int, std::vector<std::tuple<float, float, float, juce::Colour>>> notePositions; // Maps note numbers to positions and velocity and color
-    bool full_repaint {false};
 
     void calculateNotePositions()
     {
@@ -442,7 +400,7 @@ private:
         }
     }
 
-    void drawNotes(juce::Graphics& g, const juce::MidiMessageSequence& midi)
+    void drawNotes(juce::Graphics& g)
     {
         int numRows = (int) uniquePitches.size();
         float rowHeight = (float)getHeight() / (float)numRows;
@@ -483,43 +441,9 @@ public:
 
         MidiQue = MidiQue_;
         if (MidiQue_->getNumberOfWrites() > 0) {
-            midiFile = MidiQue_->getLatestDataWithoutMovingFIFOHeads();
+            midiFile = MidiQue->getLatestDataWithoutMovingFIFOHeads();
         }
 
-    }
-
-    // generates and displays a random midi file (for testing purposes only)
-    // called from PluginEditor.cpp during initialization
-    void generateRandomMidiFile(int numNotes)
-    {
-        midiFile = juce::MidiFile();
-        int ticksPerQuarterNote = 960;
-        midiFile.setTicksPerQuarterNote(ticksPerQuarterNote);
-
-        juce::MidiMessageSequence sequence;
-
-        for (int i = 0; i < numNotes; ++i)
-        {
-            int noteNumber = juce::Random::getSystemRandom().nextInt(
-                {21, 108});
-            int velocity = juce::Random::getSystemRandom().nextInt(
-                {20, 127});
-            double startTime = juce::Random::getSystemRandom().nextDouble() * 10.0;
-            double noteDuration = juce::Random::getSystemRandom().nextDouble() *
-                                      2.0 + 0.5f; // duration in quarter notes
-
-            sequence.addEvent(juce::MidiMessage::noteOn(
-                                  1, noteNumber, juce::uint8(velocity)),
-                              startTime * ticksPerQuarterNote);
-            sequence.addEvent(juce::MidiMessage::noteOff(
-                                  1, noteNumber),
-                              (startTime + noteDuration) *
-                                  ticksPerQuarterNote);
-        }
-
-        midiFile.addTrack(sequence);
-
-        repaint();
     }
 
     // should manually call repaint() after calling this function
@@ -640,7 +564,7 @@ public:
 
     // draws midi notes on the component (piano roll)
     // maps the midi notes to the component's width and height
-    // pitch values are mapped to the y axis, and time values are mapped to the x axis
+    // pitch values are mapped to the y-axis, and time values are mapped to the x-axis
     // velocity values are mapped to the alpha value of the note color
     void paint(juce::Graphics& g) override
     {
@@ -674,14 +598,15 @@ public:
         {
             g.setColour(juce::Colours::red);
             auto x = playhead_pos / disp_length * (float) getWidth();
-            g.drawLine(x, 0, x, getHeight(), 2);
+            g.drawLine((float) x, 0.0f, (float) x,
+                       (float) getHeight(), 2);
         }
     }
 
 
     // call back function for drag and drop out of the component
     // should drag from component to file explorer or DAW if allowed
-    void mouseDrag(const juce::MouseEvent& event) override
+    void mouseDrag(const juce::MouseEvent& ) override
     {
         if (UIObjects::GeneratedContentVisualizer::allowToDragOutAsMidi)
         {
@@ -729,7 +654,7 @@ private:
     juce::MidiFile midiFile;
     juce::Colour backgroundColour{juce::Colours::black};
     juce::Colour noteColour = juce::Colours::white;
-     LockFreeQueue<juce::MidiFile, 4>* MidiQue{};
+    LockFreeQueue<juce::MidiFile, 4>* MidiQue{};
     double playhead_pos{-1};
     double disp_length{8};
     double LoopStartPPQ{-1};
@@ -776,7 +701,8 @@ private:
                         }
 
                         float velocity = event->message.getFloatVelocity(); // Add velocity
-                        notePositions[noteNumber].push_back(std::make_tuple(x, length, velocity));
+                        notePositions[noteNumber].emplace_back(
+                            x, length, velocity);
                     }
                 }
             }
@@ -821,7 +747,7 @@ public:
     float playhead_pos{0};
     float disp_length{8};
     float LoopStart{-1};
-    float LoopDuarion{-1};
+    float LoopDuration {-1};
 
     void paint(juce::Graphics& g) override
     {
@@ -851,8 +777,8 @@ public:
             if (length != disp_length) {
                 disp_length = length;
             }
-            if (LoopStart >= 0 && LoopDuarion > 0) {
-                pos = std::fmod(pos, LoopDuarion);
+            if (LoopStart >= 0 && LoopDuration > 0) {
+                pos = std::fmod(pos, LoopDuration);
             }
 
             playhead_pos = pos;
@@ -860,9 +786,9 @@ public:
         }
     }
 
-    void enableLooping(float start_quarternotes, float duration_quarternotes) {
-        LoopStart = start_quarternotes;
-        LoopDuarion = duration_quarternotes;
+    void enableLooping(float start_quarter_notes, float duration_quarter_notes) {
+        LoopStart = start_quarter_notes;
+        LoopDuration = duration_quarter_notes;
     }
 };
 
@@ -882,7 +808,7 @@ public:
         // ---------------------
         int numRows = 12;
         float rowHeight = (float)getHeight() / (float)numRows;
-        g.setFont(juce::Font(getHeight() / 10.0f)); // Font size
+        g.setFont(juce::Font((float) getHeight() / 10.0f)); // Font size
         vector<juce::String> noteNames = {"C", "", "D", "", "E", "F",
                                           "", "G", "", "A", "", "B"};
 
@@ -894,13 +820,15 @@ public:
 
             // Draw note name
             juce::String noteName = noteNames[i];
-            g.drawText(noteName, 0, y, (float)getWidth(), rowHeight, juce::Justification::centredLeft);
+            g.drawText(noteName, 0, (int) y, (int)getWidth(),
+                       (int) rowHeight, juce::Justification::centredLeft);
 
             // Color the row if it is a sharp note
             if (noteName == "")
             {
                 g.setColour(sharpNoteColour);
-                g.fillRect(juce::Rectangle<float>(0, y, getWidth(), rowHeight));
+                g.fillRect(juce::Rectangle<float>(0, y,
+                                                  (float) getWidth(), rowHeight));
             }
         }
 
@@ -1022,13 +950,13 @@ public:
     }
 
     // Mouse enter and exit events
-    void mouseEnter(const juce::MouseEvent& event) override {
+    void mouseEnter(const juce::MouseEvent& ) override {
         if (display_label != nullptr) {
             display_label->setText(noteInfo, juce::dontSendNotification);
         }
     }
 
-    void mouseExit(const juce::MouseEvent& event) override {
+    void mouseExit(const juce::MouseEvent& ) override {
         if (display_label != nullptr) {
             display_label->setText("", juce::dontSendNotification);
         }
@@ -1064,18 +992,15 @@ private:
 class PianoRollComponent : public juce::Component, public juce::FileDragAndDropTarget {
 public:
     bool AllowToDragInMidi{true};
-    bool newFileDraggedIn{false};
     bool AllowToDragOutAsMidi{true};
     juce::String label{"Midi Display"};
     juce::Colour backgroundColour{juce::Colours::whitesmoke};
-    juce::Label* noteInfoLabel;
+    juce::Label* noteInfoLabel{};
 
     juce::Colour sharpNoteColour = juce::Colours::lightgrey;
 
     PlaybackSequence displayedSequence{};
     float SequenceDuration{8};
-
-    bool NewDroppedSequenceAccessed{false};
 
     PianoRollComponent() {
         setWantsKeyboardFocus(true);
@@ -1137,7 +1062,7 @@ public:
         // ---------------------
         int numRows = 12;
         float rowHeight = (float)getHeight() / (float)numRows;
-        g.setFont(juce::Font(getHeight() / 10.0f)); // Font size
+        g.setFont(juce::Font((float) getHeight() / 10.0f)); // Font size
         vector<juce::String> noteNames = {"C", "", "D", "", "E", "F",
                                           "", "G", "", "A", "", "B"};
 
@@ -1154,7 +1079,8 @@ public:
             if (noteName == "")
             {
                 g.setColour(sharpNoteColour);
-                g.fillRect(juce::Rectangle<float>(0, y, getWidth(), rowHeight));
+                g.fillRect(juce::Rectangle<float>(0, y,
+                                                  (float) getWidth(), rowHeight));
             }
         }
 
@@ -1164,7 +1090,7 @@ public:
     void resized() override {
         for (auto& noteComponent : noteComponents) {
             float x = noteComponent->start_time / SequenceDuration * (float)getWidth();
-            float length = 0;
+            float length;
             float height = 1.0f / 12.0f * (float)getHeight();
             if (noteComponent->duration > 0) {
                 length = noteComponent->duration / SequenceDuration * (float)getWidth();
@@ -1173,25 +1099,26 @@ public:
                 // will draw a small circle if the note has no note off event
                 length = height;
             }
-            float y = (12 - noteComponent->pitch_class - 1) / 12.0f * (float)getHeight();
+            float y = float(12 - noteComponent->pitch_class - 1) / 12.0f * (float)getHeight();
 
-            noteComponent->setBounds(x, y, length, height);
+            noteComponent->setBounds((int)x, (int)y,
+                                     (int)length, (int)height);
         }
 
     }
 
-    std::vector<std::unique_ptr<NoteComponent>>& get_noteComponents() {
+    [[maybe_unused]] std::vector<std::unique_ptr<NoteComponent>>& get_noteComponents() {
         return noteComponents;
     }
 
-    void mouseDrag(const juce::MouseEvent& event) override
+    void mouseDrag(const juce::MouseEvent& ) override
     {
         if (AllowToDragOutAsMidi)
         {
             // populate the midi file with the notes from the piano roll
-            auto mfile = juce::MidiFile();
+            auto midifile = juce::MidiFile();
             float ticksPerQuarterNote = 960;
-            mfile.setTicksPerQuarterNote((int) ticksPerQuarterNote);  \
+            midifile.setTicksPerQuarterNote((int) ticksPerQuarterNote);  \
             juce::MidiMessageSequence sequence;
 
             for (auto& noteComponent : noteComponents)
@@ -1205,7 +1132,8 @@ public:
                     auto velocity = noteComponent->velocity;
 
                     sequence.addEvent(
-                        juce::MidiMessage::noteOn(1, noteNumber, juce::uint8(velocity*127)),
+                        juce::MidiMessage::noteOn(1,
+                                                  noteNumber, juce::uint8(velocity*126)),
                         start_time * ticksPerQuarterNote);
                     sequence.addEvent(juce::MidiMessage::noteOff(1, noteNumber),
                                       (start_time + duration) * ticksPerQuarterNote);
@@ -1213,8 +1141,7 @@ public:
 
             }
 
-
-            mfile.addTrack(sequence);
+            midifile.addTrack(sequence);
 
             // save the midi file to a temporary file
             juce::String fileName = juce::Uuid().toString() + ".mid";  // Random filename
@@ -1228,7 +1155,7 @@ public:
                 auto p_os = std::make_unique<juce::FileOutputStream>(
                     tempf.getFile());
                 if (p_os->openedOk()) {
-                    mfile.writeTo(*p_os, 0);
+                    midifile.writeTo(*p_os, 0);
                 }
             }
 
@@ -1247,7 +1174,7 @@ public:
         return true;
     }
 
-    void filesDropped (const juce::StringArray& files, int x, int y) override
+    void filesDropped (const juce::StringArray& files, int , int ) override
     {
         auto file = juce::File(files[0]);
 
@@ -1260,7 +1187,7 @@ public:
 
     }
 
-    void fileDragEnter (const juce::StringArray& files, int x, int y) override {
+    void fileDragEnter (const juce::StringArray& /*files*/, int , int ) override {
 
     }
 
@@ -1321,7 +1248,7 @@ public:
                         if (event->message.isNoteOn())
                         {
                             int noteNumber = event->message.getNoteNumber();
-                            float start_time = event->message.getTimeStamp();
+                            auto start_time = (float) event->message.getTimeStamp();
                             float duration = 0;
                             float velocity = event->message.getFloatVelocity();
 
@@ -1347,11 +1274,9 @@ public:
                     }
 
                     if (crossThreadPianoRollData != nullptr) {
-                        cout << "Setting sequence" << endl;
                         if (loadedMFile.getNumTracks() > 0) {
-                            auto track = loadedMFile.getTrack(0);
-                            cout << "Track size: " << track->getNumEvents() << endl;
-                            crossThreadPianoRollData->setSequence(*track, true);
+                            auto track_ = loadedMFile.getTrack(0);
+                            crossThreadPianoRollData->setSequence(*track_, true);
                         }
                     }   else {
                         cout << "midiVisualizersData is null" << endl;
@@ -1378,7 +1303,7 @@ public:
         crossThreadPianoRollData = crossThreadPianoRollData_;
     }
 
-    float getSequenceDuration() {
+    [[nodiscard]] float getSequenceDuration() const {
         return SequenceDuration;
     }
 private:
@@ -1393,7 +1318,7 @@ private:
             }
         }
         // make sure the max time is multiple of 4
-        float remainder = fmod(max_time, 4);
+        auto remainder = float(fmod(max_time, 4));
         if (remainder > 0) {
             max_time += 4 - remainder;
         }
@@ -1430,7 +1355,8 @@ public:
         // 90% of the height for the piano roll
         auto area = getLocalBounds();
 
-        noteInfoLabel.setBounds(area.removeFromBottom(area.getHeight() * 0.1));
+        noteInfoLabel.setBounds(
+            area.removeFromBottom(int(area.getHeight() * 0.1)));
 
         auto key_area = area.removeFromLeft(20);
 
@@ -1438,11 +1364,11 @@ public:
         if (needsPlayhead) {
             auto phead_height = area.getHeight() * 0.1;
             pianoRollComponent.setBounds(
-                area.removeFromTop(area.getHeight() * 0.9));
+                area.removeFromTop(int(area.getHeight() * 0.9)));
             playheadVisualizer.setBounds(
-                area.removeFromTop(phead_height));
+                area.removeFromTop(int(phead_height)));
 
-            key_area.removeFromBottom(phead_height);
+            key_area.removeFromBottom(int(phead_height));
             pianoKeysComponent.setBounds(key_area);
         } else {
             pianoRollComponent.setBounds(area);
@@ -1463,11 +1389,11 @@ public:
         pianoRollComponent.AllowToDragOutAsMidi = enable;
     }
 
-    void enableLooping(float start_quarternotes, float duration_quarternotes) {
-        playheadVisualizer.enableLooping(start_quarternotes, duration_quarternotes);
+    void enableLooping(float start_quarter_notes, float duration_quarter_notes) {
+        playheadVisualizer.enableLooping(start_quarter_notes, duration_quarter_notes);
     }
 
-    void setpianoRollData(CrossThreadPianoRollData* crossThreadPianoRollData_) {
+    void setPianoRollData(CrossThreadPianoRollData* crossThreadPianoRollData_) {
         pianoRollComponent.setPianoRollData(crossThreadPianoRollData_);
         crossThreadPianoRollData = crossThreadPianoRollData_;
 
@@ -1484,19 +1410,18 @@ public:
                 if (event->noteOffObject != nullptr) {
                     pianoRollComponent.add_complete_noteComponent(
                         event->message.getNoteNumber(),
-                        event->message.getTimeStamp(),
+                        (float)event->message.getTimeStamp(),
                         event->message.getFloatVelocity(),
-                        event->noteOffObject->message.getTimeStamp() -
-                        event->message.getTimeStamp(),
+                        float(event->noteOffObject->message.getTimeStamp() -
+                        event->message.getTimeStamp()),
                         &noteInfoLabel);
 
-                    CompleteNotes.push_back(
-                        pair<MidiMessage, MidiMessage>(
-                            event->message, event->noteOffObject->message));
+                    CompleteNotes.emplace_back(
+                            event->message, event->noteOffObject->message);
                 } else {
                     pianoRollComponent.add_hanging_noteOnComponent(
                         event->message.getNoteNumber(),
-                        event->message.getTimeStamp(),
+                        (float)event->message.getTimeStamp(),
                         event->message.getFloatVelocity(),
                         &noteInfoLabel);
                 }
@@ -1522,7 +1447,7 @@ public:
                 if (!found) {
                     pianoRollComponent.add_hanging_noteOffComponent(
                         event->message.getNoteNumber(),
-                        event->message.getTimeStamp(),
+                        (float)event->message.getTimeStamp(),
                         event->message.getFloatVelocity(),
                         &noteInfoLabel);
                 }
@@ -1557,21 +1482,20 @@ public:
                         {
                             pianoRollComponent.add_complete_noteComponent(
                                 event->message.getNoteNumber(),
-                                event->message.getTimeStamp(),
+                                (float)event->message.getTimeStamp(),
                                 event->message.getFloatVelocity(),
-                                event->noteOffObject->message.getTimeStamp() -
-                                event->message.getTimeStamp(),
+                                float(event->noteOffObject->message.getTimeStamp() -
+                                event->message.getTimeStamp()),
                                 &noteInfoLabel);
 
-                            CompleteNotes.push_back(
-                                pair<MidiMessage, MidiMessage>(
-                                    event->message, event->noteOffObject->message));
+                            CompleteNotes.emplace_back(
+                                    event->message, event->noteOffObject->message);
                         }
                         else
                         {
                             pianoRollComponent.add_hanging_noteOnComponent(
                                 event->message.getNoteNumber(),
-                                event->message.getTimeStamp(),
+                                (float)event->message.getTimeStamp(),
                                 event->message.getFloatVelocity(),
                                 &noteInfoLabel);
                         }
@@ -1598,7 +1522,7 @@ public:
                         {
                             pianoRollComponent.add_hanging_noteOffComponent(
                                 event->message.getNoteNumber(),
-                                event->message.getTimeStamp(),
+                                (float)event->message.getTimeStamp(),
                                 event->message.getFloatVelocity(),
                                 &noteInfoLabel);
                         }
@@ -1619,7 +1543,7 @@ public:
     }
 
     void updatePlayhead(double playhead_pos) {
-        playheadVisualizer.setPlayheadPos(playhead_pos, pianoRollComponent.getSequenceDuration());
+        playheadVisualizer.setPlayheadPos((float)playhead_pos, pianoRollComponent.getSequenceDuration());
     }
 
 private:

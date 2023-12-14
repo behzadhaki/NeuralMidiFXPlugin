@@ -295,7 +295,6 @@ void NeuralMidiFXPluginProcessor::sendReceivedInputsAsEvents(
                 NMP2DPL_Event_Que->push(frame_meta_data);
                 last_frame_meta_data = frame_meta_data;
                 incoming_messages_sequence = juce::MidiMessageSequence();
-                cout << "NMP sending empty message to GUI" << endl;
                 NMP2GUI_IncomingMessageSequence->push(incoming_messages_sequence);
             } else {
                 // if just stopped, register the playhead stopping position
@@ -739,6 +738,7 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     }
 
     if (Pinfo.hasValue() && Pinfo->getPpqPosition().hasValue()) {
+
         // register current time for later use
         auto frame_now = time_{*Pinfo->getTimeInSamples(),
                                 *Pinfo->getTimeInSeconds(),
