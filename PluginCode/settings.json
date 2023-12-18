@@ -175,9 +175,9 @@
         }
 
     },
-
     "StandaloneTransportPanel": {
-        "enable": true
+        "enable": true,
+        "disableInPluginMode": true
     },
 
     "VirtualMidiOut": {

@@ -191,7 +191,7 @@ namespace UIObjects {
         // if you need the widget used for controlling the standalone transport
         // set following to true
         const bool enable = loaded_json["StandaloneTransportPanel"]["enable"];
-
+        const bool disableInPluginMode = loaded_json["StandaloneTransportPanel"]["disableInPluginMode"];
         // if you need to send midi out to a virtual midi cable
         // set following to true
         // NOTE: Only works on MacOs

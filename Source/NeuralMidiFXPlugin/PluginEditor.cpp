@@ -39,7 +39,20 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
     setSize (800, 600);
 
     // if standalone, add play, record, tempo, meter controls to the top
-    if (UIObjects::StandaloneTransportPanel::enable) {
+    // check if standalone mode
+    shouldActStandalone = false;
+    if (JUCEApplicationBase::isStandaloneApp()) {
+        if (UIObjects::StandaloneTransportPanel::enable) {
+            shouldActStandalone = true;
+        }
+    } else {
+        if (UIObjects::StandaloneTransportPanel::enable &&
+            !UIObjects::StandaloneTransportPanel::disableInPluginMode) {
+            shouldActStandalone = true;
+        }
+    }
+
+    if (shouldActStandalone) {
         playButton.setButtonText("Play/Stop");
         playButtonAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
             NeuralMidiFXPluginProcessorPointer.apvts, label2ParamID_("IsPlayingStandalone"), playButton);
@@ -199,7 +212,7 @@ void NeuralMidiFXPluginEditor::resized()
     area.removeFromLeft(int(area.getWidth() * .02));
 
     // check if standalone
-    if (UIObjects::StandaloneTransportPanel::enable) {
+    if (shouldActStandalone) {
         standalone_control_height = int(area.getHeight() * .1);
         proll_height = int(area.getHeight() * .1);
         gap = int(area.getHeight() * .03);
@@ -209,7 +222,7 @@ void NeuralMidiFXPluginEditor::resized()
         gap = int(area.getHeight() * .03);
     }
 
-    if (UIObjects::StandaloneTransportPanel::enable) {
+    if (shouldActStandalone) {
         auto controlArea = area.removeFromTop(standalone_control_height);
         auto cAreaGap = controlArea.getHeight() * .05;
         int width = int(controlArea.getWidth() * .2);
