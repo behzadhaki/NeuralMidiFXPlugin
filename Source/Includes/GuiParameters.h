@@ -121,10 +121,11 @@ struct GuiParams {
 
     GuiParams() { construct(); }
 
-    explicit GuiParams(juce::AudioProcessorValueTreeState *apvtsPntr) {
+    explicit GuiParams(juce::AudioProcessorValueTreeState *apvtsPntr_) {
         construct();
+        apvtsPntr = apvtsPntr_;
         for (auto &parameter: Parameters) {
-            parameter.update(apvtsPntr);
+            parameter.update(apvtsPntr_);
         }
     }
 
@@ -138,6 +139,30 @@ struct GuiParams {
             }
         }
         return isChanged;
+    }
+
+    // set the value of a slider, rotary, toggleable button, or comboBox GuiParam
+    bool setValueFor(const string &label, float newValue) {
+        chrono_timed.registerStartTime();
+        isChanged = false;
+        for (auto &parameter: Parameters) {
+            if (parameter.paramID == label2ParamID(label)) {
+                if (parameter.isButton && !parameter.isToggle) {
+                    cout << "Warning: You can only set the value of a toggleable button" << endl;
+                    return false;
+                } else {
+                    // use APVTS to update the value
+                    auto  myParameter = apvtsPntr->getParameter(parameter.paramID);
+
+                    if (myParameter != nullptr) {
+                        myParameter->setValueNotifyingHost(newValue);
+                        return true;
+                    }
+                }
+
+            }
+        }
+        return false;
     }
 
     void print() {
@@ -262,6 +287,7 @@ struct GuiParams {
 private:
     vector<param> Parameters;
     bool isChanged = false;
+    juce::AudioProcessorValueTreeState *apvtsPntr;
 
     // uses chrono::system_clock to time parameter arrival to consumption (for debugging only)
     // don't use this for anything else than debugging.
