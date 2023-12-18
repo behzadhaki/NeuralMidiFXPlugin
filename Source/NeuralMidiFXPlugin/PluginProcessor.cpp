@@ -672,8 +672,19 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     auto buffSize = buffer.getNumSamples();
 
     // check if standalone mode
+    bool shouldActStandalone = false;
+    if (JUCEApplicationBase::isStandaloneApp()) {
+        if (UIObjects::StandaloneTransportPanel::enable) {
+            shouldActStandalone = true;
+        }
+    } else {
+        if (UIObjects::StandaloneTransportPanel::enable &&
+            !UIObjects::StandaloneTransportPanel::disableInPluginMode) {
+            shouldActStandalone = true;
+        }
+    }
 
-    if (UIObjects::StandaloneTransportPanel::enable) {
+    if (shouldActStandalone) {
         standAloneParams->update();
         Pinfo->setTimeInSamples(standAloneParams->TimeInSamples);
         Pinfo->setTimeInSeconds(standAloneParams->TimeInSeconds);
