@@ -13,7 +13,7 @@
 #include "../Includes/chrono_timer.h"
 #include "../Includes/GenerationEvent.h"
 #include "../Includes/TorchScriptAndPresetLoaders.h"
-#include "PluginCode/DeploymentData.h"
+//#include "PluginCode/DeploymentData.h"
 #include "../Includes/MidiDisplayWidget.h"
 
 class DeploymentThread : public juce::Thread {
@@ -47,13 +47,13 @@ public:
     // ------------------------------------------------------------------------------------------------------------
     // ---         Step 4 . Implement Deploy Method -----> DO NOT MODIFY ANY PART EXCEPT THE BODY OF THE METHOD
     // ------------------------------------------------------------------------------------------------------------
-    std::pair<bool, bool> deploy(
-        std::optional<MidiFileEvent> & new_midi_event_dragdrop,
-        std::optional<EventFromHost> & new_event_from_host,
-        bool did_any_gui_params_change,
-        bool new_preset_loaded_since_last_call,
-        bool new_midi_file_dropped_on_visualizers,
-        bool new_audio_file_dropped_on_visualizers);
+    virtual std::pair<bool, bool> deploy(
+        std::optional<MidiFileEvent> & /*new_midi_event_dragdrop*/,
+        std::optional<EventFromHost> & /*new_event_from_host*/,
+        bool /*did_any_gui_params_change*/,
+        bool /*new_preset_loaded_since_last_call*/,
+        bool /*new_midi_file_dropped_on_visualizers*/,
+        bool /*new_audio_file_dropped_on_visualizers*/) {return {false, false};}
 
     // ============================================================================================================
 
@@ -73,7 +73,7 @@ public:
     //    mutable std::mutex  preset_loaded_mutex;
     //    bool newPresetLoaded{false};
 
-private:
+protected:
     // ============================================================================================================
     // ===          1_RandomGeneration Data
     // ===        (If you need additional data for input processing, add them here)
@@ -118,10 +118,6 @@ private:
     // ============================================================================================================
     // ===          User Customizable Struct
     // ============================================================================================================
-
-    // You can update the DeploymentData struct in CustomStructs.h if you need any additional data
-    DPLData DPLdata {};
-
     MidiVisualizersData* midiVisualizersData {};
     AudioVisualizersData* audioVisualizersData {};
 

@@ -34,9 +34,23 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
         NeuralMidiFXPluginProcessorPointer.apvts,
         NeuralMidiFXPluginProcessorPointer.deploymentThread->CustomPresetData.get());
 
+    // shared label for hover text
+    sharedHoverText = make_unique<juce::Label>();
+    sharedHoverText->setJustificationType(juce::Justification::left);
+    sharedHoverText->setColour(juce::Label::ColourIds::textColourId, juce::Colours::whitesmoke);
+    sharedHoverText->setColour(juce::Label::ColourIds::backgroundColourId, juce::Colours::darkgrey);
+
+    addAndMakeVisible(sharedHoverText.get());
+
     // Set window sizes
-    setResizable (true, true);
-    setSize (800, 600);
+    setResizable (UIObjects::user_resizable,true);
+
+    auto l1 = std::max(UIObjects::user_width/4, 20);
+    auto l2 = std::max(UIObjects::user_height/4, 20);
+
+    setResizeLimits (l1, l2, 10000, 10000);
+
+    setSize (UIObjects::user_width, UIObjects::user_height);
 
     // if standalone, add play, record, tempo, meter controls to the top
     // check if standalone mode
@@ -53,46 +67,9 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
     }
 
     if (shouldActStandalone) {
-        playButton.setButtonText("Play/Stop");
-        playButtonAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
-            NeuralMidiFXPluginProcessorPointer.apvts, label2ParamID_("IsPlayingStandalone"), playButton);
-        playButton.setClickingTogglesState(true);
-        playButton.setColour(juce::TextButton::ColourIds::buttonOnColourId, juce::Colours::lightblue);
-        playButton.setColour(juce::TextButton::ColourIds::textColourOnId, juce::Colours::black);
-        addAndMakeVisible(playButton);
-
-        recordButton.setButtonText("Record");
-        recordButtonAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
-            NeuralMidiFXPluginProcessorPointer.apvts, label2ParamID_("IsRecordingStandalone"), recordButton);
-        recordButton.setClickingTogglesState(true);
-        recordButton.setColour(juce::TextButton::ColourIds::buttonOnColourId, juce::Colours::red);
-        recordButton.setColour(juce::TextButton::ColourIds::textColourOnId, juce::Colours::black);
-        addAndMakeVisible(recordButton);
-
-        tempoSlider.setSliderStyle(juce::Slider::SliderStyle::LinearHorizontal);
-        tempoSlider.setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
-                                    tempoSlider.getTextBoxWidth(), int(tempoSlider.getHeight()*.3));
-        tempoSliderAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-            NeuralMidiFXPluginProcessorPointer.apvts, label2ParamID_("TempoStandalone"), tempoSlider);
-        tempoSlider.setTextValueSuffix(juce::String("Tempo"));
-        addAndMakeVisible(tempoSlider);
-
-        numeratorSlider.setSliderStyle(juce::Slider::SliderStyle::LinearHorizontal);
-        numeratorSlider.setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
-                                        numeratorSlider.getTextBoxWidth(), int(numeratorSlider.getHeight()*.3));
-        numeratorSliderAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-            NeuralMidiFXPluginProcessorPointer.apvts, label2ParamID_("TimeSigNumeratorStandalone"), numeratorSlider);
-        numeratorSlider.setTextValueSuffix(juce::String("Num"));
-        addAndMakeVisible(numeratorSlider);
-
-        denominatorSlider.setSliderStyle(juce::Slider::SliderStyle::LinearHorizontal);
-        denominatorSlider.setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
-                                          denominatorSlider.getTextBoxWidth(), int(denominatorSlider.getHeight()*.3));
-        denominatorSliderAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-            NeuralMidiFXPluginProcessorPointer.apvts, label2ParamID_("TimeSigDenominatorStandalone"), denominatorSlider);
-        denominatorSlider.setTextValueSuffix(juce::String("Den"));
-        addAndMakeVisible(denominatorSlider);
-
+        tempoMeterWidget = std::make_unique<StandaloneTempoMeterWidget>(
+            NeuralMidiFXPluginProcessorPointer.apvts);
+        addAndMakeVisible(*tempoMeterWidget);
     }
 
 
@@ -102,13 +79,12 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
         currentTab = UIObjects::Tabs::tabList[i];
         tabName = std::get<0>(currentTab);
 
-        paramComponentPtr = new ParameterComponent(currentTab);
+        paramComponentPtr = new ParameterComponent(currentTab, sharedHoverText.get());
 
         paramComponentVector.push_back(paramComponentPtr);
         addAndMakeVisible(*paramComponentPtr);
         paramComponentPtr->generateGuiElements(
             getLocalBounds(), &NeuralMidiFXPluginProcessorPointer_->apvts);
-        paramComponentPtr->resizeGuiElements(getLocalBounds());
 
         tabs.addTab(tabName, juce::Colours::lightgrey,
                     paramComponentPtr, true);
@@ -193,18 +169,57 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
         }
     }
 
+//    getLookAndFeel().setColour(juce::Slider::thumbColourId, juce::Colours::blueviolet);
+//    getLookAndFeel().setColour(juce::Slider::trackColourId, juce::Colours::blueviolet);
     resized();
 }
 
 void NeuralMidiFXPluginEditor::resized()
 {
+    if (UIObjects::user_resizable) {
+        if (UIObjects::user_maintain_aspect_ratio) {
+            // Retrieve the current bounds of the window
+            auto bounds = getLocalBounds();
+
+            // Calculate the desired aspect ratio
+            const float aspectRatio = static_cast<float>(UIObjects::user_width) / static_cast<float>(UIObjects::user_height);
+
+            // Calculate the new width and height while maintaining the aspect ratio
+            int newWidth = bounds.getWidth();
+            int newHeight = static_cast<int>(newWidth / aspectRatio);
+
+            // Check if the new height is greater than the available bounds, adjust if necessary
+            if (newHeight > bounds.getHeight()) {
+                newHeight = bounds.getHeight();
+                newWidth = static_cast<int>(newHeight * aspectRatio);
+            }
+
+            // Apply the new bounds to the window
+            auto x = std::max(bounds.getX(), 0);
+            auto y = std::max(bounds.getY(), 0);
+            setBounds(x , y , newWidth, newHeight);
+
+        }
+    } else {
+        setSize(UIObjects::user_width, UIObjects::user_height);
+    }
+}
+
+void NeuralMidiFXPluginEditor::paint(juce::Graphics& g)
+{
+    g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
+
     auto area = getLocalBounds();
-    setBounds(area);
-    int preset_manager_width = int(area.getWidth() * .17);
+
+    int preset_manager_width = int(area.getWidth() * .10);
 
     int standalone_control_height;
     int proll_height;
     int gap;
+
+    // place shared hover text at the top
+    sharedHoverText->setBounds(area.removeFromBottom(int(area.getHeight() * .02)));
+    sharedHoverText->setFont(juce::Font(float(sharedHoverText->getHeight() * .8)));
 
     // place preset manager at the top
     area.removeFromLeft(int(area.getWidth() * .02));
@@ -213,7 +228,7 @@ void NeuralMidiFXPluginEditor::resized()
 
     // check if standalone
     if (shouldActStandalone) {
-        standalone_control_height = int(area.getHeight() * .1);
+        standalone_control_height = int(area.getHeight() * .05);
         proll_height = int(area.getHeight() * .1);
         gap = int(area.getHeight() * .03);
     } else {
@@ -232,15 +247,9 @@ void NeuralMidiFXPluginEditor::resized()
         area.removeFromBottom((int) cAreaGap);
 
         // layout the standalone controls
-        playButton.setBounds(controlArea.removeFromLeft(width));
-        recordButton.setBounds(controlArea.removeFromLeft(width));
-        tempoSlider.setBounds(controlArea.removeFromLeft(width));
-        numeratorSlider.setBounds(controlArea.removeFromLeft(width));
-        denominatorSlider.setBounds(controlArea.removeFromLeft(width));
+        tempoMeterWidget->setBounds(controlArea);
 
     }
-
-
 
     if (outputPianoRoll != nullptr){
         outputPianoRoll->setBounds(area.removeFromBottom(proll_height));
@@ -258,15 +267,8 @@ void NeuralMidiFXPluginEditor::resized()
     area.removeFromBottom(gap);
     for (auto & i : paramComponentVector)
     {
-        i->resizeGuiElements(area);
+        i->resizeGuiElements(/*area*/);
     }
-
-}
-
-void NeuralMidiFXPluginEditor::paint(juce::Graphics& g)
-{
-    g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
-
 }
 
 void NeuralMidiFXPluginEditor::timerCallback()
@@ -313,12 +315,13 @@ void NeuralMidiFXPluginEditor::timerCallback()
     if (sequence_to_display_ != std::nullopt) {
         sequence_to_display = *sequence_to_display_;
         newContent = true;
+
     }
 
     auto playhead_pos_ = NeuralMidiFXPluginProcessorPointer_->generationsToDisplay.getPlayheadPos();
     if (playhead_pos_ != std::nullopt){
 
-        if (*playhead_pos_ != playhead_pos) {
+        if (std::abs(*playhead_pos_ - playhead_pos) > 0.0001) {
             playhead_pos = *playhead_pos_;
             newPlayheadPos = true;
         }
@@ -406,7 +409,7 @@ void NeuralMidiFXPluginEditor::timerCallback()
             outputPianoRoll->repaint();
         }
 
-        repaint();
+       repaint();
     }
 
 }

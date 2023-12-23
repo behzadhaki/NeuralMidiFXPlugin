@@ -11,6 +11,127 @@
 #pragma once
 
 
+inline std::vector<juce::ParameterID> get_preset_excluded_params() {
+    std::vector<std::string> excluded_params;
+    auto loaded_json_ = load_settings_json();
+    for (const auto& tabJson: loaded_json_["UI"]["Tabs"]["tabList"])
+    {
+        for (const auto& sliderJson: tabJson["sliders"])
+        {
+            if (sliderJson.contains("exclude_from_presets"))
+            {
+                if (sliderJson["exclude_from_presets"].get<bool>())
+                {
+                    excluded_params.push_back(sliderJson["label"].get<std::string>());
+                }
+            }
+        }
+
+        for (const auto& rotaryJson: tabJson["rotaries"])
+        {
+            if (rotaryJson.contains("exclude_from_presets"))
+            {
+                if (rotaryJson["exclude_from_presets"].get<bool>())
+                {
+                    excluded_params.push_back(rotaryJson["label"].get<std::string>());
+                }
+            }
+        }
+
+        for (const auto& buttonJson: tabJson["buttons"])
+        {
+            if (buttonJson.contains("exclude_from_presets"))
+            {
+                if (buttonJson["exclude_from_presets"].get<bool>())
+                {
+                    excluded_params.push_back(buttonJson["label"].get<std::string>());
+                }
+            }
+        }
+
+        for (const auto& hsliderJson: tabJson["hsliders"])
+        {
+            if (hsliderJson.contains("exclude_from_presets"))
+            {
+                if (hsliderJson["exclude_from_presets"].get<bool>())
+                {
+                    excluded_params.push_back(hsliderJson["label"].get<std::string>());
+                }
+            }
+        }
+
+        for (const auto& comboBoxJson: tabJson["comboBoxes"])
+        {
+            if (comboBoxJson.contains("exclude_from_presets"))
+            {
+                if (comboBoxJson["exclude_from_presets"].get<bool>())
+                {
+                    excluded_params.push_back(
+                        comboBoxJson["label"].get<std::string>());
+                }
+            }
+        }
+
+        for (const auto& midiDisplayJson: tabJson["MidiDisplays"])
+        {
+            if (midiDisplayJson.contains("exclude_from_presets"))
+            {
+                if (midiDisplayJson["exclude_from_presets"].get<bool>())
+                {
+                    excluded_params.push_back(
+                        midiDisplayJson["label"].get<std::string>());
+                }
+            }
+        }
+
+        for (const auto& audioDisplayJson: tabJson["AudioDisplays"])
+        {
+            if (audioDisplayJson.contains("exclude_from_presets"))
+            {
+                if (audioDisplayJson["exclude_from_presets"].get<bool>())
+                {
+                    excluded_params.push_back(
+                        audioDisplayJson["label"].get<std::string>());
+                }
+            }
+        }
+    }
+
+    if (loaded_json_["StandaloneTransportPanel"].contains("exclude_tempo_from_presets")) {
+        if (loaded_json_["StandaloneTransportPanel"]["exclude_tempo_from_presets"].get<bool>()) {
+            excluded_params.emplace_back("TempoStandalone");
+        }
+    }
+
+    if (loaded_json_["StandaloneTransportPanel"].contains("exclude_time_signature_from_presets")) {
+        if (loaded_json_["StandaloneTransportPanel"]["exclude_time_signature_from_presets"].get<bool>()) {
+            excluded_params.emplace_back("TimeSigNumeratorStandalone");
+            excluded_params.emplace_back("TimeSigDenominatorStandalone");
+        }
+    }
+
+    if (loaded_json_["StandaloneTransportPanel"].contains("exclude_play_button_from_presets")) {
+        if (loaded_json_["StandaloneTransportPanel"]["exclude_play_button_from_presets"].get<bool>()) {
+            excluded_params.emplace_back("IsPlayingStandalone");
+        }
+    }
+
+    if (loaded_json_["StandaloneTransportPanel"].contains("exclude_record_button_from_presets")) {
+        if (loaded_json_["StandaloneTransportPanel"]["exclude_record_button_from_presets"].get<bool>()) {
+            excluded_params.emplace_back("IsRecordingStandalone");
+        }
+    }
+
+    // parse using label2ParamID
+    std::vector<juce::ParameterID> excluded_params_juce;
+    for (const auto& param: excluded_params) {
+        excluded_params_juce.emplace_back(label2ParamID(param));
+    }
+
+    return excluded_params_juce;
+
+}
+
 // ============================================================================================================
 // ==========         This Thread is in charge of checking which parameters in APVTS have been changed.
 // ==========           If changed, the updated value will be pushed to a corresponding queue to be read
@@ -31,7 +152,6 @@ class APVTSMediatorThread: public juce::Thread
 {
 public:
     juce::StringArray paths;
-
 
     // ============================================================================================================
     // ===          Preparing Thread for Running
@@ -71,7 +191,7 @@ public:
         int prev_selectedPreset = -1;
         while (!bExit) {
             if (APVTSPntr != nullptr) {
-                if (guiParamsPntr->update(APVTSPntr)) {
+                if (guiParamsPntr->update()) {
                     if (APVM2DPL_GuiParams_QuePntr != nullptr) {
                         APVM2DPL_GuiParams_QuePntr->push(*guiParamsPntr);
                     }
@@ -91,7 +211,7 @@ public:
                 bExit = threadShouldExit();
 
                 // avoid burning CPU, if reading is returning immediately
-                sleep(thread_configurations::APVTSMediatorThread::waitTimeBtnIters);
+                sleep((int)thread_configurations::APVTSMediatorThread::waitTimeBtnIters);
             }
         }
 
@@ -109,21 +229,27 @@ public:
         // Step 2: Get the ValueTree from the XML
         if (xml != nullptr)
         {
-            juce::ValueTree xmlState = juce::ValueTree::fromXml(*xml);
-
             if (xml->hasTagName(APVTSPntr->state.getType()))
             {
+                // 3.a get the existing values of the parameters that are not to be loaded
+                std::vector<float> values_not_to_load;
+                for (const auto& paramID: paramIDs2Exclude) {
+                    values_not_to_load.emplace_back(APVTSPntr->getParameter(paramID.getParamID())->getValue());
+                }
+
+                // 3.b load the preset and reset the APVTS with the new preset
                 APVTSPntr->replaceState(juce::ValueTree::fromXml(*xml));
 
+                // 3.c use the values in 3.a to reset the parameters that are not to be loaded
+                // We store all params in APVTS but just loading it when needed
+                for (int i = 0; i < paramIDs2Exclude.size(); i++) {
+                    APVTSPntr->getParameter(paramIDs2Exclude[i].getParamID())->setValueNotifyingHost(values_not_to_load[i]);
+                }
+
+                // 4. load the tensor preset data associated with the preset
                 auto filePath = xml->getStringAttribute("filePath");
-                // Handle the file path as needed
-
-                // cout << "Loading preset from: " << filePath << endl;
                 auto tensormap = load_tensor_map(filePath.toStdString());
-
                 CustomPresetData->copy_from_map(tensormap);
-
-                // cout << "Loaded tensor map: [x1] = " << *CustomPresetData->tensor("x1") << endl;
                 CustomPresetData->printTensorMap();
             }
 
@@ -139,7 +265,7 @@ public:
     // run this in destructor destructing object
     void prepareToStop() {
         //Need to wait enough to ensure the run() method is over before killing thread
-        this->stopThread(100 * thread_configurations::APVTSMediatorThread::waitTimeBtnIters);
+        this->stopThread(int(100 * thread_configurations::APVTSMediatorThread::waitTimeBtnIters));
         readyToStop = true;
     }
 
@@ -163,4 +289,10 @@ private:
     // ===          Pointer to APVTS hosted in the Main Processor
     // ============================================================================================================
     juce::AudioProcessorValueTreeState *APVTSPntr{nullptr};
+
+    // ============================================================================================================
+    // ===          Pointer to APVTS hosted in the Main Processor
+    // ============================================================================================================
+    std::vector<ParameterID> paramIDs2Exclude {get_preset_excluded_params()};
+
 };

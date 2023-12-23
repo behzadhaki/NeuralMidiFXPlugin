@@ -241,9 +241,14 @@ public:
 
 class AudioVisualizer: public juce::Component, juce::Timer {
 public:
+
+    std::string info;
+
     AudioVisualizer(bool needsPlayhead_,
-                    string paramID_) {
-        setInterceptsMouseClicks(false, true);
+                    string paramID_,
+                    juce::Label* noteInfoLabel_) {
+        noteInfoLabel = noteInfoLabel_;
+        setInterceptsMouseClicks(true, true);
         paramID = std::move(paramID_);
         std::transform(paramID.begin(), paramID.end(), paramID.begin(), ::toupper);
         needsPlayhead = needsPlayhead_;
@@ -258,6 +263,7 @@ public:
         // 10% of the height for the playhead
         // 90% of the height for the piano roll
         auto area = getLocalBounds();
+        area.reduce(5,5);
 
        if (needsPlayhead) {
             auto phead_height = area.getHeight() * 0.1;
@@ -320,6 +326,15 @@ public:
             (float)playhead_pos, (float)audioWaveformWidget.getSequenceDuration());
     }
 
+    void mouseEnter(const juce::MouseEvent& /*event*/) override {
+        std::string text = paramID + " | " + info;
+        noteInfoLabel->setText(text, juce::dontSendNotification);
+    }
+
+    void mouseExit(const juce::MouseEvent& /*event*/) override {
+        noteInfoLabel->setText("", juce::dontSendNotification);
+    }
+
 private:
     AudioWaveformWidget audioWaveformWidget;
     AudioPlayheadVisualizer audioPlayheadVisualizer;
@@ -327,6 +342,7 @@ private:
     // all visualizers' data will be stored here.
     // thread safe access/updates via editor and/or DPL thread
     CrossThreadAudioVisualizerData* crossThreadAudioVisualizerData{nullptr};
+    juce::Label* noteInfoLabel;
     bool needsPlayhead{false};
     std::string paramID;
 };

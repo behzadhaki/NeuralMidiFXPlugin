@@ -1,183 +1,993 @@
 {
     "UI": {
+        "resizable": true,
+        "maintain_aspect_ratio": true,
+        "width": 1000,
+        "height": 800,
+
         "Tabs": {
-            "show_grid": true,
-            "draw_borders_for_components": true,
+            "show_grid": false,
+            "draw_borders_for_components": false,
             "tabList": [
                 {
-                    "name": "Tab 1",
+                    "name": "Main",
                     "sliders": [
                         {
-                            "label": "Slider 1",
+                            "label": "K Den",
                             "min": 0.0,
                             "max": 1.0,
-                            "default": 0.0,
-                            "topLeftCorner": "Av",
-                            "bottomRightCorner": "Cz",
-                            "horizontal": true
+                            "default": 0.5,
+                            "topLeftCorner": "Tu",
+                            "bottomRightCorner": "Ww",
+                            "horizontal": true,
+                            "show_label": false
+                        },
+                        {
+                            "label": "K Vel",
+                            "min": 0.0,
+                            "max": 1.0,
+                            "default": 0.5,
+                            "topLeftCorner": "Wu",
+                            "bottomRightCorner": "Zw",
+                            "horizontal": true,
+                            "show_label": false
+                        },
+                        {
+                            "label": "S Den",
+                            "min": 0.0,
+                            "max": 1.0,
+                            "default": 0.5,
+                            "topLeftCorner": "Tr",
+                            "bottomRightCorner": "Wt",
+                            "horizontal": true,
+                            "show_label": false
+
+                        },
+                        {
+                            "label": "S Vel",
+                            "min": 0.0,
+                            "max": 1.0,
+                            "default": 0.5,
+                            "topLeftCorner": "Wr",
+                            "bottomRightCorner": "Zt",
+                            "horizontal": true,
+                            "show_label": false
+                        },
+                        {
+                            "label": "CH Den",
+                            "min": 0.0,
+                            "max": 1.0,
+                            "default": 0.5,
+                            "topLeftCorner": "To",
+                            "bottomRightCorner": "Wq",
+                            "horizontal": true,
+                            "show_label": false
+
+                        },
+                        {
+                            "label": "CH Vel",
+                            "min": 0.0,
+                            "max": 1.0,
+                            "default": 0.5,
+                            "topLeftCorner": "Wo",
+                            "bottomRightCorner": "Zq",
+                            "horizontal": true,
+                            "show_label": false
+                        },
+                        {
+                            "label": "OH Den",
+                            "min": 0.0,
+                            "max": 1.0,
+                            "default": 0.5,
+                            "topLeftCorner": "Tl",
+                            "bottomRightCorner": "Wn",
+                            "horizontal": true,
+                            "show_label": false
+
+                        },
+                        {
+                            "label": "OH Vel",
+                            "min": 0.0,
+                            "max": 1.0,
+                            "default": 0.5,
+                            "topLeftCorner": "Wl",
+                            "bottomRightCorner": "Zn",
+                            "horizontal": true,
+                            "show_label": false
+                        },
+                        {
+                            "label": "Toms Den",
+                            "min": 0.0,
+                            "max": 1.0,
+                            "default": 0.5,
+                            "topLeftCorner": "Ti",
+                            "bottomRightCorner": "Wk",
+                            "horizontal": true,
+                            "show_label": false
+
+                        },
+                        {
+                            "label": "Toms Vel",
+                            "min": 0.0,
+                            "max": 1.0,
+                            "default": 0.5,
+                            "topLeftCorner": "Wi",
+                            "bottomRightCorner": "Zk",
+                            "horizontal": true,
+                            "show_label": false
+                        },
+                        {
+                            "label": "Crash Den",
+                            "min": 0.0,
+                            "max": 1.0,
+                            "default": 0.5,
+                            "topLeftCorner": "Tf",
+                            "bottomRightCorner": "Wh",
+                            "horizontal": true,
+                            "show_label": false
+
+                        },
+                        {
+                            "label": "Crash Vel",
+                            "min": 0.0,
+                            "max": 1.0,
+                            "default": 0.5,
+                            "topLeftCorner": "Wf",
+                            "bottomRightCorner": "Zh",
+                            "horizontal": true,
+                            "show_label": false
+                        },
+                        {
+                            "label": "Ride Den",
+                            "min": 0.0,
+                            "max": 1.0,
+                            "default": 0.5,
+                            "topLeftCorner": "Tc",
+                            "bottomRightCorner": "We",
+                            "horizontal": true,
+                            "show_label": false
+
+                        },
+                        {
+                            "label": "Ride Vel",
+                            "min": 0.0,
+                            "max": 1.0,
+                            "default": 0.5,
+                            "topLeftCorner": "Wc",
+                            "bottomRightCorner": "Ze",
+                            "horizontal": true,
+                            "show_label": false
                         }
                     ],
                     "rotaries": [
                         {
-                            "label": "Rotary 1",
+                            "label": "Uncertainty",
                             "min": 0.0,
                             "max": 1.0,
                             "default": 0.5,
-                            "topLeftCorner": "Vc",
-                            "bottomRightCorner": "Xk"
+                            "topLeftCorner": "Nk",
+                            "bottomRightCorner": "Ro",
+                            "show_label": false,
+                            "info": "Amount of uncertainty in sampling the generations",
+                            "exclude_from_presets": true
                         },
                         {
-                            "label": "Rotary 2",
+                            "label": "Groove Velocity",
                             "min": 0.0,
-                            "max": 4.0,
-                            "default": 1.5,
-                            "topLeftCorner": "Iq",
-                            "bottomRightCorner": "Qz"
+                            "max": 1.0,
+                            "default": 0.5,
+                            "topLeftCorner": "Ob",
+                            "bottomRightCorner": "Qe",
+                            "show_label": false,
+                            "info": "Velocity scaling of the instrumental groove"
+                        },
+                        {
+                            "label": "Groove Offset",
+                            "min": 0.0,
+                            "max": 1.0,
+                            "default": 0.5,
+                            "topLeftCorner": "Of",
+                            "bottomRightCorner": "Qi",
+                            "show_label": false,
+                            "info": "Offset Quantization amount of the instrumental groove"
                         }
                     ],
                     "buttons": [
                         {
-                            "label": "TriggerButton 1",
+                            "label": "Random A",
                             "isToggle": false,
-                            "topLeftCorner": "Wv",
-                            "bottomRightCorner": "Zz"
+                            "topLeftCorner": "Cq",
+                            "bottomRightCorner": "Dr",
+                            "show_label": false,
+                            "info": "Press to randomize pattern A"
+                        },
+                        {
+                            "label": "Snap To A",
+                            "isToggle": false,
+                            "topLeftCorner": "Ct",
+                            "bottomRightCorner": "Du",
+                            "show_label": false,
+                            "info": "Stores the current pattern here"
+                        },
+                        {
+                            "label": "Random B",
+                            "isToggle": false,
+                            "topLeftCorner": "Nq",
+                            "bottomRightCorner": "Or",
+                            "show_label": false,
+                            "info": "Press to randomize pattern B"
+                        },
+                        {
+                            "label": "Snap To B",
+                            "isToggle": false,
+                            "topLeftCorner": "Nt",
+                            "bottomRightCorner": "Ou",
+                            "show_label": false,
+                            "info": "Stores the current pattern here"
+                        },
+                        {
+                            "label": "Record",
+                            "isToggle": true,
+                            "topLeftCorner": "Bb",
+                            "bottomRightCorner": "Dd"
+                        },
+                        {
+                            "label": "Overdub",
+                            "isToggle": true,
+                            "topLeftCorner": "Be",
+                            "bottomRightCorner": "Dg"
+                        },
+                        {
+                            "label": "Clear Groove",
+                            "isToggle": false,
+                            "topLeftCorner": "Ga",
+                            "bottomRightCorner": "Kb"
                         }
                     ],
                     "MidiDisplays": [
                         {
-                            "label": "MidiDisplay 1",
-                            "topLeftCorner": "Bb",
-                            "bottomRightCorner": "Jh",
+                            "label": "MidiVisualizerA",
+                            "topLeftCorner": "Av",
+                            "bottomRightCorner": "Gz",
                             "allowToDragOutAsMidi": true,
-                            "allowToDragInMidi": true,
-                            "needsPlayhead": true
+                            "allowToDragInMidi": false,
+                            "needsPlayhead": true,
+                            "PlayheadLoopDurationQuarterNotes": 8.0,
+                            "info": "Pattern A Visualization"
                         },
                         {
-                            "label": "MidiDisplay 2",
-                            "topLeftCorner": "Jh",
-                            "bottomRightCorner": "Ro",
+                            "label": "MidiVisualizerB",
+                            "topLeftCorner": "Kv",
+                            "bottomRightCorner": "Qz",
+                            "allowToDragOutAsMidi": true,
+                            "allowToDragInMidi": false,
+                            "needsPlayhead": true,
+                            "PlayheadLoopDurationQuarterNotes": 8.0,
+                            "info": "Pattern B Visualization"
+                        },
+                        {
+                            "label": "MidiVisualizerGroove2Drum",
+                            "topLeftCorner": "Fd",
+                            "bottomRightCorner": "Lg",
+                            "allowToDragOutAsMidi": true,
+                            "allowToDragInMidi": false,
+                            "needsPlayhead": true,
+                            "PlayheadLoopDurationQuarterNotes": 8.0,
+                            "info": "Accompaniment Pattern Visualization"
+                        },
+                        {
+                            "label": "MidiVisualizerGroove",
+                            "topLeftCorner": "Fb",
+                            "bottomRightCorner": "Ld",
                             "allowToDragOutAsMidi": true,
                             "allowToDragInMidi": true,
                             "needsPlayhead": true,
-                            "PlayheadLoopDurationQuarterNotes": 4.0
+                            "PlayheadLoopDurationQuarterNotes": 8.0,
+                            "info": "Instrumental Groove Visualization"
+                        }
+                    ],
+                    "labels": [
+                        {
+                            "label": "Groove Velocity",
+                            "topLeftCorner": "Oe",
+                            "bottomRightCorner": "Qf",
+                            "font_size": 10
+                        },
+                        {
+                            "label": "Groove Offset",
+                            "topLeftCorner": "Oi",
+                            "bottomRightCorner": "Qj",
+                            "font_size": 10
+                        },
+                        {
+                            "label": "Uncertainty",
+                            "topLeftCorner": "No",
+                            "bottomRightCorner": "Rp",
+                            "font_size": 11
+                        },
+                        {
+                            "label": "Randomize",
+                            "topLeftCorner": "Aq",
+                            "bottomRightCorner": "Cr"
+                        },
+                        {
+                            "label": "Snap Here",
+                            "topLeftCorner": "At",
+                            "bottomRightCorner": "Cu"
+                        },
+                        {
+                            "label": "Randomize",
+                            "topLeftCorner": "Oq",
+                            "bottomRightCorner": "Qr"
+                        },
+                        {
+                            "label": "Snap Here",
+                            "topLeftCorner": "Ot",
+                            "bottomRightCorner": "Qu"
+                        },
+
+                        {
+                            "label": "A",
+                            "topLeftCorner": "Dr",
+                            "bottomRightCorner": "Et",
+                            "info": "Pattern A",
+                            "font_size": 18
+                        },
+                        {
+                            "label": "B",
+                            "topLeftCorner": "Mr",
+                            "bottomRightCorner": "Nt",
+                            "info": "Pattern B",
+                            "font_size": 18
+                        },
+                        {
+                            "label": "Groove",
+                            "topLeftCorner": "Gh",
+                            "bottomRightCorner": "Ki",
+                            "info": "Pattern associated with the groove"
+                        },
+                        {
+                            "label": "Ride",
+                            "topLeftCorner": "Sc",
+                            "bottomRightCorner": "Te"
+                        },
+                        {
+                            "label": "Crash",
+                            "topLeftCorner": "Sf",
+                            "bottomRightCorner": "Th"
+                        },
+                        {
+                            "label": "Toms",
+                            "topLeftCorner": "Si",
+                            "bottomRightCorner": "Tk"
+                        },
+                        {
+                            "label": "OH",
+                            "topLeftCorner": "Sl",
+                            "bottomRightCorner": "Tn"
+                        },
+                        {
+                            "label": "CH",
+                            "topLeftCorner": "So",
+                            "bottomRightCorner": "Tq"
+                        },
+                        {
+                            "label": "Snare",
+                            "topLeftCorner": "Sr",
+                            "bottomRightCorner": "Tt"
+                        },
+                        {
+                            "label": "Kick",
+                            "topLeftCorner": "Su",
+                            "bottomRightCorner": "Tw"
+                        },
+                        {
+                            "label": "Density",
+                            "topLeftCorner": "Tw",
+                            "bottomRightCorner": "Wy"
+                        },
+                        {
+                            "label": "Velocity",
+                            "topLeftCorner": "Ww",
+                            "bottomRightCorner": "Zy"
+                        }
+                    ],
+                    "lines": [
+                        {
+                            "start": "Gg",
+                            "end": "Hh"
+                        },
+                        {
+                            "start": "Hh",
+                            "end": "Hi"
+                        },
+                        {
+                            "start": "Hi",
+                            "end": "Ji"
+                        },
+                        {
+                            "start": "Ji",
+                            "end": "Jh"
+                        },
+                        {
+                            "start": "Jh",
+                            "end": "Kg"
+                        }
+                    ],
+                    "triangleSliders": [
+                        {
+                            "label": "Interpolation Area",
+                            "topLeftCorner": "Di",
+                            "bottomRightCorner": "Nt",
+                            "DistanceFromA_Label": "Interpolate",
+                            "ClosenessToC_Label": "Follow",
+                            "ensure_equilateral": true,
+                            "info": "Area in which the interpolation happens"
                         }
                     ]
                 },
+
                 {
-                    "name": "Tab 2",
+                    "name": "Main",
                     "sliders": [
                         {
-                            "label": "Test 1",
+                            "label": "Interpolate",
                             "min": 0.0,
-                            "max": 1.0,
-                            "default": 0.0,
-                            "topLeftCorner": "Aa",
-                            "bottomRightCorner": "Ff"
+                            "max": 1,
+                            "default": 0.5,
+                            "topLeftCorner": "Er",
+                            "bottomRightCorner": "Mt",
+                            "horizontal": true,
+                            "show_label": false,
+                            "info": "Interpolation Amount between A and B Patterns"
                         },
                         {
-                            "label": "Gibberish",
+                            "label": "Follow",
                             "min": 0.0,
-                            "max": 25.0,
-                            "default": 11.0,
-                            "topLeftCorner": "Ff",
-                            "bottomRightCorner": "Ll"
+                            "max": 1.0,
+                            "default": 0.5,
+                            "topLeftCorner": "Gi",
+                            "bottomRightCorner": "Kr",
+                            "horizontal": false,
+                            "show_label": false,
+                            "info": "Amount by which the drums follow your playing"
+                        },
+                        {
+                            "label": "K Den",
+                            "min": 0.0,
+                            "max": 1.0,
+                            "default": 0.5,
+                            "topLeftCorner": "Tu",
+                            "bottomRightCorner": "Ww",
+                            "horizontal": true,
+                            "show_label": false
+                        },
+                        {
+                            "label": "K Vel",
+                            "min": 0.0,
+                            "max": 1.0,
+                            "default": 0.5,
+                            "topLeftCorner": "Wu",
+                            "bottomRightCorner": "Zw",
+                            "horizontal": true,
+                            "show_label": false
+                        },
+                        {
+                            "label": "S Den",
+                            "min": 0.0,
+                            "max": 1.0,
+                            "default": 0.5,
+                            "topLeftCorner": "Tr",
+                            "bottomRightCorner": "Wt",
+                            "horizontal": true,
+                            "show_label": false
+
+                        },
+                        {
+                            "label": "S Vel",
+                            "min": 0.0,
+                            "max": 1.0,
+                            "default": 0.5,
+                            "topLeftCorner": "Wr",
+                            "bottomRightCorner": "Zt",
+                            "horizontal": true,
+                            "show_label": false
+                        },
+                        {
+                            "label": "CH Den",
+                            "min": 0.0,
+                            "max": 1.0,
+                            "default": 0.5,
+                            "topLeftCorner": "To",
+                            "bottomRightCorner": "Wq",
+                            "horizontal": true,
+                            "show_label": false
+
+                        },
+                        {
+                            "label": "CH Vel",
+                            "min": 0.0,
+                            "max": 1.0,
+                            "default": 0.5,
+                            "topLeftCorner": "Wo",
+                            "bottomRightCorner": "Zq",
+                            "horizontal": true,
+                            "show_label": false
+                        },
+                        {
+                            "label": "OH Den",
+                            "min": 0.0,
+                            "max": 1.0,
+                            "default": 0.5,
+                            "topLeftCorner": "Tl",
+                            "bottomRightCorner": "Wn",
+                            "horizontal": true,
+                            "show_label": false
+
+                        },
+                        {
+                            "label": "OH Vel",
+                            "min": 0.0,
+                            "max": 1.0,
+                            "default": 0.5,
+                            "topLeftCorner": "Wl",
+                            "bottomRightCorner": "Zn",
+                            "horizontal": true,
+                            "show_label": false
+                        },
+                        {
+                            "label": "Toms Den",
+                            "min": 0.0,
+                            "max": 1.0,
+                            "default": 0.5,
+                            "topLeftCorner": "Ti",
+                            "bottomRightCorner": "Wk",
+                            "horizontal": true,
+                            "show_label": false
+
+                        },
+                        {
+                            "label": "Toms Vel",
+                            "min": 0.0,
+                            "max": 1.0,
+                            "default": 0.5,
+                            "topLeftCorner": "Wi",
+                            "bottomRightCorner": "Zk",
+                            "horizontal": true,
+                            "show_label": false
+                        },
+                        {
+                            "label": "Crash Den",
+                            "min": 0.0,
+                            "max": 1.0,
+                            "default": 0.5,
+                            "topLeftCorner": "Tf",
+                            "bottomRightCorner": "Wh",
+                            "horizontal": true,
+                            "show_label": false
+
+                        },
+                        {
+                            "label": "Crash Vel",
+                            "min": 0.0,
+                            "max": 1.0,
+                            "default": 0.5,
+                            "topLeftCorner": "Wf",
+                            "bottomRightCorner": "Zh",
+                            "horizontal": true,
+                            "show_label": false
+                        },
+                        {
+                            "label": "Ride Den",
+                            "min": 0.0,
+                            "max": 1.0,
+                            "default": 0.5,
+                            "topLeftCorner": "Tc",
+                            "bottomRightCorner": "We",
+                            "horizontal": true,
+                            "show_label": false
+
+                        },
+                        {
+                            "label": "Ride Vel",
+                            "min": 0.0,
+                            "max": 1.0,
+                            "default": 0.5,
+                            "topLeftCorner": "Wc",
+                            "bottomRightCorner": "Ze",
+                            "horizontal": true,
+                            "show_label": false
                         }
                     ],
                     "rotaries": [
                         {
-                            "label": "Rotary 1B",
+                            "label": "Uncertainty",
                             "min": 0.0,
                             "max": 1.0,
                             "default": 0.5,
-                            "topLeftCorner": "Ll",
-                            "bottomRightCorner": "Pp"
+                            "topLeftCorner": "Nk",
+                            "bottomRightCorner": "Ro",
+                            "show_label": false,
+                            "info": "Amount of uncertainty in sampling the generations"
                         },
                         {
-                            "label": "Test 2B",
+                            "label": "Groove Velocity",
                             "min": 0.0,
-                            "max": 4.0,
-                            "default": 1.5,
-                            "topLeftCorner": "Pp",
-                            "bottomRightCorner": "Tt"
+                            "max": 1.0,
+                            "default": 0.5,
+                            "topLeftCorner": "Ob",
+                            "bottomRightCorner": "Qe",
+                            "show_label": false,
+                            "info": "Velocity scaling of the instrumental groove"
+                        },
+                        {
+                            "label": "Groove Offset",
+                            "min": 0.0,
+                            "max": 1.0,
+                            "default": 0.5,
+                            "topLeftCorner": "Of",
+                            "bottomRightCorner": "Qi",
+                            "show_label": false,
+                            "info": "Offset Quantization amount of the instrumental groove"
                         }
                     ],
                     "buttons": [
                         {
-                            "label": "ToggleButton 1",
-                            "isToggle": true,
-                            "topLeftCorner": "Tt",
-                            "bottomRightCorner": "Zz"
-                        }
-                    ]
-                },
-                {
-                    "name": "Tab 3",
-                    "sliders": [
-                        {
-                            "label": "Generation Playback Delay",
-                            "min": 0.0,
-                            "max": 10.0,
-                            "default": 0.0,
-                            "topLeftCorner": "Aa",
-                            "bottomRightCorner": "Zk",
-                            "horizontal": true
-
-                        }
-                    ],
-                    "comboBoxes": [
-                        {
-                            "label": "ComboBox 1",
-                            "options": [
-                                "Item 1",
-                                "Item 2",
-                                "Item 3"
-                            ],
-                            "topLeftCorner": "Av",
-                            "bottomRightCorner": "Zz"
-                        }
-                    ]
-                },
-                {
-                    "name": "Tab 4",
-                    "AudioDisplays": [
-                        {
-                            "label": "AudioDisplay 1",
-                            "topLeftCorner": "Bb",
-                            "bottomRightCorner": "Jh",
-                            "allowToDragOutAsAudio": true,
-                            "allowToDragInAudio": true,
-                            "needsPlayhead": true
+                            "label": "Random A",
+                            "isToggle": false,
+                            "topLeftCorner": "Cq",
+                            "bottomRightCorner": "Dr",
+                            "show_label": false,
+                            "info": "Press to randomize pattern A"
                         },
                         {
-                            "label": "AudioDisplay 2",
-                            "topLeftCorner": "Jh",
-                            "bottomRightCorner": "Ro",
-                            "allowToDragOutAsAudio": true,
-                            "allowToDragInAudio": true,
+                            "label": "Snap To A",
+                            "isToggle": false,
+                            "topLeftCorner": "Ct",
+                            "bottomRightCorner": "Du",
+                            "show_label": false,
+                            "info": "Stores the current pattern here"
+                        },
+                        {
+                            "label": "Random B",
+                            "isToggle": false,
+                            "topLeftCorner": "Nq",
+                            "bottomRightCorner": "Or",
+                            "show_label": false,
+                            "info": "Press to randomize pattern B"
+                        },
+                        {
+                            "label": "Snap To B",
+                            "isToggle": false,
+                            "topLeftCorner": "Nt",
+                            "bottomRightCorner": "Ou",
+                            "show_label": false,
+                            "info": "Stores the current pattern here"
+                        },
+                        {
+                            "label": "Record",
+                            "isToggle": true,
+                            "topLeftCorner": "Bb",
+                            "bottomRightCorner": "Dd"
+                        },
+                        {
+                            "label": "Overdub",
+                            "isToggle": true,
+                            "topLeftCorner": "Be",
+                            "bottomRightCorner": "Dg"
+                        },
+                        {
+                            "label": "Clear Groove",
+                            "isToggle": false,
+                            "topLeftCorner": "Ga",
+                            "bottomRightCorner": "Kb"
+                        }
+                    ],
+                    "MidiDisplays": [
+                        {
+                            "label": "MidiVisualizerA",
+                            "topLeftCorner": "Av",
+                            "bottomRightCorner": "Gz",
+                            "allowToDragOutAsMidi": true,
+                            "allowToDragInMidi": false,
                             "needsPlayhead": true,
-                            "PlayheadLoopDurationSamples": 44100
+                            "PlayheadLoopDurationQuarterNotes": 8.0,
+                            "info": "Pattern A Visualization"
+                        },
+                        {
+                            "label": "MidiVisualizerB",
+                            "topLeftCorner": "Kv",
+                            "bottomRightCorner": "Qz",
+                            "allowToDragOutAsMidi": true,
+                            "allowToDragInMidi": false,
+                            "needsPlayhead": true,
+                            "PlayheadLoopDurationQuarterNotes": 8.0,
+                            "info": "Pattern B Visualization"
+                        },
+                        {
+                            "label": "MidiVisualizerGroove2Drum",
+                            "topLeftCorner": "Fd",
+                            "bottomRightCorner": "Lg",
+                            "allowToDragOutAsMidi": true,
+                            "allowToDragInMidi": false,
+                            "needsPlayhead": true,
+                            "PlayheadLoopDurationQuarterNotes": 8.0,
+                            "info": "Accompaniment Pattern Visualization"
+                        },
+                        {
+                            "label": "MidiVisualizerGroove",
+                            "topLeftCorner": "Fb",
+                            "bottomRightCorner": "Ld",
+                            "allowToDragOutAsMidi": true,
+                            "allowToDragInMidi": true,
+                            "needsPlayhead": true,
+                            "PlayheadLoopDurationQuarterNotes": 8.0,
+                            "info": "Instrumental Groove Visualization"
+                        }
+                    ],
+                    "labels": [
+                        {
+                            "label": "Interpolate",
+                            "topLeftCorner": "Gt",
+                            "bottomRightCorner": "Ku"
+                        },
+                        {
+                            "label": "Randomize",
+                            "topLeftCorner": "Aq",
+                            "bottomRightCorner": "Cr"
+                        },
+                        {
+                            "label": "Snap Here",
+                            "topLeftCorner": "At",
+                            "bottomRightCorner": "Cu"
+                        },
+                        {
+                            "label": "Randomize",
+                            "topLeftCorner": "Oq",
+                            "bottomRightCorner": "Qr"
+                        },
+                        {
+                            "label": "Snap Here",
+                            "topLeftCorner": "Ot",
+                            "bottomRightCorner": "Qu"
+                        },
+                        {
+                            "label": "Groove Velocity",
+                            "topLeftCorner": "Oe",
+                            "bottomRightCorner": "Qf",
+                            "font_size": 10
+                        },
+                        {
+                            "label": "Groove Offset",
+                            "topLeftCorner": "Oi",
+                            "bottomRightCorner": "Qj",
+                            "font_size": 10
+                        },
+                        {
+                            "label": "Uncertainty",
+                            "topLeftCorner": "No",
+                            "bottomRightCorner": "Rp",
+                            "font_size": 11
+                        },
+                        {
+                            "label": "A",
+                            "topLeftCorner": "Dr",
+                            "bottomRightCorner": "Et",
+                            "info": "Pattern A",
+                            "font_size": 18
+                        },
+                        {
+                            "label": "B",
+                            "topLeftCorner": "Mr",
+                            "bottomRightCorner": "Nt",
+                            "info": "Pattern B",
+                            "font_size": 18
+                        },
+                        {
+                            "label": "Groove",
+                            "topLeftCorner": "Gh",
+                            "bottomRightCorner": "Ki",
+                            "info": "Pattern associated with the groove"
+                        },
+                        {
+                            "label": "<------- Only Groove",
+                            "topLeftCorner": "Ii",
+                            "bottomRightCorner": "Mj",
+                            "info": "Fully follows the groove at the expense of ignoring A/B patterns",
+                            "font_size": 10
+                        },
+                        {
+                            "label": "<------- Only A/B",
+                            "topLeftCorner": "Iq",
+                            "bottomRightCorner": "Mr",
+                            "info": "Only uses A/B patterns at the expense of ignoring the groove",
+                            "font_size": 10
+                        },
+                        {
+                            "label": "Ride",
+                            "topLeftCorner": "Sc",
+                            "bottomRightCorner": "Te"
+                        },
+                        {
+                            "label": "Crash",
+                            "topLeftCorner": "Sf",
+                            "bottomRightCorner": "Th"
+                        },
+                        {
+                            "label": "Toms",
+                            "topLeftCorner": "Si",
+                            "bottomRightCorner": "Tk"
+                        },
+                        {
+                            "label": "OH",
+                            "topLeftCorner": "Sl",
+                            "bottomRightCorner": "Tn"
+                        },
+                        {
+                            "label": "CH",
+                            "topLeftCorner": "So",
+                            "bottomRightCorner": "Tq"
+                        },
+                        {
+                            "label": "Snare",
+                            "topLeftCorner": "Sr",
+                            "bottomRightCorner": "Tt"
+                        },
+                        {
+                            "label": "Kick",
+                            "topLeftCorner": "Su",
+                            "bottomRightCorner": "Tw"
+                        },
+                        {
+                            "label": "Density",
+                            "topLeftCorner": "Tw",
+                            "bottomRightCorner": "Wy"
+                        },
+                        {
+                            "label": "Velocity",
+                            "topLeftCorner": "Ww",
+                            "bottomRightCorner": "Zy"
+                        }
+                    ],
+                    "lines": [
+                        {
+                            "start": "Gg",
+                            "end": "Hh"
+                        },
+                        {
+                            "start": "Hh",
+                            "end": "Hi"
+                        },
+                        {
+                            "start": "Hi",
+                            "end": "Ji"
+                        },
+                        {
+                            "start": "Ji",
+                            "end": "Jh"
+                        },
+                        {
+                            "start": "Jh",
+                            "end": "Kg"
                         }
                     ]
+                },
+
+                {
+                    "name": "Midi Mappings",
+                    "sliders": [],
+                    "rotaries": [
+                        {
+                            "label": "Kick",
+                            "min": 0,
+                            "max": 127,
+                            "default": 36,
+                            "topLeftCorner": "Cc",
+                            "bottomRightCorner": "Gi",
+                            "show_label": true
+                        },
+                        {
+                            "label": "Snare",
+                            "min": 0,
+                            "max": 127,
+                            "default": 38,
+                            "topLeftCorner": "Hc",
+                            "bottomRightCorner": "Li",
+                            "show_label": true
+                        },
+                        {
+                            "label": "ClosedHat",
+                            "min": 0,
+                            "max": 127,
+                            "default": 42,
+                            "topLeftCorner": "Pc",
+                            "bottomRightCorner": "Ti",
+                            "show_label": true
+                        },
+                        {
+                            "label": "OpenHat",
+                            "min": 0,
+                            "max": 127,
+                            "default": 46,
+                            "topLeftCorner": "Uc",
+                            "bottomRightCorner": "Yi",
+                            "show_label": true
+                        },
+                        {
+                            "label": "LowTom",
+                            "min": 0,
+                            "max": 127,
+                            "default": 41,
+                            "topLeftCorner": "Cm",
+                            "bottomRightCorner": "Gs",
+                            "show_label": true
+                        },
+                        {
+                            "label": "MidTom",
+                            "min": 0,
+                            "max": 127,
+                            "default": 48,
+                            "topLeftCorner": "Hm",
+                            "bottomRightCorner": "Ls",
+                            "show_label": true
+                        },
+                        {
+                            "label": "HighTom",
+                            "min": 0,
+                            "max": 127,
+                            "default": 45,
+                            "topLeftCorner": "Pm",
+                            "bottomRightCorner": "Ts",
+                            "show_label": true
+                        },
+                        {
+                            "label": "Crash",
+                            "min": 0,
+                            "max": 127,
+                            "default": 49,
+                            "topLeftCorner": "Um",
+                            "bottomRightCorner": "Ys",
+                            "show_label": true
+                        },
+                        {
+                            "label": "Ride",
+                            "min": 0,
+                            "max": 127,
+                            "default": 51,
+                            "topLeftCorner": "Lt",
+                            "bottomRightCorner": "Pz",
+                            "show_label": true
+                        }
+                    ],
+                    "buttons": [],
+                    "MidiDisplays": []
                 }
+
             ]
         },
 
         "MidiInVisualizer": {
-            "enable": true,
+            "enable": false,
             "allowToDragInMidi": true,
             "visualizeIncomingMidiFromHost": true,
             "deletePreviousIncomingMidiMessagesOnBackwardPlayhead": true,
             "deletePreviousIncomingMidiMessagesOnRestart": true
         },
+
         "GeneratedContentVisualizer": {
             "enable": true,
             "allowToDragOutAsMidi": true
         }
 
     },
+
     "StandaloneTransportPanel": {
         "enable": true,
-        "disableInPluginMode": true
+        "disableInPluginMode": true,
+        "exclude_tempo_from_presets": true,
+        "exclude_time_signature_from_presets": false,
+        "exclude_record_button_from_presets": true,
+        "exclude_play_button_from_presets": true
     },
 
     "VirtualMidiOut": {
