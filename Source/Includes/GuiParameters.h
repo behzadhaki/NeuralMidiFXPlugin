@@ -90,7 +90,7 @@ struct param {
         value = 1;
         paramID = label2ParamID(label);
         min = 1;
-        comboBoxOptions = comboBox_json["options"].get<std::vector<std::string>>();
+        comboBoxOptions = comboBox_json["items"].get<std::vector<std::string>>();
         max = comboBoxOptions.size();
         defaultVal = 1;
         isSlider = false;

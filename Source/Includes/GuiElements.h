@@ -502,7 +502,7 @@ private:
         newComboBox->setTextWhenNothingSelected(comboBoxText);
 
         // Obtain comboBox options
-        auto comboBoxOptions = comboBoxJson["options"].get<std::vector<std::string>>();
+        auto comboBoxOptions = comboBoxJson["items"].get<std::vector<std::string>>();
         int c_ = 1;
         for (auto &option : comboBoxOptions) {
             newComboBox->addItem(option, c_);
