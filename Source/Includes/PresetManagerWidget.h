@@ -54,7 +54,7 @@ public:
     void paintRowBackground(juce::Graphics& g, int /*rowNumber*/, int /*width*/, int /*height*/, bool rowIsSelected) override
     {
         if (rowIsSelected)
-            g.fillAll(juce::Colours::lightblue);
+            g.fillAll(juce::Colours::skyblue);
     }
 
     void paintCell(juce::Graphics& g, int rowNumber, int /*columnId*/, int width, int height, bool /*rowIsSelected*/) override
@@ -66,7 +66,8 @@ public:
     ~PresetTableComponent() override = default;
 
     void resized() override
-    {   auto gap = proportionOfHeight(0.05f);
+    {
+        auto gap = proportionOfHeight(0.03f);
 
         auto area = getLocalBounds();
         area.removeFromTop(gap);
@@ -79,6 +80,7 @@ public:
         }
         area.removeFromTop(gap);
         presetNameEditor.setBounds(area.removeFromTop(proportionOfHeight(0.05f)));
+        area.removeFromTop((int)gap/2.0f);
         saveButton.setBounds(area.removeFromBottom(proportionOfHeight(0.1f)));
         area.removeFromTop(gap);
 
@@ -148,6 +150,10 @@ public:
     {
         return presetNames.size();
     }
+
+    /*void loadPreset() {
+        // moved to APVTSMediatorThread
+    }*/
 
     void savePreset()
     {

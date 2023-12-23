@@ -4,6 +4,7 @@
 #include "../Includes/GuiElements.h"
 #include "../Includes/MidiDisplayWidget.h"
 #include "../Includes/PresetManagerWidget.h"
+#include "../Includes/StandaloneControlsWidget.h"
 
 using namespace std;
 
@@ -30,17 +31,11 @@ public:
 
     // standalone controls Play Button, Record Button, Tempo Rotary, and Loop Button (with attachments)
     // add a juce button amd attachment
-    juce::TextButton playButton;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> playButtonAttachment;
-    juce::TextButton recordButton;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> recordButtonAttachment;
-    juce::Slider tempoSlider;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> tempoSliderAttachment;
-    juce::Slider numeratorSlider;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> numeratorSliderAttachment;
-    juce::Slider denominatorSlider;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> denominatorSliderAttachment;
+    std::unique_ptr<StandaloneControlsWidget> tempoMeterWidget;
     unique_ptr<PresetTableComponent> presetManagerWidget;
+
+    // shared label for info
+    std::unique_ptr<juce::Label> sharedHoverText;
 
     /*void saveAPVTSToFile(int preset_idx);
     void loadAPVTSFromFile(int preset_idx);*/
@@ -59,5 +54,6 @@ private:
     double LoopEnd {0};
     juce::MidiMessageSequence incoming_sequence;
     bool shouldActStandalone {false};
+
 };
 

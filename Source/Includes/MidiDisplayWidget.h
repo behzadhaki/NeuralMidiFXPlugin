@@ -751,6 +751,7 @@ public:
 
     void paint(juce::Graphics& g) override
     {
+
         if (show_playhead) {
             g.setColour(playheadColour);
             // Draw playhead
@@ -1330,21 +1331,21 @@ private:
 class MidiVisualizer: public juce::Component, juce::Timer {
 
 public:
-    /*bool AllowToDragInMidi{true};
-    bool AllowToDragOutAsMidi{true};*/
+
+    std::string info;
 
     MidiVisualizer(bool needsPlayhead_,
-                   string paramID_) {
-        setInterceptsMouseClicks(false, true);
+                   string paramID_,
+                   juce::Label* noteInfoLabel_) {
+        noteInfoLabel = noteInfoLabel_;
+        setInterceptsMouseClicks(true, true);
         paramID = std::move(paramID_);
         std::transform(paramID.begin(), paramID.end(), paramID.begin(), ::toupper);
         needsPlayhead = needsPlayhead_;
-        noteInfoLabel.setFont(10);
-        pianoRollComponent.noteInfoLabel = &noteInfoLabel;
+        pianoRollComponent.noteInfoLabel = noteInfoLabel;
         addAndMakeVisible(playheadVisualizer);
         addAndMakeVisible(pianoRollComponent);
         addAndMakeVisible(pianoKeysComponent);
-        addAndMakeVisible(noteInfoLabel);
 
         // start timer
         startTimerHz(10);
@@ -1354,9 +1355,8 @@ public:
         // 10% of the height for the playhead
         // 90% of the height for the piano roll
         auto area = getLocalBounds();
-
-        noteInfoLabel.setBounds(
-            area.removeFromBottom(int(area.getHeight() * 0.1)));
+        // remove 5 pixels from edges
+        area.reduce(1, 1);
 
         auto key_area = area.removeFromLeft(20);
 
@@ -1378,7 +1378,7 @@ public:
     }
 
     void paint(juce::Graphics& g) override {
-        g.fillAll(juce::Colours::black);
+        g.fillAll(juce::Colours::grey);
     }
 
     void enableDragInMidi(bool enable) {
@@ -1414,7 +1414,7 @@ public:
                         event->message.getFloatVelocity(),
                         float(event->noteOffObject->message.getTimeStamp() -
                         event->message.getTimeStamp()),
-                        &noteInfoLabel);
+                        noteInfoLabel);
 
                     CompleteNotes.emplace_back(
                             event->message, event->noteOffObject->message);
@@ -1423,7 +1423,7 @@ public:
                         event->message.getNoteNumber(),
                         (float)event->message.getTimeStamp(),
                         event->message.getFloatVelocity(),
-                        &noteInfoLabel);
+                        noteInfoLabel);
                 }
 
             }
@@ -1449,7 +1449,7 @@ public:
                         event->message.getNoteNumber(),
                         (float)event->message.getTimeStamp(),
                         event->message.getFloatVelocity(),
-                        &noteInfoLabel);
+                        noteInfoLabel);
                 }
 
             }
@@ -1486,7 +1486,7 @@ public:
                                 event->message.getFloatVelocity(),
                                 float(event->noteOffObject->message.getTimeStamp() -
                                 event->message.getTimeStamp()),
-                                &noteInfoLabel);
+                                noteInfoLabel);
 
                             CompleteNotes.emplace_back(
                                     event->message, event->noteOffObject->message);
@@ -1497,7 +1497,7 @@ public:
                                 event->message.getNoteNumber(),
                                 (float)event->message.getTimeStamp(),
                                 event->message.getFloatVelocity(),
-                                &noteInfoLabel);
+                                noteInfoLabel);
                         }
 
                     }
@@ -1524,7 +1524,7 @@ public:
                                 event->message.getNoteNumber(),
                                 (float)event->message.getTimeStamp(),
                                 event->message.getFloatVelocity(),
-                                &noteInfoLabel);
+                                noteInfoLabel);
                         }
 
                     }
@@ -1546,15 +1546,23 @@ public:
         playheadVisualizer.setPlayheadPos((float)playhead_pos, pianoRollComponent.getSequenceDuration());
     }
 
+    void mouseEnter(const juce::MouseEvent& /*event*/) override {
+        std::string text = paramID + " | " + info;
+        noteInfoLabel->setText(text, juce::dontSendNotification);
+    }
+
+    void mouseExit(const juce::MouseEvent& /*event*/) override {
+        noteInfoLabel->setText("", juce::dontSendNotification);
+    }
+
 private:
-//    juce::MidiFile midiFile;
 
     PlayheadVisualizer playheadVisualizer;
     PianoRollComponent pianoRollComponent;
     PianoKeysComponent pianoKeysComponent{
         juce::Colours::whitesmoke,
         juce::Colours::grey};
-    juce::Label noteInfoLabel; // displays the note name when the mouse hovers over a note
+    juce::Label* noteInfoLabel; // displays the note name when the mouse hovers over a note
     bool needsPlayhead{false};
     CrossThreadPianoRollData* crossThreadPianoRollData {nullptr};
     std::string paramID;

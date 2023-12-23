@@ -39,9 +39,14 @@ using hslider_list = std::vector<json>;
 using comboBox_list = std::vector<json>;
 using midiDisplay_list = std::vector<json>;
 using audioDisplay_list = std::vector<json>;
+using labels_list = std::vector<json>;
+using lines_list = std::vector<json>;
+using triangleSliders_list = std::vector<json>;
 
-using tab_tuple = std::tuple<std::string, slider_list, rotary_list, button_list, hslider_list, comboBox_list, midiDisplay_list, audioDisplay_list>;
-
+using tab_tuple = std::tuple<
+    std::string, slider_list, rotary_list, button_list, hslider_list,
+    comboBox_list, midiDisplay_list, audioDisplay_list, labels_list,
+    lines_list, triangleSliders_list>;
 
 inline json load_settings_json() {
 
@@ -84,6 +89,9 @@ inline std::vector<tab_tuple> parse_to_tabList() {
         comboBox_list tabComboBoxes;
         midiDisplay_list tabMidiDisplays;
         audioDisplay_list tabAudioDisplays;
+        labels_list tabLabels;
+        lines_list tabLines;
+        triangleSliders_list tabtriangleSliders;
 
         // check if sliders exist
         if (tabJson.contains("sliders")) {
@@ -131,8 +139,24 @@ inline std::vector<tab_tuple> parse_to_tabList() {
             }
         }
 
+        if (tabJson.contains("labels")) {
+            for (const auto& labelJson: tabJson["labels"]) {
+                tabLabels.push_back(labelJson);
+            }
+        }
 
-        tab_tuple tabTuple = {tabName, tabSliders, tabRotaries, tabButtons, tabhsliders, tabComboBoxes, tabMidiDisplays, tabAudioDisplays};
+        if (tabJson.contains("lines")) {
+            for (const auto& lineJson: tabJson["lines"]) {
+                tabLines.push_back(lineJson);
+            }
+        }
+
+        if (tabJson.contains("triangleSliders")) {
+            for (const auto& triangleSlidersJson: tabJson["triangleSliders"]) {
+                tabtriangleSliders.push_back(triangleSlidersJson);
+            }
+        }
+        tab_tuple tabTuple = {tabName, tabSliders, tabRotaries, tabButtons, tabhsliders, tabComboBoxes, tabMidiDisplays, tabAudioDisplays, tabLabels, tabLines, tabtriangleSliders};
         tabList.push_back(tabTuple);
 
     }
@@ -142,6 +166,11 @@ inline std::vector<tab_tuple> parse_to_tabList() {
 
 // GUI settings
 namespace UIObjects {
+
+    const bool user_resizable = loaded_json["UI"].contains("resizable") ? loaded_json["UI"]["resizable"].get<bool>() : false;
+    const bool user_maintain_aspect_ratio = loaded_json["UI"].contains("maintain_aspect_ratio") ? loaded_json["UI"]["maintain_aspect_ratio"].get<bool>() : false;
+    const int user_width = loaded_json["UI"].contains("width") ? loaded_json["UI"]["width"].get<int>() : 800;
+    const int user_height = loaded_json["UI"].contains("height") ? loaded_json["UI"]["height"].get<int>() : 600;
 
     namespace Tabs {
         const bool show_grid = loaded_json["UI"]["Tabs"]["show_grid"];
@@ -169,7 +198,6 @@ namespace UIObjects {
         // if playback is stopped, do you want to delete all the previously
         // visualized notes received from host?
         const bool deletePreviousIncomingMidiMessagesOnRestart = loaded_json["UI"]["MidiInVisualizer"]["deletePreviousIncomingMidiMessagesOnRestart"];
-
     }
 
     namespace GeneratedContentVisualizer
@@ -288,7 +316,7 @@ const double waitTimeBtnIters{
 
 namespace thread_configurations::APVTSMediatorThread {
 // wait time between iterations in ms
-const double waitTimeBtnIters{0.5};
+const double waitTimeBtnIters{1};
 }
 // ======================================================================================
 // ==================       QUEUE  Settings                  ============================

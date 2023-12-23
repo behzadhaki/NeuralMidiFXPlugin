@@ -7,7 +7,7 @@ target_sources(${BaseTargetName} PRIVATE
         ../Source/NeuralMidiFXPlugin/PluginEditor.cpp
         ../Source/DeploymentThreads/DeploymentThread.cpp
         ../Source/Includes/colored_cout.cpp
-        Deploy.cpp
+        deploy.h
         settings.json
         )
 

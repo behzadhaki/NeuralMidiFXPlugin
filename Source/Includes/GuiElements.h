@@ -5,19 +5,66 @@
 #pragma once
 
 
+#include <utility>
+
 #include "GuiParameters.h"
 #include "MidiDisplayWidget.h"
 #include "AudioDisplayWidget.h"
+#include "TriangleSliders.h"
 
 using namespace std;
+
+// ==================== Custom Components ====================
+template <typename ComponentType>
+class ComponentWithHoverText : public ComponentType {
+public:
+    juce::Label* hoverText{nullptr};
+    juce::String hoverTextString;
+    juce::String label;
+    bool show_label = true;
+
+    ComponentWithHoverText(): ComponentType() {}
+
+    void init(juce::Label* hoverText_, json sliderJson_) {
+        hoverTextString = sliderJson_.contains("info") ? sliderJson_["info"].get<std::string>() : "";
+        hoverText = hoverText_;
+        label = sliderJson_["label"].get<std::string>();
+        show_label = sliderJson_.contains("show_label") ? sliderJson_["show_label"].get<bool>() : true;
+    }
+
+    void mouseMove(const juce::MouseEvent& /*event*/) override {
+        if (hoverText != nullptr) {
+            hoverText->setVisible(true);
+        }
+        juce::String text_;
+        if constexpr (std::is_same<ComponentType, juce::Slider>::value) {
+            text_ = label + " | " + juce::String(this->getValue(), 2) + " | " + hoverTextString;
+        } else if constexpr (std::is_same<ComponentType, juce::Label>::value) {
+            text_ = hoverTextString;
+        } else {
+            text_ = label + " | " + hoverTextString;
+        }
+        hoverText->setText(text_, juce::dontSendNotification);
+    }
+
+    void mouseExit(const juce::MouseEvent& /*event*/) override {
+        if (hoverText != nullptr) {
+            hoverText->setText("", juce::dontSendNotification);
+        }
+    }
+};
+
+// ==================== GUI ELEMENTS ====================
 
 // Creates the layout for a single tab
 class ParameterComponent : public juce::Button::Listener,
                            public juce::Component {
 public:
 
-    explicit ParameterComponent(tab_tuple tabTuple) {
+    explicit ParameterComponent(tab_tuple tabTuple, juce::Label *sharedHoverText_ = nullptr) {
         setInterceptsMouseClicks(false, true);
+
+        sharedHoverText = sharedHoverText_;
 
         // Separate the larger tuple into a separate tuple for each category of UI elements
         tabName = std::get<0>(tabTuple);
@@ -28,11 +75,15 @@ public:
         comboBoxesList = std::get<5>(tabTuple);
         midiDisplayList = std::get<6>(tabTuple);
         audioDisplayList = std::get<7>(tabTuple);
+        labelsList = std::get<8>(tabTuple);
+        linesList = std::get<9>(tabTuple);
+        triangleSlidersList = std::get<10>(tabTuple);
 
         numButtons = buttonsList.size();
     }
 
-    void generateGuiElements(juce::Rectangle<int> paramsArea, juce::AudioProcessorValueTreeState *apvtsPointer_) {
+    void generateGuiElements(juce::Rectangle<int> paramsArea,
+                             juce::AudioProcessorValueTreeState *apvtsPointer_) {
         setSize(paramsArea.getWidth(), paramsArea.getHeight());
         //
         apvtsPointer = apvtsPointer_;
@@ -43,8 +94,45 @@ public:
         std::vector<std::string> buttonParamIDS;
         std::vector<std::string> hsliderParamIDS;
 
+        for (const auto &lineJson: linesList) {
+            lineStartPoints.emplace_back(lineJson["start"].get<std::string>());
+            lineEndPoints.emplace_back(lineJson["end"].get<std::string>());
+        }
+
+        for (const auto &labelJson: labelsList) {
+            juce::Label *newLabel = generateLabel(labelJson);
+            labelsTopLeftCorners.emplace_back(labelJson["topLeftCorner"].get<std::string>());
+            labelsBottomRightCorners.emplace_back(labelJson["bottomRightCorner"].get<std::string>());
+            labelsArray.add(newLabel);
+            addAndMakeVisible(newLabel);
+        }
+
+        for (const auto &midiDisplayJson: midiDisplayList) {
+            MidiVisualizer *newMidiVisualizer = generateMidiVisualizer(midiDisplayJson);
+            midiDisplayTopLeftCorners.emplace_back(midiDisplayJson["topLeftCorner"].get<std::string>()); // [0]
+            midiDisplayBottomRightCorners.emplace_back(midiDisplayJson["bottomRightCorner"].get<std::string>()); // [1]
+            midiDisplayArray.add(newMidiVisualizer);
+            addAndMakeVisible(newMidiVisualizer);
+        }
+
+        for (const auto &audioDisplayJson: audioDisplayList) {
+            AudioVisualizer *newAudioVisualizer = generateAudioVisualizer(audioDisplayJson);
+            audioDisplayTopLeftCorners.emplace_back(audioDisplayJson["topLeftCorner"].get<std::string>()); // [0]
+            audioDisplayBottomRightCorners.emplace_back(audioDisplayJson["bottomRightCorner"].get<std::string>()); // [1]
+            audioDisplayArray.add(newAudioVisualizer);
+            addAndMakeVisible(newAudioVisualizer);
+        }
+
+        for (const auto &triangleSlidersJson: triangleSlidersList) {
+            TriangleSliders *newTriangleSliders = generateTriangleSliders(triangleSlidersJson);
+            triangleSlidersTopLeftCorners.emplace_back(triangleSlidersJson["topLeftCorner"].get<std::string>());
+            triangleSlidersBottomRightCorners.emplace_back(triangleSlidersJson["bottomRightCorner"].get<std::string>());
+            triangleSlidersArray.add(newTriangleSliders);
+            addAndMakeVisible(newTriangleSliders);
+        }
+
         for (const auto & sliderJson: slidersList) {
-            juce::Slider *newSlider = generateSlider(sliderJson);
+            auto newSlider = generateSlider(sliderJson);
             auto paramID = label2ParamID(sliderJson["label"].get<std::string>());
             sliderAttachmentArray.push_back(std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
                     *apvtsPointer, paramID, *newSlider));
@@ -55,7 +143,7 @@ public:
         }
 
         for (const auto &rotaryJson: rotariesList) {
-            juce::Slider *newRotary = generateRotary(rotaryJson);
+            auto newRotary = generateRotary(rotaryJson);
             auto paramID = label2ParamID(rotaryJson["label"].get<std::string>());
             rotaryAttachmentArray.push_back(std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
                     *apvtsPointer, paramID, *newRotary));
@@ -67,7 +155,7 @@ public:
 
         for (const auto &buttonJson: buttonsList) {
 
-            juce::TextButton *textButton = generateButton(buttonJson);
+            auto textButton = generateButton(buttonJson);
             auto isToggleable = buttonJson["isToggle"].get<bool>();
             // only need a listener for buttons that are not connected to APVTS
 
@@ -88,7 +176,7 @@ public:
         }
 
         for (const auto &sliderJson: hslidersList) {
-            juce::Slider *newSlider = generateSlider(sliderJson, true);
+            auto newSlider = generateSlider(sliderJson);
             auto paramID = label2ParamID(sliderJson["label"].get<std::string>());
             sliderAttachmentArray.push_back(std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
                 *apvtsPointer, paramID, *newSlider));
@@ -99,7 +187,8 @@ public:
         }
 
         for (const auto &comboJson: comboBoxesList) {
-            juce::ComboBox *newComboBox = generateComboBox(comboJson);
+            cout << "comboJson: " << comboJson << endl;
+            auto newComboBox = generateComboBox(comboJson);
             auto paramID = label2ParamID(comboJson["label"].get<std::string>());
             comboBoxAttachmentArray.push_back(std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
                 *apvtsPointer, paramID, *newComboBox));
@@ -117,31 +206,19 @@ public:
             addAndMakeVisible(comboBoxLabelArray.getLast());
         }
 
-        for (const auto &midiDisplayJson: midiDisplayList) {
-            MidiVisualizer *newMidiVisualizer = generateMidiVisualizer(midiDisplayJson);
-            midiDisplayTopLeftCorners.emplace_back(midiDisplayJson["topLeftCorner"].get<std::string>()); // [0]
-            midiDisplayBottomRightCorners.emplace_back(midiDisplayJson["bottomRightCorner"].get<std::string>()); // [1]
-            midiDisplayArray.add(newMidiVisualizer);
-            addAndMakeVisible(newMidiVisualizer);
-        }
-
-        for (const auto &audioDisplayJson: audioDisplayList) {
-            AudioVisualizer *newAudioVisualizer = generateAudioVisualizer(audioDisplayJson);
-            audioDisplayTopLeftCorners.emplace_back(audioDisplayJson["topLeftCorner"].get<std::string>()); // [0]
-            audioDisplayBottomRightCorners.emplace_back(audioDisplayJson["bottomRightCorner"].get<std::string>()); // [1]
-            audioDisplayArray.add(newAudioVisualizer);
-            addAndMakeVisible(newAudioVisualizer);
-        }
-
+        // Resize all the GUI elements
+        resizeGuiElements();
     }
 
-    void resizeGuiElements(juce::Rectangle<int> area) {
+    void resizeGuiElements(/*juce::Rectangle<int> area*/) {
+
+        auto area = getLocalBounds();
 
         //reshape the entire component
         setSize(area.getWidth(), area.getHeight());
 
-        width = (float)getWidth(); // Get the width of the component
-        height = (float)getHeight(); // Get the height of the component
+        width = (float)area.getWidth(); // Get the width of the component
+        height = (float)area.getHeight(); // Get the height of the component
         marginWidth = 0.05f * width; // 5% margin on both sides
         marginHeight = 0.05f * height; // 5% margin on top and bottom
 
@@ -168,7 +245,13 @@ public:
          // AudioDisplays
          resizeAudioDisplays();
 
-         repaint();
+         // Labels
+         resizeLabels();
+
+        // TriangleSliders
+        resizeTriangleSliders();
+
+        repaint();
     }
 
     void paint(Graphics& g) override {
@@ -226,9 +309,19 @@ public:
             }
         }
 
+        if (lineStartPoints.size() == lineEndPoints.size()) {
+            g.setColour(Colours::grey);
+            for (int i = 0; i < lineStartPoints.size(); i++) {
+                auto [startX, startY] = coordinatesFromString(lineStartPoints[i]);
+                auto [endX, endY] = coordinatesFromString(lineEndPoints[i]);
+                g.drawLine(startX, startY, endX, endY, 1.0f);
+            }
+        }
     }
 
-    void resized() override {}
+    void resized() override {
+
+    }
 
     void buttonClicked(juce::Button *button) override {
         // only need to increment button push count when
@@ -245,16 +338,18 @@ public:
         }
     }
 
-    juce::OwnedArray<juce::Slider> sliderArray;
-    juce::OwnedArray<juce::Slider> rotaryArray;
-    juce::OwnedArray<juce::Button> buttonArray;
+    juce::OwnedArray<ComponentWithHoverText<juce::Slider>> sliderArray;
+    juce::OwnedArray<ComponentWithHoverText<juce::Slider>> rotaryArray;
+    juce::OwnedArray<ComponentWithHoverText<juce::TextButton>> buttonArray;
     std::vector<juce::String> buttonParameterIDs;
 
-    juce::OwnedArray<juce::ComboBox> comboBoxArray;
+    juce::OwnedArray<ComponentWithHoverText<juce::ComboBox>> comboBoxArray;
     juce::OwnedArray<juce::Label> comboBoxLabelArray;
 
+    juce::OwnedArray<juce::Label> labelsArray;
     juce::OwnedArray<MidiVisualizer> midiDisplayArray;
     juce::OwnedArray<AudioVisualizer> audioDisplayArray;
+    juce::OwnedArray<TriangleSliders> triangleSlidersArray;
 
 private:
 
@@ -278,6 +373,14 @@ private:
     std::vector<std::string> midiDisplayBottomRightCorners;
     std::vector<std::string> audioDisplayTopLeftCorners;
     std::vector<std::string> audioDisplayBottomRightCorners;
+    std::vector<std::string> labelsTopLeftCorners;
+    std::vector<std::string> labelsBottomRightCorners;
+    std::vector<string> lineStartPoints;
+    std::vector<string> lineEndPoints;
+    std::vector<string> triangleSlidersTopLeftCorners;
+    std::vector<string> triangleSlidersBottomRightCorners;
+
+    juce::Label* sharedHoverText;
 
     std::vector<std::tuple<float, float, float, float, string, string>> componentBorders;
 
@@ -304,88 +407,78 @@ private:
     comboBox_list comboBoxesList;
     midiDisplay_list midiDisplayList;
     audioDisplay_list audioDisplayList;
+    labels_list labelsList;
+    lines_list linesList;
+    triangleSliders_list triangleSlidersList;
 
     size_t numButtons;
 
     int deltaX{};
     int deltaY{};
 
-    static juce::Slider *generateSlider(json sliderJson_, bool isHorizontal = false) {
-        auto *newSlider = new juce::Slider;
-        if (isHorizontal) {
+    ComponentWithHoverText<juce::Slider> *generateSlider(json sliderJson_) {
+        ComponentWithHoverText<juce::Slider> *newSlider = new ComponentWithHoverText<juce::Slider>;
+
+        newSlider->init(sharedHoverText,
+                        sliderJson_);
+
+        if (sliderJson_.contains("horizontal") && sliderJson_["horizontal"].get<bool>()) {
             newSlider->setSliderStyle(juce::Slider::SliderStyle::LinearHorizontal);
         } else {
             newSlider->setSliderStyle(juce::Slider::SliderStyle::LinearVertical);
         }
-        newSlider->setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow,
-                                   true,
-                                   newSlider->getTextBoxWidth(),
-                                   int(newSlider->getHeight()*.2));
 
-        newSlider->setColour(juce::Slider::textBoxBackgroundColourId, juce::Colours::darkgrey);
-        newSlider->setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::black);
-        newSlider->setColour(juce::Slider::textBoxTextColourId, juce::Colours::whitesmoke);
-
-//        std::tie(name, minValue, maxValue, initValue, topleftCorner, bottomrightCorner) = sliderJson_;
-        auto name = sliderJson_["label"].get<std::string>();
         auto minValue = sliderJson_["min"].get<double>();
         auto maxValue = sliderJson_["max"].get<double>();
         auto initValue = sliderJson_["default"].get<double>();
 
-        // Generate labels
-        juce::String str = juce::String(" ") + juce::String(name);
-        newSlider->setTextValueSuffix(str);
+        // Set Name
+        bool showLabel = sliderJson_.contains("show_label") ? sliderJson_["show_label"].get<bool>() : true;
+        if (showLabel) {
+            newSlider->setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow,
+                                       true,
+                                       newSlider->getTextBoxWidth(),
+                                       int(newSlider->getHeight()*.2));
+            newSlider->setColour(juce::Slider::textBoxBackgroundColourId, juce::Colours::darkgrey);
+            newSlider->setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::black);
+            newSlider->setColour(juce::Slider::textBoxTextColourId, juce::Colours::whitesmoke);
 
-        // Set range and initialize values
+            auto name = sliderJson_["label"].get<std::string>();
+            juce::String str = juce::String(" ") + juce::String(name);
+            newSlider->setTextValueSuffix(str);
+            newSlider->setNumDecimalPlacesToDisplay(2);
+
+        } else {
+            newSlider->setTextBoxStyle(juce::Slider::TextEntryBoxPosition::NoTextBox, true, 0, 0);
+        }
+
         newSlider->setRange(minValue, maxValue);
         newSlider->setValue(initValue);
-        newSlider->setNumDecimalPlacesToDisplay(2);
 
         return newSlider;
     }
 
-    static juce::Slider *generateRotary(json rotaryJson) {
-        auto *newRotary = new juce::Slider;
+    ComponentWithHoverText<juce::Slider> *generateRotary(json rotaryJson) {
+        ComponentWithHoverText<juce::Slider> *newRotary = generateSlider(std::move(rotaryJson));
         newRotary->setSliderStyle(juce::Slider::SliderStyle::RotaryHorizontalVerticalDrag);
-
-        newRotary->setTextBoxStyle(
-            juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
-            newRotary->getTextBoxWidth(),
-            int(newRotary->getHeight()*.2));
-
-        newRotary->setColour(juce::Slider::textBoxBackgroundColourId, juce::Colours::darkgrey);
-        newRotary->setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::black);
-        newRotary->setColour(juce::Slider::textBoxTextColourId, juce::Colours::whitesmoke);
-        newRotary->setColour(juce::Slider::rotarySliderFillColourId , juce::Colours::lightskyblue);
-
-        // Retrieve single rotary and its values
-        // std::tie(name, minValue, maxValue, initValue, topleftCorner, bottomrightCorner) = rotaryJson;
-        auto name = rotaryJson["label"].get<std::string>();
-        auto minValue = rotaryJson["min"].get<double>();
-        auto maxValue = rotaryJson["max"].get<double>();
-        auto initValue = rotaryJson["default"].get<double>();
-
-        // Set Name
-        juce::String str = juce::String(" ") + juce::String(name);
-        newRotary->setTextValueSuffix(str);
-
-        // Set range and initialize values
-        newRotary->setRange(minValue, maxValue);
-        newRotary->setValue(initValue);
-        newRotary->setNumDecimalPlacesToDisplay(2);
-
+        // set rotary knob color
         return newRotary;
     }
 
-    static juce::TextButton *generateButton(json buttonJson) {
-        auto *newButton = new juce::TextButton;
+    ComponentWithHoverText<juce::TextButton> *generateButton(json buttonJson) {
+        ComponentWithHoverText<juce::TextButton> *newButton = new ComponentWithHoverText<juce::TextButton>;
+        newButton->init(sharedHoverText,
+                        buttonJson);
 
         // Obtain button info including text
         auto name = buttonJson["label"].get<std::string>();
         auto isToggleable = buttonJson["isToggle"].get<bool>();
 
-        juce::String buttonText = juce::String(" ") + juce::String(name);
-        newButton->setButtonText(buttonText);
+        if (buttonJson.contains("show_label") ? buttonJson["show_label"].get<bool>() : true) {
+            juce::String buttonText = juce::String(" ") + juce::String(name);
+            newButton->setButtonText(buttonText);
+            newButton->setColour(juce::TextButton::ColourIds::textColourOnId, juce::Colours::black);
+        }
 
         // Create toggle button if second value in tuple is true
         if (isToggleable) {
@@ -393,13 +486,15 @@ private:
         }
 
         newButton->setColour(juce::TextButton::ColourIds::buttonOnColourId, juce::Colours::lightblue);
-        newButton->setColour(juce::TextButton::ColourIds::textColourOnId, juce::Colours::black);
 
         return newButton;
     }
 
-    static juce::ComboBox *generateComboBox(json comboBoxJson) {
-        auto *newComboBox = new juce::ComboBox;
+    ComponentWithHoverText<juce::ComboBox> *generateComboBox(json comboBoxJson) {
+        cout << "Creating ComboBox" << endl;
+        ComponentWithHoverText<juce::ComboBox> *newComboBox = new ComponentWithHoverText<juce::ComboBox>;
+        newComboBox->init(sharedHoverText,
+                          comboBoxJson);
 
         // Obtain comboBox info including text
         auto name = comboBoxJson["label"].get<std::string>();
@@ -407,23 +502,24 @@ private:
         newComboBox->setTextWhenNothingSelected(comboBoxText);
 
         // Obtain comboBox options
-        auto comboBoxOptions = comboBoxJson["options"].get<std::vector<std::string>>();
+        auto comboBoxOptions = comboBoxJson["items"].get<std::vector<std::string>>();
         int c_ = 1;
         for (auto &option : comboBoxOptions) {
             newComboBox->addItem(option, c_);
             c_++;
         }
-
+        cout << "ComboBox created " << endl;
         return newComboBox;
     }
 
-    static MidiVisualizer *generateMidiVisualizer(json midiDisplayJson) {
+    MidiVisualizer *generateMidiVisualizer(json midiDisplayJson) {
         auto label = midiDisplayJson["label"].get<std::string>();
         auto allowToDragOutAsMidiFile = midiDisplayJson["allowToDragOutAsMidi"].get<bool>();
         auto allowToDragInMidiFile = midiDisplayJson["allowToDragInMidi"].get<bool>();
         auto needsPlayhead = midiDisplayJson["needsPlayhead"].get<bool>();
 
-        auto *newMidiVisualizer = new MidiVisualizer{needsPlayhead, label};
+        auto *newMidiVisualizer = new MidiVisualizer{needsPlayhead, label, sharedHoverText};
+        newMidiVisualizer->info = midiDisplayJson.contains("info") ? midiDisplayJson["info"].get<std::string>() : "";
 
         newMidiVisualizer->enableDragInMidi(allowToDragInMidiFile);
         newMidiVisualizer->enableDragOutAsMidi(allowToDragOutAsMidiFile);
@@ -440,13 +536,14 @@ private:
         return newMidiVisualizer;
     }
 
-    static AudioVisualizer *generateAudioVisualizer(json audioDisplayJson) {
+    AudioVisualizer *generateAudioVisualizer(json audioDisplayJson) {
         auto label = audioDisplayJson["label"].get<std::string>();
         auto allowToDragOutAsAudioFile = audioDisplayJson["allowToDragOutAsAudio"].get<bool>();
         auto allowToDragInAudioFile = audioDisplayJson["allowToDragInAudio"].get<bool>();
         auto needsPlayhead = audioDisplayJson["needsPlayhead"].get<bool>();
 
-        auto *newAudioVisualizer = new AudioVisualizer{needsPlayhead, label};
+        auto *newAudioVisualizer = new AudioVisualizer{needsPlayhead, label, sharedHoverText};
+        newAudioVisualizer->info = audioDisplayJson.contains("info") ? audioDisplayJson["info"].get<std::string>() : "";
 
         newAudioVisualizer->enableDragInAudio(allowToDragInAudioFile);
         newAudioVisualizer->enableDragOutAsAudio(allowToDragOutAsAudioFile);
@@ -463,12 +560,36 @@ private:
         return newAudioVisualizer;
     }
 
+    TriangleSliders *generateTriangleSliders(json triangleSlidersJson) {
+        auto *newTriangleSliders = new TriangleSliders{
+            triangleSlidersJson, apvtsPointer, sharedHoverText};
+        return newTriangleSliders;
+    }
+
+    juce::Label *generateLabel(json labelJson) {
+        auto *newLabel = new ComponentWithHoverText<juce::Label>;
+        newLabel->init(sharedHoverText,
+                       labelJson);
+
+        // Obtain label info including text
+        auto name = labelJson["label"].get<std::string>();
+        juce::String labelText = juce::String(" ") + juce::String(name);
+        newLabel->setText(labelText, juce::dontSendNotification);
+        newLabel->setJustificationType(juce::Justification::centred);
+        auto fontSize = labelJson.contains("font_size") ? labelJson["font_size"].get<float>() : 12.0f;
+        newLabel->setFont(juce::Font(fontSize, juce::Font::bold));
+        return newLabel;
+    }
+
     void resizeSliders() {
         int slider_ix = 0;
         componentBorders.clear();
         for (auto *comp: sliderArray) {
-            comp->setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
-                                  comp->getTextBoxWidth(), int(comp->getHeight()*.2));
+            if (comp->show_label) {
+                comp->setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
+                                      comp->getTextBoxWidth(),
+                                      int(comp->getHeight()*.2));
+            }
 
             auto [topLeftX, topLeftY] = coordinatesFromString(sliderTopLeftCorners[slider_ix]);
             auto [bottomRightX, bottomRightY] = coordinatesFromString(sliderBottomRightCorners[slider_ix]);
@@ -496,9 +617,12 @@ private:
         int rotary_ix = 0;
         for (auto *comp: rotaryArray)
         {
-            comp->setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
-                                  comp->getTextBoxWidth(),
-                                  int(comp->getHeight()*.2));
+            if (comp->show_label) {
+                comp->setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow, true,
+                                      comp->getTextBoxWidth(),
+                                      int(comp->getHeight()*.2));
+                // set fo
+            }
 
             auto [topLeftX, topLeftY] =
                 coordinatesFromString(rotaryTopLeftCorners[rotary_ix]);
@@ -628,6 +752,57 @@ private:
 
             audioDisplay_ix++;
         }
+    }
+
+    void resizeLabels() {
+        int label_ix = 0;
+        for (auto *comp: labelsArray) {
+            auto [topLeftX, topLeftY] = coordinatesFromString(labelsTopLeftCorners[label_ix]);
+            auto [bottomRightX, bottomRightY] = coordinatesFromString(labelsBottomRightCorners[label_ix]);
+
+            auto x = topLeftX - 2.0f;
+            auto y = topLeftY - 2.0f;
+            width = (bottomRightX - topLeftX) + 4.0f;
+            height = (bottomRightY - topLeftY) + 4.0f;
+
+            comp->setBounds((int)x, (int)y, (int)width, (int)height);
+
+            if (UIObjects::Tabs::draw_borders_for_components) {
+                string tl_label = labelsTopLeftCorners[label_ix];
+                string br_label = labelsBottomRightCorners[label_ix];
+                auto border = std::tuple<float, float, float, float, string, string>(
+                    x, y, width, height, tl_label, br_label);
+                componentBorders.emplace_back(border);
+            }
+
+            comp->setColour(juce::Label::textColourId, juce::Colours::black);
+            label_ix++;
+        }
+    }
+
+    void resizeTriangleSliders() {
+        int triangleSliders_ix = 0;
+        for (auto *comp: triangleSlidersArray) {
+            auto [topLeftX, topLeftY] = coordinatesFromString(triangleSlidersTopLeftCorners[triangleSliders_ix]);
+            auto [bottomRightX, bottomRightY] = coordinatesFromString(triangleSlidersBottomRightCorners[triangleSliders_ix]);
+
+            auto x = topLeftX - 2.0f;
+            auto y = topLeftY - 2.0f;
+            width = (bottomRightX - topLeftX) + 4.0f;
+            height = (bottomRightY - topLeftY) + 4.0f;
+
+            comp->setBounds((int)x, (int)y, (int)width, (int)height);
+
+            if (UIObjects::Tabs::draw_borders_for_components) {
+                string tl_label = triangleSlidersTopLeftCorners[triangleSliders_ix];
+                string br_label = triangleSlidersBottomRightCorners[triangleSliders_ix];
+                auto border = std::tuple<float, float, float, float, string, string>(
+                    x, y, width, height, tl_label, br_label);
+                componentBorders.emplace_back(border);
+            }
+            triangleSliders_ix++;
+        }
+
     }
 
     std::pair<float, float> coordinatesFromString(const std::string &coordinate) {

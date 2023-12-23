@@ -56,6 +56,20 @@ struct param {
         isChanged = true;   // first time update is always true
     }
 
+    void initializeTriangleSlider(std::string label_, double defaultVal_, double min_, double max_) {
+        label = std::move(label_);
+        value = defaultVal_;
+        paramID = label2ParamID(label);
+        min = min_;
+        max = max_;
+        defaultVal = defaultVal_;
+        isSlider = true;
+        isRotary = false;
+        isButton = false;
+        isToggle = false;
+        isChanged = true; // first time update is always true
+    }
+
     void InitializeButton(json button_json) {
         label = button_json["label"].get<std::string>();
         value = 0;
@@ -76,7 +90,7 @@ struct param {
         value = 1;
         paramID = label2ParamID(label);
         min = 1;
-        comboBoxOptions = comboBox_json["options"].get<std::vector<std::string>>();
+        comboBoxOptions = comboBox_json["items"].get<std::vector<std::string>>();
         max = comboBoxOptions.size();
         defaultVal = 1;
         isSlider = false;
@@ -86,7 +100,7 @@ struct param {
         isComboBox = true;
         isChanged = true; // first time update is always true
     }
-
+    
     bool update(juce::AudioProcessorValueTreeState *apvts) {
         auto new_val_ptr = apvts->getRawParameterValue(paramID);
 
@@ -100,12 +114,11 @@ struct param {
     }
 
     // ensures new paramID is available
-    void assertIfSameLabelOrID(const string& new_string) const {
+    [[nodiscard]] bool assertIfSameLabelOrID(const string& new_string) const {
         if (label == new_string) {
-            std::stringstream ss;
-            std::cout << "Duplicate label found: " << label << std::endl;
-            assert(false && "Duplicate label found");
+            return true;
         }
+        return false;
 
     }
 };
@@ -129,13 +142,12 @@ struct GuiParams {
         }
     }
 
-    bool update(juce::AudioProcessorValueTreeState *apvtsPntr) {
+    bool update() {
         chrono_timed.registerStartTime();
         isChanged = false;
         for (auto &parameter: Parameters) {
             if (parameter.update(apvtsPntr)) {
                 isChanged = true;
-                break;
             }
         }
         return isChanged;
@@ -287,19 +299,24 @@ struct GuiParams {
 private:
     vector<param> Parameters;
     bool isChanged = false;
-    juce::AudioProcessorValueTreeState *apvtsPntr;
+    juce::AudioProcessorValueTreeState *apvtsPntr{};
 
     // uses chrono::system_clock to time parameter arrival to consumption (for debugging only)
     // don't use this for anything else than debugging.
     // used to keep track of when the object was created && when it was accessed
     chrono_timer chrono_timed;
 
-    void assertLabelIsUnique(const string &label_) {
+    [[nodiscard]] bool assertLabelIsUnique(const string &label_) {
         for (const auto &previous_param: Parameters) {
             // if assert is thrown, then you have a
             // duplicate parameter label
-            previous_param.assertIfSameLabelOrID(label_);
+
+            if (previous_param.assertIfSameLabelOrID(label_)) {
+                return false;
+            }
         }
+
+        return true;
     }
 
     void construct() {
@@ -314,45 +331,69 @@ private:
             auto buttonsList = std::get<3>(tab_list);
             auto vslidersList = std::get<4>(tab_list);
             auto comboBoxesList = std::get<5>(tab_list);
+            auto triangleSlidersList = std::get<10>(tab_list);
 
             for (const auto &slider_json: slidersList) {
                 auto label = slider_json["label"].get<std::string>();
-                assertLabelIsUnique(label);
-                auto param_ = param();
-                param_.InitializeSlider(slider_json, true);
-                Parameters.emplace_back(param_);
+                if (assertLabelIsUnique(label)) {
+                    auto param_ = param();
+                    param_.InitializeSlider(slider_json, true);
+                    Parameters.emplace_back(param_);
+                }
             }
 
             for (const auto &vslider_json: vslidersList) {
                 auto label = vslider_json["label"].get<std::string>();
-                assertLabelIsUnique(label);
-                auto param_ = param();
-                param_.InitializeSlider(vslider_json, true);
-                Parameters.emplace_back(param_);
+                if (assertLabelIsUnique(label)) {
+                    auto param_ = param();
+                    param_.InitializeSlider(vslider_json, true);
+                    Parameters.emplace_back(param_);
+                }
             }
 
             for (const auto &rotary_json: rotariesList) {
                 auto label = rotary_json["label"].get<std::string>();
-                assertLabelIsUnique(label);
-                auto param_ = param();
-                param_.InitializeSlider(rotary_json, false);
-                Parameters.emplace_back(param_);
+                if (assertLabelIsUnique(label)) {
+                    auto param_ = param();
+                    param_.InitializeSlider(rotary_json, false);
+                    Parameters.emplace_back(param_);
+                }
             }
 
             for (const auto &button_json: buttonsList) {
                 std::string label = button_json["label"].get<std::string>();
-                assertLabelIsUnique(label);
-                auto param_ = param();
-                param_.InitializeButton(button_json);
-                Parameters.emplace_back(param_);
+                if (assertLabelIsUnique(label)) {
+                    auto param_ = param();
+                    param_.InitializeButton(button_json);
+                    Parameters.emplace_back(param_);
+                }
             }
 
             for (const auto &comboBox_json: comboBoxesList) {
                 std::string label = comboBox_json["label"].get<std::string>();
-                assertLabelIsUnique(label);
-                auto param_ = param();
-                param_.InitializeCombobox(comboBox_json);
-                Parameters.emplace_back(param_);
+                if (assertLabelIsUnique(label)) {
+                    auto param_ = param();
+                    param_.InitializeCombobox(comboBox_json);
+                    Parameters.emplace_back(param_);
+                }
+            }
+
+            for (const auto &triangleSlider_json: triangleSlidersList) {
+                std::string DistanceFromA_Label = triangleSlider_json["DistanceFromA_Label"].get<std::string>();
+                std::string ClosenessToC_Label = triangleSlider_json["ClosenessToC_Label"].get<std::string>();
+
+                if (assertLabelIsUnique(DistanceFromA_Label)) {
+                    auto param_ = param();
+                    param_.initializeTriangleSlider(DistanceFromA_Label, 0.0f, 0.0f, 1.0f);
+                    Parameters.emplace_back(param_);
+                }
+
+                if (assertLabelIsUnique(ClosenessToC_Label)) {
+                    auto param_ = param();
+                    param_.initializeTriangleSlider(ClosenessToC_Label, 0.5, 0, 1);
+                    Parameters.emplace_back(param_);
+                }
+
             }
         }
     }
