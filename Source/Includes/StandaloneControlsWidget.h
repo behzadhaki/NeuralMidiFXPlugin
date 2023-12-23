@@ -1,12 +1,13 @@
 #pragma once
 
 
-class StandaloneTempoMeterWidget : public juce::Component,
+class StandaloneControlsWidget
+    : public juce::Component,
                                    private juce::Label::Listener,
                                    public juce::Slider::Listener {
 public:
 
-    explicit StandaloneTempoMeterWidget(juce::AudioProcessorValueTreeState& vts)
+    explicit StandaloneControlsWidget(juce::AudioProcessorValueTreeState& vts)
         : apvts(vts) {
 
         // Set up the labels
@@ -57,6 +58,7 @@ public:
         playButton.setClickingTogglesState(true);
         playButton.setColour(juce::TextButton::ColourIds::buttonOnColourId, juce::Colours::lightblue);
         playButton.setColour(juce::TextButton::ColourIds::textColourOnId, juce::Colours::black);
+
         addAndMakeVisible(playButton);
 
         recordButton.setButtonText("Rec");
@@ -85,11 +87,13 @@ public:
 
         // leave out 20% on the left
         auto empty_area = area.removeFromLeft(area.getWidth() / 5);
-        auto w = empty_area.getWidth() / 4;
-        empty_area.removeFromLeft(w);
-        playButton.setBounds(empty_area.removeFromLeft(w));
-        empty_area.removeFromLeft(w);
-        recordButton.setBounds(empty_area.removeFromLeft(w));
+        auto w = empty_area.getWidth() / 6;
+
+        playButton.setBounds(empty_area.removeFromLeft(2*w));
+        recordButton.setBounds(empty_area.removeFromRight(playButton.getWidth()));
+
+        playButton.changeWidthToFitText();
+        recordButton.changeWidthToFitText();
 
         // tempo area
         auto tempoArea = area.removeFromLeft(area.getWidth() / 2);

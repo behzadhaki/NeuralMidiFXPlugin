@@ -229,13 +229,15 @@
                             "label": "Record",
                             "isToggle": true,
                             "topLeftCorner": "Bb",
-                            "bottomRightCorner": "Dd"
+                            "bottomRightCorner": "Dd",
+                            "exclude_from_presets": true
                         },
                         {
                             "label": "Overdub",
                             "isToggle": true,
                             "topLeftCorner": "Be",
-                            "bottomRightCorner": "Dg"
+                            "bottomRightCorner": "Dg",
+                            "exclude_from_presets": true
                         },
                         {
                             "label": "Clear Groove",
@@ -875,7 +877,6 @@
 
                 {
                     "name": "Midi Mappings",
-                    "sliders": [],
                     "rotaries": [
                         {
                             "label": "Kick",
@@ -958,9 +959,31 @@
                             "bottomRightCorner": "Pz",
                             "show_label": true
                         }
+                    ]
+                },
+
+                {
+                    "name": "AudioDisplay",
+                    "AudioDisplays": [
+                        {
+                            "label": "AudioDisplay",
+                            "topLeftCorner": "Aa",
+                            "bottomRightCorner": "Kz",
+                            "allowToDragOutAsAudio": true,
+                            "allowToDragInAudio": true,
+                            "needsPlayhead": true,
+                            "PlayheadLoopDurationQuarterNotes": 8.0,
+                            "info": "Audio Visualization"
+                        }
                     ],
-                    "buttons": [],
-                    "MidiDisplays": []
+                    "comboBoxes": [
+                        {
+                            "label": "ComboBox 1",
+                            "topLeftCorner": "Wv",
+                            "bottomRightCorner": "Zz",
+                            "items": [ "Item 1", "Item 2", "Item 3" ]
+                        }
+                    ]
                 }
 
             ]

@@ -620,10 +620,12 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
             auto comboboxJson = comboboxList[i];
 
             auto name = comboboxJson["label"].get<std::string>();
-            auto items = comboboxJson["options"].get<std::vector<std::string>>();
-
+            cout << "name: " << name << endl;
+            auto items = comboboxJson["items"].get<std::vector<std::string>>();
+            cout << "done" << items[0] << " " << items[1] << " " << items[2] << endl;
             auto paramIDstr = label2ParamID(name);
             juce::ParameterID paramID = juce::ParameterID(paramIDstr, version_hint);
+            cout << "done1" << endl;
 
             bool alreadyExists = false;
             for (const auto& param_id : param_ids_so_far) {
