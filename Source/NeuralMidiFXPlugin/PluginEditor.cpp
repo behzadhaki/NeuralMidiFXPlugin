@@ -67,7 +67,7 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
     }
 
     if (shouldActStandalone) {
-        tempoMeterWidget = std::make_unique<StandaloneTempoMeterWidget>(
+        tempoMeterWidget = std::make_unique<StandaloneControlsWidget>(
             NeuralMidiFXPluginProcessorPointer.apvts);
         addAndMakeVisible(*tempoMeterWidget);
     }

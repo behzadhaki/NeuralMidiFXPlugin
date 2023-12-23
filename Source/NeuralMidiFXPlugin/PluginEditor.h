@@ -4,7 +4,7 @@
 #include "../Includes/GuiElements.h"
 #include "../Includes/MidiDisplayWidget.h"
 #include "../Includes/PresetManagerWidget.h"
-#include "../Includes/StandaloneTempoMeterWidget.h"
+#include "../Includes/StandaloneControlsWidget.h"
 
 using namespace std;
 
@@ -31,7 +31,7 @@ public:
 
     // standalone controls Play Button, Record Button, Tempo Rotary, and Loop Button (with attachments)
     // add a juce button amd attachment
-    std::unique_ptr<StandaloneTempoMeterWidget> tempoMeterWidget;
+    std::unique_ptr<StandaloneControlsWidget> tempoMeterWidget;
     unique_ptr<PresetTableComponent> presetManagerWidget;
 
     // shared label for info
