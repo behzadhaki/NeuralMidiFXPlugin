@@ -174,6 +174,7 @@ public:
         APVM2DPL_GuiParams_QuePntr = APVM2DPL_GuiParams_QuePntr_;
 
         guiParamsPntr = make_unique<GuiParams>(APVTSPntr_);
+        APVM2DPL_GuiParams_QuePntr->push(*guiParamsPntr);
 
         startThread();
     }

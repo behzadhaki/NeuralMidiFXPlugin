@@ -132,7 +132,13 @@ struct param {
 //      auto paramID = GuiParams.getParamValue(LabelOnGUi);
 struct GuiParams {
 
-    GuiParams() { construct(); }
+    GuiParams() {
+        construct();
+        for (auto &parameter: Parameters) {
+            parameter.isChanged = true; // make sure on construction, all params are set to changed
+        }
+        setAllChanged();
+    }
 
     explicit GuiParams(juce::AudioProcessorValueTreeState *apvtsPntr_) {
         construct();
@@ -140,6 +146,7 @@ struct GuiParams {
         for (auto &parameter: Parameters) {
             parameter.update(apvtsPntr_);
         }
+        setAllChanged();
     }
 
     bool update() {
@@ -298,7 +305,7 @@ struct GuiParams {
 
 private:
     vector<param> Parameters;
-    bool isChanged = false;
+    bool isChanged = true;
     juce::AudioProcessorValueTreeState *apvtsPntr{};
 
     // uses chrono::system_clock to time parameter arrival to consumption (for debugging only)
@@ -317,6 +324,13 @@ private:
         }
 
         return true;
+    }
+
+    // only to be used in the wrapper! don't use in deploy.h
+    void setAllChanged() {
+        for (auto &parameter: Parameters) {
+            parameter.isChanged = true;
+        }
     }
 
     void construct() {
