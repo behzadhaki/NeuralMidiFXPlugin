@@ -19,11 +19,11 @@ using namespace std;
 struct GenerationsToDisplay {
 private:
     bool policy_accessed_already{false};
-
-public:
     double fs {44100};
     double qpm {-1};
     double playhead_pos {0};
+
+public:
     PlaybackPolicies policy;
     juce::MidiMessageSequence sequence_to_display;
     std::mutex mutex;
@@ -51,6 +51,7 @@ public:
 
     void setPolicy(PlaybackPolicies policy_) {
         std::lock_guard<std::mutex> lock(mutex);
+        policy_accessed_already = false;
         policy = policy_;
     }
 

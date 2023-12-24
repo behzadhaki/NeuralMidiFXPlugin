@@ -681,10 +681,8 @@ private:
                     {
                         int noteNumber = event->message.getNoteNumber();
                         uniquePitches.insert(noteNumber);
-
                         float x = float(event->message.getTimeStamp() / disp_length) *
                                   (float)getWidth();
-
                         float length = 0;
                         for (int j = i + 1; j < track->getNumEvents(); ++j)
                         {

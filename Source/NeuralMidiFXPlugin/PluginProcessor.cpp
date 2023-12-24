@@ -620,12 +620,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
             auto comboboxJson = comboboxList[i];
 
             auto name = comboboxJson["label"].get<std::string>();
-            cout << "name: " << name << endl;
             auto items = comboboxJson["items"].get<std::vector<std::string>>();
-            cout << "done" << items[0] << " " << items[1] << " " << items[2] << endl;
             auto paramIDstr = label2ParamID(name);
             juce::ParameterID paramID = juce::ParameterID(paramIDstr, version_hint);
-            cout << "done1" << endl;
 
             bool alreadyExists = false;
             for (const auto& param_id : param_ids_so_far) {
@@ -817,13 +814,13 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
 
     generationsToDisplay.setFs(fs);
     generationsToDisplay.setQpm(   *Pinfo->getBpm());
-    generationsToDisplay.playhead_pos = *Pinfo->getPpqPosition();
+    generationsToDisplay.setPlayheadPos(*Pinfo->getPpqPosition());
 
     // check if any events are received from the DPL thread
     if (DPL2NMP_GenerationEvent_Que->getNumReady() > 0)
     {
         event = DPL2NMP_GenerationEvent_Que->pop();
-        generationsToDisplay.policy = playbackPolicies;
+        generationsToDisplay.setPolicy( playbackPolicies);
         // update midi message sequence if new one arrived
         if (event->IsNewPlaybackSequence())
         {

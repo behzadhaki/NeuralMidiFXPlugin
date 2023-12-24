@@ -297,7 +297,6 @@ void NeuralMidiFXPluginEditor::timerCallback()
     if (policy_ != std::nullopt) {
         play_policy = *policy_;
         newContent = true;
-
         if (policy_->getLoopDuration() > 0) {
             NeuralMidiFXPluginProcessorPointer_->playbackAnchorMutex.lock();
             LoopStart = NeuralMidiFXPluginProcessorPointer_->TimeAnchor.inQuarterNotes();
