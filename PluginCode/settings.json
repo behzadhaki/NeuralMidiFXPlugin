@@ -421,8 +421,8 @@
                             "label": "Interpolation Area",
                             "topLeftCorner": "Di",
                             "bottomRightCorner": "Nt",
-                            "DistanceFromA_Label": "Interpolate",
-                            "ClosenessToC_Label": "Follow",
+                            "DistanceFromBottomLeftCornerSlider": "Interpolate",
+                            "HeightSlider": "Follow",
                             "ensure_equilateral": true,
                             "info": "Area in which the interpolation happens"
                         }
@@ -979,18 +979,19 @@
                     "comboBoxes": [
                         {
                             "label": "ComboBox 1",
-                            "topLeftCorner": "Wv",
+                            "topLeftCorner": "Kv",
                             "bottomRightCorner": "Zz",
-                            "items": [ "Item 1", "Item 2", "Item 3" ]
+                            "items": [ "Item 1", "Item 2", "Item 3" ],
+                            "info": "ComboBox 1 Info",
+                            "exclude_from_presets": false
                         }
                     ]
                 }
-
             ]
         },
 
         "MidiInVisualizer": {
-            "enable": false,
+            "enable": true,
             "allowToDragInMidi": true,
             "visualizeIncomingMidiFromHost": true,
             "deletePreviousIncomingMidiMessagesOnBackwardPlayhead": true,

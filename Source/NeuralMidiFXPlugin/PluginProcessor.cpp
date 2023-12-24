@@ -647,16 +647,16 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
         for (size_t i = 0; i < numTriangleSliders; ++i) {
             auto json = triangleSlidersList[i];
 
-            if (!json.contains("DistanceFromA_Label") || !json.contains("ClosenessToC_Label")) {
-                cout << "ERROR: Triangle Slider missing DistanceFromA_Label or ClosenessToC_Label" << endl;
+            if (!json.contains("DistanceFromBottomLeftCornerSlider") || !json.contains("HeightSlider")) {
+                cout << "ERROR: Triangle Slider missing DistanceFromBottomLeftCornerSlider or HeightSlider" << endl;
                 continue;
             }
 
-            auto DistanceFromA_Label = json["DistanceFromA_Label"].get<std::string>();
-            auto ClosenessToC_Label = json["ClosenessToC_Label"].get<std::string>();
+            auto DistanceFromBottomLeftCornerSlider = json["DistanceFromBottomLeftCornerSlider"].get<std::string>();
+            auto HeightSlider = json["HeightSlider"].get<std::string>();
 
-            auto paramAIDstr = label2ParamID(DistanceFromA_Label);
-            auto paramBIDstr = label2ParamID(ClosenessToC_Label);
+            auto paramAIDstr = label2ParamID(DistanceFromBottomLeftCornerSlider);
+            auto paramBIDstr = label2ParamID(HeightSlider);
 
             juce::ParameterID paramAID = juce::ParameterID(paramAIDstr, version_hint);
             juce::ParameterID paramBID = juce::ParameterID(paramBIDstr, version_hint);

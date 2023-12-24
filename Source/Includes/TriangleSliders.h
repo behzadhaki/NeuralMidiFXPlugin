@@ -21,7 +21,7 @@ public:
 
         // DistanceFromASlider Attachment and don't display the slider
         auto sl_a_param = label2ParamID(
-            triangleSlidersJson["DistanceFromA_Label"].get<std::string>());
+            triangleSlidersJson["DistanceFromBottomLeftCornerSlider"].get<std::string>());
 
         DistanceFromASliderAttachment = std::make_unique<
             juce::AudioProcessorValueTreeState::SliderAttachment>(
@@ -29,7 +29,7 @@ public:
 
         // DistanceFromCSlider Attachment and don't display the slider
         auto sl_c_param = label2ParamID(
-            triangleSlidersJson["ClosenessToC_Label"].get<std::string>());
+            triangleSlidersJson["HeightSlider"].get<std::string>());
 
         DistanceFromCSliderAttachment = std::make_unique<
             juce::AudioProcessorValueTreeState::SliderAttachment>(
@@ -273,9 +273,9 @@ public:
         ss << std::fixed << std::setprecision(2);
 
         ss << triangleSlidersJson["label"].get<std::string>() << " | ";
-        ss << triangleSlidersJson["DistanceFromA_Label"].get<std::string>() <<
+        ss << triangleSlidersJson["DistanceFromBottomLeftCornerSlider"].get<std::string>() <<
             ": " << DistanceFromASlider.getValue()  << " | ";
-        ss << triangleSlidersJson["ClosenessToC_Label"].get<std::string>() <<
+        ss << triangleSlidersJson["HeightSlider"].get<std::string>() <<
             ": " << DistanceFromCSlider.getValue();
 
         if (triangleSlidersJson.contains("info")) {

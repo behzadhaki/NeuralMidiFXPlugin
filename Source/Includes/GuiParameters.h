@@ -379,18 +379,18 @@ private:
             }
 
             for (const auto &triangleSlider_json: triangleSlidersList) {
-                std::string DistanceFromA_Label = triangleSlider_json["DistanceFromA_Label"].get<std::string>();
-                std::string ClosenessToC_Label = triangleSlider_json["ClosenessToC_Label"].get<std::string>();
+                std::string DistanceFromBottomLeftCornerSlider = triangleSlider_json["DistanceFromBottomLeftCornerSlider"].get<std::string>();
+                std::string HeightSlider = triangleSlider_json["HeightSlider"].get<std::string>();
 
-                if (assertLabelIsUnique(DistanceFromA_Label)) {
+                if (assertLabelIsUnique(DistanceFromBottomLeftCornerSlider)) {
                     auto param_ = param();
-                    param_.initializeTriangleSlider(DistanceFromA_Label, 0.0f, 0.0f, 1.0f);
+                    param_.initializeTriangleSlider(DistanceFromBottomLeftCornerSlider, 0.0f, 0.0f, 1.0f);
                     Parameters.emplace_back(param_);
                 }
 
-                if (assertLabelIsUnique(ClosenessToC_Label)) {
+                if (assertLabelIsUnique(HeightSlider)) {
                     auto param_ = param();
-                    param_.initializeTriangleSlider(ClosenessToC_Label, 0.5, 0, 1);
+                    param_.initializeTriangleSlider(HeightSlider, 0.5, 0, 1);
                     Parameters.emplace_back(param_);
                 }
 
