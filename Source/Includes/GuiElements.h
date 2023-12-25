@@ -518,7 +518,7 @@ private:
         auto allowToDragInMidiFile = midiDisplayJson["allowToDragInMidi"].get<bool>();
         auto needsPlayhead = midiDisplayJson["needsPlayhead"].get<bool>();
 
-        auto *newMidiVisualizer = new MidiVisualizer{needsPlayhead, label, sharedHoverText};
+        auto *newMidiVisualizer = new MidiVisualizer{midiDisplayJson, sharedHoverText};
         newMidiVisualizer->info = midiDisplayJson.contains("info") ? midiDisplayJson["info"].get<std::string>() : "";
 
         newMidiVisualizer->enableDragInMidi(allowToDragInMidiFile);

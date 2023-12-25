@@ -272,10 +272,12 @@
                             "topLeftCorner": "Fd",
                             "bottomRightCorner": "Lg",
                             "allowToDragOutAsMidi": true,
-                            "allowToDragInMidi": false,
+                            "allowToDragInMidi": true,
                             "needsPlayhead": true,
                             "PlayheadLoopDurationQuarterNotes": 8.0,
-                            "info": "Accompaniment Pattern Visualization"
+                            "info": "Accompaniment Pattern Visualization",
+                            "custom_voices": ["Kick", "Snare", "Chat", "Ohat", "Low Tom", "Mid Tom", "High Tom", "Crash", "Ride"],
+                            "custom_pitches": [36, 38, 42, 46, 41, 43, 45, 49, 51]
                         },
                         {
                             "label": "MidiVisualizerGroove",

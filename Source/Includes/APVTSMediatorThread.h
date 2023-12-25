@@ -16,82 +16,96 @@ inline std::vector<juce::ParameterID> get_preset_excluded_params() {
     auto loaded_json_ = load_settings_json();
     for (const auto& tabJson: loaded_json_["UI"]["Tabs"]["tabList"])
     {
-        for (const auto& sliderJson: tabJson["sliders"])
-        {
-            if (sliderJson.contains("exclude_from_presets"))
+        if (tabJson.contains("sliders")) {
+            for (const auto& sliderJson: tabJson["sliders"])
             {
-                if (sliderJson["exclude_from_presets"].get<bool>())
+                if (sliderJson.contains("exclude_from_presets"))
                 {
-                    excluded_params.push_back(sliderJson["label"].get<std::string>());
+                    if (sliderJson["exclude_from_presets"].get<bool>())
+                    {
+                        excluded_params.push_back(sliderJson["label"].get<std::string>());
+                    }
                 }
             }
         }
 
-        for (const auto& rotaryJson: tabJson["rotaries"])
-        {
-            if (rotaryJson.contains("exclude_from_presets"))
+        if (tabJson.contains("rotaries")) {
+            for (const auto& rotaryJson: tabJson["rotaries"])
             {
-                if (rotaryJson["exclude_from_presets"].get<bool>())
+                if (rotaryJson.contains("exclude_from_presets"))
                 {
-                    excluded_params.push_back(rotaryJson["label"].get<std::string>());
+                    if (rotaryJson["exclude_from_presets"].get<bool>())
+                    {
+                        excluded_params.push_back(rotaryJson["label"].get<std::string>());
+                    }
                 }
             }
         }
 
-        for (const auto& buttonJson: tabJson["buttons"])
-        {
-            if (buttonJson.contains("exclude_from_presets"))
+        if (tabJson.contains("buttons")) {
+            for (const auto& buttonJson: tabJson["buttons"])
             {
-                if (buttonJson["exclude_from_presets"].get<bool>())
+                if (buttonJson.contains("exclude_from_presets"))
                 {
-                    excluded_params.push_back(buttonJson["label"].get<std::string>());
+                    if (buttonJson["exclude_from_presets"].get<bool>())
+                    {
+                        excluded_params.push_back(buttonJson["label"].get<std::string>());
+                    }
                 }
             }
         }
 
-        for (const auto& hsliderJson: tabJson["hsliders"])
-        {
-            if (hsliderJson.contains("exclude_from_presets"))
+        if (tabJson.contains("hsliders")) {
+            for (const auto& hsliderJson: tabJson["hsliders"])
             {
-                if (hsliderJson["exclude_from_presets"].get<bool>())
+                if (hsliderJson.contains("exclude_from_presets"))
                 {
-                    excluded_params.push_back(hsliderJson["label"].get<std::string>());
+                    if (hsliderJson["exclude_from_presets"].get<bool>())
+                    {
+                        excluded_params.push_back(hsliderJson["label"].get<std::string>());
+                    }
                 }
             }
         }
 
-        for (const auto& comboBoxJson: tabJson["comboBoxes"])
-        {
-            if (comboBoxJson.contains("exclude_from_presets"))
+        if (tabJson.contains("comboBoxes")) {
+            for (const auto& comboBoxJson: tabJson["comboBoxes"])
             {
-                if (comboBoxJson["exclude_from_presets"].get<bool>())
+                if (comboBoxJson.contains("exclude_from_presets"))
                 {
-                    excluded_params.push_back(
-                        comboBoxJson["label"].get<std::string>());
+                    if (comboBoxJson["exclude_from_presets"].get<bool>())
+                    {
+                        excluded_params.push_back(
+                                comboBoxJson["label"].get<std::string>());
+                    }
                 }
             }
         }
 
-        for (const auto& midiDisplayJson: tabJson["MidiDisplays"])
-        {
-            if (midiDisplayJson.contains("exclude_from_presets"))
+        if (tabJson.contains("MidiDisplays")) {
+            for (const auto& midiDisplayJson: tabJson["MidiDisplays"])
             {
-                if (midiDisplayJson["exclude_from_presets"].get<bool>())
+                if (midiDisplayJson.contains("exclude_from_presets"))
                 {
-                    excluded_params.push_back(
-                        midiDisplayJson["label"].get<std::string>());
+                    if (midiDisplayJson["exclude_from_presets"].get<bool>())
+                    {
+                        excluded_params.push_back(
+                                midiDisplayJson["label"].get<std::string>());
+                    }
                 }
             }
         }
 
-        for (const auto& audioDisplayJson: tabJson["AudioDisplays"])
-        {
-            if (audioDisplayJson.contains("exclude_from_presets"))
+        if (tabJson.contains("AudioDisplays")) {
+            for (const auto& audioDisplayJson: tabJson["AudioDisplays"])
             {
-                if (audioDisplayJson["exclude_from_presets"].get<bool>())
+                if (audioDisplayJson.contains("exclude_from_presets"))
                 {
-                    excluded_params.push_back(
-                        audioDisplayJson["label"].get<std::string>());
+                    if (audioDisplayJson["exclude_from_presets"].get<bool>())
+                    {
+                        excluded_params.push_back(
+                                audioDisplayJson["label"].get<std::string>());
+                    }
                 }
             }
         }
