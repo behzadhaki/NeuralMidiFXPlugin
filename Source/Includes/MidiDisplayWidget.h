@@ -835,7 +835,11 @@ public:
         {
             int numRows = int(custom_noteNames.size());
             float rowHeight = (float)getHeight() / (float)numRows;
-            g.setFont(juce::Font((float) getHeight() / 10.0f)); // Font size
+
+            auto fs = (float) getHeight() / float(numRows + 1);
+            fs = std::min(fs, 8.0f);
+
+            g.setFont(juce::Font(fs)); // Font size
 
             for (int i = 0; i < numRows; ++i) {
                 float y = float(numRows - 1 - i) * rowHeight;
@@ -869,7 +873,10 @@ public:
 
     void update_noteNames(vector<std::string> noteNames_) {
         custom_noteNames = noteNames_;
-        custom_noteNames.push_back("Other");
+        if (custom_noteNames[0] != "Onset") {
+            custom_noteNames.push_back("Other");
+        }
+
         repaint();
     }
 
@@ -998,19 +1005,12 @@ public:
                 return;
             }
 
-            // draw a triangle
-            juce::Path trianglePath;
-            auto bounds = getLocalBounds().toFloat();
-            trianglePath.startNewSubPath(bounds.getX(), bounds.getY());
-            trianglePath.lineTo(bounds.getCentreX()/2, bounds.getCentreY());
-            trianglePath.lineTo(bounds.getX(), bounds.getBottom());
-
-            // Fill the triangle and use velocity for alpha
-            g.fillPath(trianglePath);
-
-            // Optionally, draw a black border around the triangle if needed
+            // draw a circle
+            g.fillEllipse(getLocalBounds().toFloat());
+            // Draw a black border around the circle
             g.setColour(juce::Colours::black);
-            g.strokePath(trianglePath, juce::PathStrokeType(0.2f));
+            g.drawEllipse(getLocalBounds().toFloat(), 1);
+
         }
     }
 
@@ -1110,7 +1110,6 @@ public:
         resized();
     }
 
-
     // paints the sequence
     void paint(juce::Graphics& g) override {
 
@@ -1188,7 +1187,7 @@ public:
                 noteComponent->setBounds((int)x, (int)y,
                                          (int)length, (int)height);
             }
-        } else {
+        } else if (!isOnsetVis){
             for (auto& noteComponent : noteComponents) {
                 float x = noteComponent->start_time / SequenceDuration * (float)getWidth();
                 float length;
@@ -1204,6 +1203,21 @@ public:
                 noteComponent->setBounds((int)x, (int)y,
                                          (int)length, (int)height);
             }
+        } else {
+            for (auto& noteComponent : noteComponents) {
+                noteComponent->isOnsetOnly = true;
+
+                // provide a square for the noteComponent
+                // the square height must correspond to the velocity
+                float x = noteComponent->start_time / SequenceDuration * (float)getWidth();
+                float y = float(1.0 - noteComponent->velocity) * (float)getHeight();
+                int edge = 5;
+
+                noteComponent->setBounds((int)x, (int)y,
+                                         edge, edge);
+
+            }
+
         }
     }
 
@@ -1407,8 +1421,19 @@ public:
         return SequenceDuration;
     }
 
-    void setCustomPitches(vector<int> custom_pitches_) {
+    void setCustomPitches(vector<int> custom_pitches_, bool isOnsetVis_=false) {
         custom_pitches.clear();
+
+        isOnsetVis = isOnsetVis_;
+
+        if (isOnsetVis) {
+            for (int i = 0; i < 129; ++i) {
+                custom_pitches[i] = 0;
+            }
+            custom_rows = 1;
+            return;
+        }
+
         int row = 0;
         for (auto& pitch : custom_pitches_) {
             custom_pitches[pitch] = row;
@@ -1453,6 +1478,7 @@ private:
     }
     map<int, int> custom_pitches; // pitch, row
     int custom_rows = 0;
+    bool isOnsetVis = false;
 };
 
 class MidiVisualizer: public juce::Component, juce::Timer {
@@ -1474,9 +1500,21 @@ public:
         addAndMakeVisible(pianoRollComponent);
         addAndMakeVisible(pianoKeysComponent);
 
-        if (midiDisplayJson.contains("custom_voices") && midiDisplayJson["custom_voices"].is_array() &&
-                midiDisplayJson.contains("custom_pitches") && midiDisplayJson["custom_pitches"].is_array()) {
+        // check if onset visualizer
+        bool isOnsetVis = false;
+        if (midiDisplayJson.contains("isOnsetVisualizer")) {
+            isOnsetVis = midiDisplayJson["isOnsetVisualizer"].get<bool>();
+        }
 
+        // check if there are custom note names
+        bool hasCustomNoteNames = false;
+        if (midiDisplayJson.contains("custom_voices") && midiDisplayJson["custom_voices"].is_array() &&
+                midiDisplayJson.contains("custom_pitches") && midiDisplayJson["custom_pitches"].is_array())
+        {
+            hasCustomNoteNames = true;
+        }
+
+        if (hasCustomNoteNames && !isOnsetVis) {
             // make sure the arrays are the same size
             if (midiDisplayJson["custom_voices"].size() != midiDisplayJson["custom_pitches"].size()) {
                 cout << "[settings.json]: custom_voices and custom_pitches must be the same size for midi display: " << midiDisplayJson["label"].get<std::string>() << endl;
@@ -1487,13 +1525,18 @@ public:
                     custom_voices.push_back(voice);
                     custom_pitches.push_back(pitch);
 
-                    pianoKeysComponent.update_noteNames(custom_voices);
-                    pianoRollComponent.setCustomPitches(custom_pitches);
                 }
+                pianoKeysComponent.update_noteNames(custom_voices);
+                pianoRollComponent.setCustomPitches(custom_pitches);
 
             }
-
         }
+
+        if (isOnsetVis) {
+            pianoKeysComponent.update_noteNames({"Onset"});
+            pianoRollComponent.setCustomPitches({0}, true);
+        }
+
 
         // start timer
         startTimerHz(10);

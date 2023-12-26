@@ -287,7 +287,8 @@
                             "allowToDragInMidi": true,
                             "needsPlayhead": true,
                             "PlayheadLoopDurationQuarterNotes": 8.0,
-                            "info": "Instrumental Groove Visualization"
+                            "info": "Instrumental Groove Visualization",
+                            "isOnsetVisualizer": true
                         }
                     ],
                     "labels": [

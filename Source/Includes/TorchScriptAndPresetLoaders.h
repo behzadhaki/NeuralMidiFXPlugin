@@ -180,7 +180,6 @@ public:
             changeFlags[tensorLabel] = false;  // Reset the flag for this key
             return it->second;
         }
-        cout << "CustomPresetDataDictionary::tensor: Tensor with label " << tensorLabel << " not found" << endl;
         return std::nullopt;
     }
 

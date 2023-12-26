@@ -25,13 +25,10 @@ public:
         bool newPlaybackPolicyShouldBeSent{false};
         bool newPlaybackSequenceGeneratedAndShouldBeSent{false};
 
-        cout << "PluginDeploymentThread::deploy() called " << cnt << " times" << endl;
-
         // make sure to set these flags to true if you want to send new data to the main thread
         return {newPlaybackPolicyShouldBeSent, newPlaybackSequenceGeneratedAndShouldBeSent};
     }
 
 private:
     // add any member variables or methods you need here
-    int cnt = 0;
 };
