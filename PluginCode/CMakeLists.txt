@@ -1,6 +1,6 @@
-project(NMFx_SingleThread VERSION 0.0.1)
+project(NMFx VERSION 0.0.1)
 
-set (BaseTargetName NMFx_SingleThread)
+set (BaseTargetName NMFx)
 
 add_definitions(-DPROJECT_NAME="${BaseTargetName}")
 
@@ -18,8 +18,7 @@ juce_add_plugin("${BaseTargetName}"
         PLUGIN_MANUFACTURER_CODE Juce                #
         PLUGIN_CODE NMFx                             # MUST BE UNIQUE!! If similar to other plugins, conflicts will occur
         FORMATS AU VST3 Standalone
-        PRODUCT_NAME "NMFx_SingleThread")           # Replace with your plugin title
-
+        PRODUCT_NAME "NMFx")           # Replace with your plugin title
 
 
 # DO NOT REMOVE THIS LINE
