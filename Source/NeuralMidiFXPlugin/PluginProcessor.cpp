@@ -620,12 +620,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
             auto comboboxJson = comboboxList[i];
 
             auto name = comboboxJson["label"].get<std::string>();
-            cout << "name: " << name << endl;
             auto items = comboboxJson["items"].get<std::vector<std::string>>();
-            cout << "done" << items[0] << " " << items[1] << " " << items[2] << endl;
             auto paramIDstr = label2ParamID(name);
             juce::ParameterID paramID = juce::ParameterID(paramIDstr, version_hint);
-            cout << "done1" << endl;
 
             bool alreadyExists = false;
             for (const auto& param_id : param_ids_so_far) {
@@ -647,16 +644,16 @@ juce::AudioProcessorValueTreeState::ParameterLayout NeuralMidiFXPluginProcessor:
         for (size_t i = 0; i < numTriangleSliders; ++i) {
             auto json = triangleSlidersList[i];
 
-            if (!json.contains("DistanceFromA_Label") || !json.contains("ClosenessToC_Label")) {
-                cout << "ERROR: Triangle Slider missing DistanceFromA_Label or ClosenessToC_Label" << endl;
+            if (!json.contains("DistanceFromBottomLeftCornerSlider") || !json.contains("HeightSlider")) {
+                cout << "ERROR: Triangle Slider missing DistanceFromBottomLeftCornerSlider or HeightSlider" << endl;
                 continue;
             }
 
-            auto DistanceFromA_Label = json["DistanceFromA_Label"].get<std::string>();
-            auto ClosenessToC_Label = json["ClosenessToC_Label"].get<std::string>();
+            auto DistanceFromBottomLeftCornerSlider = json["DistanceFromBottomLeftCornerSlider"].get<std::string>();
+            auto HeightSlider = json["HeightSlider"].get<std::string>();
 
-            auto paramAIDstr = label2ParamID(DistanceFromA_Label);
-            auto paramBIDstr = label2ParamID(ClosenessToC_Label);
+            auto paramAIDstr = label2ParamID(DistanceFromBottomLeftCornerSlider);
+            auto paramBIDstr = label2ParamID(HeightSlider);
 
             juce::ParameterID paramAID = juce::ParameterID(paramAIDstr, version_hint);
             juce::ParameterID paramBID = juce::ParameterID(paramBIDstr, version_hint);
@@ -817,13 +814,13 @@ void NeuralMidiFXPluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
 
     generationsToDisplay.setFs(fs);
     generationsToDisplay.setQpm(   *Pinfo->getBpm());
-    generationsToDisplay.playhead_pos = *Pinfo->getPpqPosition();
+    generationsToDisplay.setPlayheadPos(*Pinfo->getPpqPosition());
 
     // check if any events are received from the DPL thread
     if (DPL2NMP_GenerationEvent_Que->getNumReady() > 0)
     {
         event = DPL2NMP_GenerationEvent_Que->pop();
-        generationsToDisplay.policy = playbackPolicies;
+        generationsToDisplay.setPolicy( playbackPolicies);
         // update midi message sequence if new one arrived
         if (event->IsNewPlaybackSequence())
         {

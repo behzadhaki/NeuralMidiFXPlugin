@@ -272,10 +272,12 @@
                             "topLeftCorner": "Fd",
                             "bottomRightCorner": "Lg",
                             "allowToDragOutAsMidi": true,
-                            "allowToDragInMidi": false,
+                            "allowToDragInMidi": true,
                             "needsPlayhead": true,
                             "PlayheadLoopDurationQuarterNotes": 8.0,
-                            "info": "Accompaniment Pattern Visualization"
+                            "info": "Accompaniment Pattern Visualization",
+                            "custom_voices": ["Kick", "Snare", "Chat", "Ohat", "Low Tom", "Mid Tom", "High Tom", "Crash", "Ride"],
+                            "custom_pitches": [36, 38, 42, 46, 41, 43, 45, 49, 51]
                         },
                         {
                             "label": "MidiVisualizerGroove",
@@ -285,7 +287,8 @@
                             "allowToDragInMidi": true,
                             "needsPlayhead": true,
                             "PlayheadLoopDurationQuarterNotes": 8.0,
-                            "info": "Instrumental Groove Visualization"
+                            "info": "Instrumental Groove Visualization",
+                            "isOnsetVisualizer": true
                         }
                     ],
                     "labels": [
@@ -421,8 +424,8 @@
                             "label": "Interpolation Area",
                             "topLeftCorner": "Di",
                             "bottomRightCorner": "Nt",
-                            "DistanceFromA_Label": "Interpolate",
-                            "ClosenessToC_Label": "Follow",
+                            "DistanceFromBottomLeftCornerSlider": "Interpolate",
+                            "HeightSlider": "Follow",
                             "ensure_equilateral": true,
                             "info": "Area in which the interpolation happens"
                         }
@@ -979,18 +982,19 @@
                     "comboBoxes": [
                         {
                             "label": "ComboBox 1",
-                            "topLeftCorner": "Wv",
+                            "topLeftCorner": "Kv",
                             "bottomRightCorner": "Zz",
-                            "items": [ "Item 1", "Item 2", "Item 3" ]
+                            "items": [ "Item 1", "Item 2", "Item 3" ],
+                            "info": "ComboBox 1 Info",
+                            "exclude_from_presets": false
                         }
                     ]
                 }
-
             ]
         },
 
         "MidiInVisualizer": {
-            "enable": false,
+            "enable": true,
             "allowToDragInMidi": true,
             "visualizeIncomingMidiFromHost": true,
             "deletePreviousIncomingMidiMessagesOnBackwardPlayhead": true,

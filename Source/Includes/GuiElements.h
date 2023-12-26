@@ -187,7 +187,6 @@ public:
         }
 
         for (const auto &comboJson: comboBoxesList) {
-            cout << "comboJson: " << comboJson << endl;
             auto newComboBox = generateComboBox(comboJson);
             auto paramID = label2ParamID(comboJson["label"].get<std::string>());
             comboBoxAttachmentArray.push_back(std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
@@ -491,7 +490,6 @@ private:
     }
 
     ComponentWithHoverText<juce::ComboBox> *generateComboBox(json comboBoxJson) {
-        cout << "Creating ComboBox" << endl;
         ComponentWithHoverText<juce::ComboBox> *newComboBox = new ComponentWithHoverText<juce::ComboBox>;
         newComboBox->init(sharedHoverText,
                           comboBoxJson);
@@ -508,7 +506,6 @@ private:
             newComboBox->addItem(option, c_);
             c_++;
         }
-        cout << "ComboBox created " << endl;
         return newComboBox;
     }
 
@@ -518,7 +515,7 @@ private:
         auto allowToDragInMidiFile = midiDisplayJson["allowToDragInMidi"].get<bool>();
         auto needsPlayhead = midiDisplayJson["needsPlayhead"].get<bool>();
 
-        auto *newMidiVisualizer = new MidiVisualizer{needsPlayhead, label, sharedHoverText};
+        auto *newMidiVisualizer = new MidiVisualizer{midiDisplayJson, sharedHoverText};
         newMidiVisualizer->info = midiDisplayJson.contains("info") ? midiDisplayJson["info"].get<std::string>() : "";
 
         newMidiVisualizer->enableDragInMidi(allowToDragInMidiFile);

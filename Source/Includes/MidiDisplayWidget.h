@@ -21,7 +21,6 @@ public:
 
     }
 
-
     explicit InputMidiPianoRollComponent(
         LockFreeQueue<juce::MidiFile, 4>* MidiQue_,
         const juce::MidiMessageSequence& NMP2GUI_IncomingMessageSequence_)
@@ -681,10 +680,8 @@ private:
                     {
                         int noteNumber = event->message.getNoteNumber();
                         uniquePitches.insert(noteNumber);
-
                         float x = float(event->message.getTimeStamp() / disp_length) *
                                   (float)getWidth();
-
                         float length = 0;
                         for (int j = i + 1; j < track->getNumEvents(); ++j)
                         {
@@ -797,6 +794,7 @@ class PianoKeysComponent : public juce::Component
 {
 public:
 
+
     void paint(Graphics &g) override {
 
         g.fillAll(backgroundColour);
@@ -807,37 +805,84 @@ public:
         // Draw a horizontal rectangle for each row with the corresponding note name
         // and color the row if it is a sharp note
         // ---------------------
-        int numRows = 12;
-        float rowHeight = (float)getHeight() / (float)numRows;
-        g.setFont(juce::Font((float) getHeight() / 10.0f)); // Font size
-        vector<juce::String> noteNames = {"C", "", "D", "", "E", "F",
-                                          "", "G", "", "A", "", "B"};
-
-        for (int i = 0; i < numRows; ++i)
+        if (custom_noteNames.empty())
         {
-            float y = float(numRows - 1 - i) * rowHeight;
-            g.setColour(juce::Colours::grey);
-            g.drawRect(juce::Rectangle<float>(0, y, (float)getWidth(), rowHeight), .1);
+            int numRows = int(noteNames.size());
+            float rowHeight = (float)getHeight() / (float)numRows;
+            g.setFont(juce::Font((float) getHeight() / 10.0f)); // Font size
 
-            // Draw note name
-            juce::String noteName = noteNames[i];
-            g.drawText(noteName, 0, (int) y, (int)getWidth(),
-                       (int) rowHeight, juce::Justification::centredLeft);
 
-            // Color the row if it is a sharp note
-            if (noteName == "")
-            {
-                g.setColour(sharpNoteColour);
-                g.fillRect(juce::Rectangle<float>(0, y,
-                                                  (float) getWidth(), rowHeight));
+            for (int i = 0; i < numRows; ++i) {
+                float y = float(numRows - 1 - i) * rowHeight;
+                g.setColour(juce::Colours::grey);
+                g.drawRect(juce::Rectangle<float>(0, y, (float)getWidth(), rowHeight), .1);
+
+                // Draw note name
+                juce::String noteName = noteNames[i];
+                g.drawText(noteName, 0, (int) y, (int)getWidth(),
+                           (int) rowHeight, juce::Justification::centredLeft);
+
+                // Color the row if it is a sharp note
+                if (noteName == "")
+                {
+                    g.setColour(sharpNoteColour);
+                    g.fillRect(juce::Rectangle<float>(0, y,
+                                                      (float) getWidth(), rowHeight));
+                }
+            }
+        }
+        else
+        {
+            int numRows = int(custom_noteNames.size());
+            float rowHeight = (float)getHeight() / (float)numRows;
+
+            auto fs = (float) getHeight() / float(numRows + 1);
+            fs = std::min(fs, 8.0f);
+
+            g.setFont(juce::Font(fs)); // Font size
+
+            for (int i = 0; i < numRows; ++i) {
+                float y = float(numRows - 1 - i) * rowHeight;
+
+                // Color the row if it is a sharp note
+                if (i % 2 == 1)
+                {
+                    g.setColour(sharpNoteColour);
+                    g.fillRect(juce::Rectangle<float>(0, y,
+                                                      (float) getWidth(), rowHeight));
+
+                    // Draw note name
+                    juce::String noteName = custom_noteNames[i];
+                    // white text
+                    g.setColour(juce::Colours::white);
+                    g.drawText(noteName, 0, (int) y, (int)getWidth(),
+                               (int) rowHeight, juce::Justification::centredLeft);
+                } else {
+                    g.setColour(juce::Colours::grey);
+                    g.drawRect(juce::Rectangle<float>(0, y, (float)getWidth(), rowHeight), .1);
+
+                    // Draw note name
+                    juce::String noteName = custom_noteNames[i];
+                    g.drawText(noteName, 0, (int) y, (int)getWidth(),
+                               (int) rowHeight, juce::Justification::centredLeft);
+                }
             }
         }
 
     }
 
+    void update_noteNames(vector<std::string> noteNames_) {
+        custom_noteNames = noteNames_;
+        if (custom_noteNames[0] != "Onset") {
+            custom_noteNames.push_back("Other");
+        }
+
+        repaint();
+    }
+
+
     PianoKeysComponent(juce::Colour backgroundColour_,
-                       juce::Colour sharpNoteColour_)
-    {
+                       juce::Colour sharpNoteColour_) {
         backgroundColour = backgroundColour_;
         sharpNoteColour = sharpNoteColour_;
     }
@@ -845,8 +890,10 @@ public:
 private:
     juce::Colour backgroundColour;
     juce::Colour sharpNoteColour;
+    vector<std::string> noteNames = {"C", "", "D", "", "E", "F",
+                                      "", "G", "", "A", "", "B"};
+    vector<std::string> custom_noteNames;
 };
-
 
 class NoteComponent : public juce::Component {
 public:
@@ -860,8 +907,11 @@ public:
     juce::Label* display_label{};
     bool isHangingNoteOn{false};
     bool isHangingNoteOff{false};
+    bool isOnsetOnly{false};
 
-    NoteComponent() = default;
+    NoteComponent(bool isOnsetOnly_=false){
+        isOnsetOnly = isOnsetOnly_;
+    }
 
     // creates a note component with a specified duration
     // NOTE: Velocity must be between 0 and 1
@@ -916,37 +966,51 @@ public:
         // Set the colour with alpha based on velocity for all shapes
         g.setColour(color.withAlpha(velocity));
 
-        if (!isHangingNoteOn && !isHangingNoteOff) {
-            // Standard note: Draw a rectangle
-            g.fillRect(getLocalBounds());
-            // Draw a black border around the rectangle
-            g.setColour(juce::Colours::black);
-            g.drawRect(getLocalBounds().toFloat(), 1);
-        } else {
-            // Prepare to draw an arrow for note-on or note-off
-            juce::Path arrowPath;
-            auto bounds = getLocalBounds().toFloat();
+        if (!isOnsetOnly) {
+            if (!isHangingNoteOn && !isHangingNoteOff) {
+                // Standard note: Draw a rectangle
+                g.fillRect(getLocalBounds());
+                // Draw a black border around the rectangle
+                g.setColour(juce::Colours::black);
+                g.drawRect(getLocalBounds().toFloat(), 1);
+            } else {
+                // Prepare to draw an arrow for note-on or note-off
+                juce::Path arrowPath;
+                auto bounds = getLocalBounds().toFloat();
 
-            if (isHangingNoteOn) {
-                // Note-on (right-pointing arrow)
-                arrowPath.startNewSubPath(bounds.getX(), bounds.getY());
-                arrowPath.lineTo(bounds.getRight(), bounds.getCentreY());
-                arrowPath.lineTo(bounds.getX(), bounds.getBottom());
-                arrowPath.closeSubPath();
-            } else if (isHangingNoteOff) {
-                // Note-off (left-pointing arrow)
-                arrowPath.startNewSubPath(bounds.getRight(), bounds.getY());
-                arrowPath.lineTo(bounds.getX(), bounds.getCentreY());
-                arrowPath.lineTo(bounds.getRight(), bounds.getBottom());
-                arrowPath.closeSubPath();
+                if (isHangingNoteOn) {
+                    // Note-on (right-pointing arrow)
+                    arrowPath.startNewSubPath(bounds.getX(), bounds.getY());
+                    arrowPath.lineTo(bounds.getRight(), bounds.getCentreY());
+                    arrowPath.lineTo(bounds.getX(), bounds.getBottom());
+                    arrowPath.closeSubPath();
+                } else if (isHangingNoteOff) {
+                    // Note-off (left-pointing arrow)
+                    arrowPath.startNewSubPath(bounds.getRight(), bounds.getY());
+                    arrowPath.lineTo(bounds.getX(), bounds.getCentreY());
+                    arrowPath.lineTo(bounds.getRight(), bounds.getBottom());
+                    arrowPath.closeSubPath();
+                }
+
+                // Fill the arrow with the same colour and alpha as the standard note
+                g.fillPath(arrowPath);
+
+                // Optionally, draw a black border around the arrow if needed
+                g.setColour(juce::Colours::black);
+                g.strokePath(arrowPath, juce::PathStrokeType(1.0f));
+            }
+        } else {
+            // draw only if complete note or hanging note on
+            if (isHangingNoteOff) {
+                return;
             }
 
-            // Fill the arrow with the same colour and alpha as the standard note
-            g.fillPath(arrowPath);
+            // draw a circle
+            g.fillEllipse(getLocalBounds().toFloat());
+            // Draw a black border around the circle
+            g.setColour(juce::Colours::black);
+            g.drawEllipse(getLocalBounds().toFloat(), 1);
 
-            // Optionally, draw a black border around the arrow if needed
-             g.setColour(juce::Colours::black);
-             g.strokePath(arrowPath, juce::PathStrokeType(1.0f));
         }
     }
 
@@ -1046,7 +1110,6 @@ public:
         resized();
     }
 
-
     // paints the sequence
     void paint(juce::Graphics& g) override {
 
@@ -1061,27 +1124,45 @@ public:
         // Draw a horizontal rectangle for each row with the corresponding note name
         // and color the row if it is a sharp note
         // ---------------------
-        int numRows = 12;
-        float rowHeight = (float)getHeight() / (float)numRows;
-        g.setFont(juce::Font((float) getHeight() / 10.0f)); // Font size
-        vector<juce::String> noteNames = {"C", "", "D", "", "E", "F",
-                                          "", "G", "", "A", "", "B"};
+        if (custom_pitches.empty()) {
+            int numRows = 12;
+            float rowHeight = (float)getHeight() / (float)numRows;
+            g.setFont(juce::Font((float) getHeight() / 10.0f)); // Font size
+            vector<juce::String> noteNames = {"C", "", "D", "", "E", "F",
+                                              "", "G", "", "A", "", "B"};
 
-        for (int i = 0; i < numRows; ++i)
-        {
-            float y = float(numRows - 1 - i) * rowHeight;
-            g.setColour(juce::Colours::lightgrey);
-            g.drawRect(juce::Rectangle<float>(0, y, (float)getWidth(), rowHeight), .1);
+            for (int i = 0; i < numRows; ++i) {
+                float y = float(numRows - 1 - i) * rowHeight;
+                g.setColour(juce::Colours::lightgrey);
+                g.drawRect(juce::Rectangle<float>(0, y, (float)getWidth(), rowHeight), .1);
 
-            // Draw note name
-            juce::String noteName = noteNames[i];
+                // Draw note name
+                juce::String noteName = noteNames[i];
 
-            // Color the row if it is a sharp note
-            if (noteName == "")
-            {
-                g.setColour(sharpNoteColour);
-                g.fillRect(juce::Rectangle<float>(0, y,
-                                                  (float) getWidth(), rowHeight));
+                // Color the row if it is a sharp note
+                if (noteName == "")
+                {
+                    g.setColour(sharpNoteColour);
+                    g.fillRect(juce::Rectangle<float>(0, y,
+                                                      (float) getWidth(), rowHeight));
+                }
+            }
+        } else {
+            int numRows = custom_rows;
+            float rowHeight = (float)getHeight() / (float)numRows;
+            g.setFont(juce::Font((float) getHeight() / 10.0f)); // Font size
+
+            for (int i = 0; i < numRows; ++i) {
+                float y = float(numRows - 1 - i) * rowHeight;
+                g.setColour(juce::Colours::lightgrey);
+                g.drawRect(juce::Rectangle<float>(0, y, (float)getWidth(), rowHeight), .1);
+
+                // Color the odd rows
+                if ( i % 2 == 1) {
+                    g.setColour(sharpNoteColour);
+                    g.fillRect(juce::Rectangle<float>(0, y,
+                                                      (float) getWidth(), rowHeight));
+                }
             }
         }
 
@@ -1089,23 +1170,55 @@ public:
 
     // resizes the note components
     void resized() override {
-        for (auto& noteComponent : noteComponents) {
-            float x = noteComponent->start_time / SequenceDuration * (float)getWidth();
-            float length;
-            float height = 1.0f / 12.0f * (float)getHeight();
-            if (noteComponent->duration > 0) {
-                length = noteComponent->duration / SequenceDuration * (float)getWidth();
-                length = max(length, 1.0f);
-            } else {
-                // will draw a small circle if the note has no note off event
-                length = height;
+        if (custom_pitches.empty()) {
+            for (auto& noteComponent : noteComponents) {
+                float x = noteComponent->start_time / SequenceDuration * (float)getWidth();
+                float length;
+                float height = 1.0f / 12.0f * (float)getHeight();
+                if (noteComponent->duration > 0) {
+                    length = noteComponent->duration / SequenceDuration * (float)getWidth();
+                    length = max(length, 1.0f);
+                } else {
+                    // will draw a small circle if the note has no note off event
+                    length = height;
+                }
+                float y = float(12 - noteComponent->pitch_class - 1) / 12.0f * (float)getHeight();
+
+                noteComponent->setBounds((int)x, (int)y,
+                                         (int)length, (int)height);
             }
-            float y = float(12 - noteComponent->pitch_class - 1) / 12.0f * (float)getHeight();
+        } else if (!isOnsetVis){
+            for (auto& noteComponent : noteComponents) {
+                float x = noteComponent->start_time / SequenceDuration * (float)getWidth();
+                float length;
+                float height = 1.0f / (float)(custom_rows) * (float)getHeight();
+                if (noteComponent->duration > 0) {
+                    length = noteComponent->duration / SequenceDuration * (float)getWidth();
+                    length = max(length, 1.0f);
+                } else {
+                    // will draw a small circle if the note has no note off event
+                    length = height;
+                }
+                float y = float(custom_rows -1 - custom_pitches[noteComponent->noteNumber]) / (float)(custom_rows) * (float)getHeight();
+                noteComponent->setBounds((int)x, (int)y,
+                                         (int)length, (int)height);
+            }
+        } else {
+            for (auto& noteComponent : noteComponents) {
+                noteComponent->isOnsetOnly = true;
 
-            noteComponent->setBounds((int)x, (int)y,
-                                     (int)length, (int)height);
+                // provide a square for the noteComponent
+                // the square height must correspond to the velocity
+                float x = noteComponent->start_time / SequenceDuration * (float)getWidth();
+                float y = float(1.0 - noteComponent->velocity) * (float)getHeight();
+                int edge = 5;
+
+                noteComponent->setBounds((int)x, (int)y,
+                                         edge, edge);
+
+            }
+
         }
-
     }
 
     [[maybe_unused]] std::vector<std::unique_ptr<NoteComponent>>& get_noteComponents() {
@@ -1307,9 +1420,46 @@ public:
     [[nodiscard]] float getSequenceDuration() const {
         return SequenceDuration;
     }
+
+    void setCustomPitches(vector<int> custom_pitches_, bool isOnsetVis_=false) {
+        custom_pitches.clear();
+
+        isOnsetVis = isOnsetVis_;
+
+        if (isOnsetVis) {
+            for (int i = 0; i < 129; ++i) {
+                custom_pitches[i] = 0;
+            }
+            custom_rows = 1;
+            return;
+        }
+
+        int row = 0;
+        for (auto& pitch : custom_pitches_) {
+            custom_pitches[pitch] = row;
+            row++;
+        }
+
+        // add the rest of the pitches to a single row
+        for (int i = 0; i < 129; ++i) {
+            bool found = false;
+            for (auto& pitch : custom_pitches_) {
+                if (pitch == i) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                custom_pitches[i] = row;
+            }
+        }
+
+        custom_rows = row + 1;
+    }
+
 private:
     std::vector<std::unique_ptr<NoteComponent>> noteComponents;
-    CrossThreadPianoRollData* crossThreadPianoRollData {nullptr};
+    CrossThreadPianoRollData *crossThreadPianoRollData {nullptr};
     void setSequenceDuration() {
         // find the last note off event
         float max_time = 0;
@@ -1326,6 +1476,9 @@ private:
         SequenceDuration = max_time;
         resized();
     }
+    map<int, int> custom_pitches; // pitch, row
+    int custom_rows = 0;
+    bool isOnsetVis = false;
 };
 
 class MidiVisualizer: public juce::Component, juce::Timer {
@@ -1334,18 +1487,56 @@ public:
 
     std::string info;
 
-    MidiVisualizer(bool needsPlayhead_,
-                   string paramID_,
+    MidiVisualizer(json midiDisplayJson,
                    juce::Label* noteInfoLabel_) {
+        MidiVisJson = midiDisplayJson;
         noteInfoLabel = noteInfoLabel_;
         setInterceptsMouseClicks(true, true);
-        paramID = std::move(paramID_);
+        paramID = midiDisplayJson["label"].get<std::string>();
         std::transform(paramID.begin(), paramID.end(), paramID.begin(), ::toupper);
-        needsPlayhead = needsPlayhead_;
+        needsPlayhead = midiDisplayJson["needsPlayhead"].get<bool>();
         pianoRollComponent.noteInfoLabel = noteInfoLabel;
         addAndMakeVisible(playheadVisualizer);
         addAndMakeVisible(pianoRollComponent);
         addAndMakeVisible(pianoKeysComponent);
+
+        // check if onset visualizer
+        bool isOnsetVis = false;
+        if (midiDisplayJson.contains("isOnsetVisualizer")) {
+            isOnsetVis = midiDisplayJson["isOnsetVisualizer"].get<bool>();
+        }
+
+        // check if there are custom note names
+        bool hasCustomNoteNames = false;
+        if (midiDisplayJson.contains("custom_voices") && midiDisplayJson["custom_voices"].is_array() &&
+                midiDisplayJson.contains("custom_pitches") && midiDisplayJson["custom_pitches"].is_array())
+        {
+            hasCustomNoteNames = true;
+        }
+
+        if (hasCustomNoteNames && !isOnsetVis) {
+            // make sure the arrays are the same size
+            if (midiDisplayJson["custom_voices"].size() != midiDisplayJson["custom_pitches"].size()) {
+                cout << "[settings.json]: custom_voices and custom_pitches must be the same size for midi display: " << midiDisplayJson["label"].get<std::string>() << endl;
+            } else {
+                for (int i = 0; i < midiDisplayJson["custom_voices"].size(); ++i) {
+                    auto voice = midiDisplayJson["custom_voices"][i].get<std::string>();
+                    auto pitch = midiDisplayJson["custom_pitches"][i].get<int>();
+                    custom_voices.push_back(voice);
+                    custom_pitches.push_back(pitch);
+
+                }
+                pianoKeysComponent.update_noteNames(custom_voices);
+                pianoRollComponent.setCustomPitches(custom_pitches);
+
+            }
+        }
+
+        if (isOnsetVis) {
+            pianoKeysComponent.update_noteNames({"Onset"});
+            pianoRollComponent.setCustomPitches({0}, true);
+        }
+
 
         // start timer
         startTimerHz(10);
@@ -1358,21 +1549,19 @@ public:
         // remove 5 pixels from edges
         area.reduce(1, 1);
 
-        auto key_area = area.removeFromLeft(20);
-
+        auto phead_height = std::max(int(area.getHeight() * 0.1), 3);
+        auto pkeys_width = std::max(int(area.getWidth() * 0.1), 20);
 
         if (needsPlayhead) {
-            auto phead_height = area.getHeight() * 0.1;
-            pianoRollComponent.setBounds(
-                area.removeFromTop(int(area.getHeight() * 0.9)));
-            playheadVisualizer.setBounds(
-                area.removeFromTop(int(phead_height)));
-
-            key_area.removeFromBottom(int(phead_height));
-            pianoKeysComponent.setBounds(key_area);
-        } else {
+            auto phead_area = area.removeFromBottom(int(phead_height));
+            phead_area.removeFromLeft(int(pkeys_width));
+            playheadVisualizer.setBounds(phead_area);
+            pianoKeysComponent.setBounds(area.removeFromLeft(int(pkeys_width)));
             pianoRollComponent.setBounds(area);
-            pianoKeysComponent.setBounds(key_area);
+
+        } else {
+            pianoKeysComponent.setBounds(area.removeFromLeft(int(pkeys_width)));
+            pianoRollComponent.setBounds(area);
         }
 
     }
@@ -1547,7 +1736,7 @@ public:
     }
 
     void mouseEnter(const juce::MouseEvent& /*event*/) override {
-        std::string text = paramID + " | " + info;
+        std::string text = MidiVisJson["label"].get<std::string>() + " | " + info;
         noteInfoLabel->setText(text, juce::dontSendNotification);
     }
 
@@ -1566,6 +1755,9 @@ private:
     bool needsPlayhead{false};
     CrossThreadPianoRollData* crossThreadPianoRollData {nullptr};
     std::string paramID;
+    vector<string> custom_voices;
+    vector<int> custom_pitches;
+    json MidiVisJson;
 
 };
 

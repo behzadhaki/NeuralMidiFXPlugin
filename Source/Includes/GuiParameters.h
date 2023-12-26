@@ -132,7 +132,13 @@ struct param {
 //      auto paramID = GuiParams.getParamValue(LabelOnGUi);
 struct GuiParams {
 
-    GuiParams() { construct(); }
+    GuiParams() {
+        construct();
+        for (auto &parameter: Parameters) {
+            parameter.isChanged = true; // make sure on construction, all params are set to changed
+        }
+        setAllChanged();
+    }
 
     explicit GuiParams(juce::AudioProcessorValueTreeState *apvtsPntr_) {
         construct();
@@ -140,6 +146,7 @@ struct GuiParams {
         for (auto &parameter: Parameters) {
             parameter.update(apvtsPntr_);
         }
+        setAllChanged();
     }
 
     bool update() {
@@ -298,7 +305,7 @@ struct GuiParams {
 
 private:
     vector<param> Parameters;
-    bool isChanged = false;
+    bool isChanged = true;
     juce::AudioProcessorValueTreeState *apvtsPntr{};
 
     // uses chrono::system_clock to time parameter arrival to consumption (for debugging only)
@@ -317,6 +324,13 @@ private:
         }
 
         return true;
+    }
+
+    // only to be used in the wrapper! don't use in deploy.h
+    void setAllChanged() {
+        for (auto &parameter: Parameters) {
+            parameter.isChanged = true;
+        }
     }
 
     void construct() {
@@ -379,18 +393,18 @@ private:
             }
 
             for (const auto &triangleSlider_json: triangleSlidersList) {
-                std::string DistanceFromA_Label = triangleSlider_json["DistanceFromA_Label"].get<std::string>();
-                std::string ClosenessToC_Label = triangleSlider_json["ClosenessToC_Label"].get<std::string>();
+                std::string DistanceFromBottomLeftCornerSlider = triangleSlider_json["DistanceFromBottomLeftCornerSlider"].get<std::string>();
+                std::string HeightSlider = triangleSlider_json["HeightSlider"].get<std::string>();
 
-                if (assertLabelIsUnique(DistanceFromA_Label)) {
+                if (assertLabelIsUnique(DistanceFromBottomLeftCornerSlider)) {
                     auto param_ = param();
-                    param_.initializeTriangleSlider(DistanceFromA_Label, 0.0f, 0.0f, 1.0f);
+                    param_.initializeTriangleSlider(DistanceFromBottomLeftCornerSlider, 0.0f, 0.0f, 1.0f);
                     Parameters.emplace_back(param_);
                 }
 
-                if (assertLabelIsUnique(ClosenessToC_Label)) {
+                if (assertLabelIsUnique(HeightSlider)) {
                     auto param_ = param();
-                    param_.initializeTriangleSlider(ClosenessToC_Label, 0.5, 0, 1);
+                    param_.initializeTriangleSlider(HeightSlider, 0.5, 0, 1);
                     Parameters.emplace_back(param_);
                 }
 
