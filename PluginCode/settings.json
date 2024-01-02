@@ -709,7 +709,9 @@
                             "allowToDragInMidi": false,
                             "needsPlayhead": true,
                             "PlayheadLoopDurationQuarterNotes": 8.0,
-                            "info": "Pattern B Visualization"
+                            "info": "Pattern B Visualization",
+                            "custom_voices": ["Kick", "Snare", "Chat", "Ohat", "Low Tom", "Mid Tom", "High Tom", "Crash", "Ride"],
+                            "custom_pitches": [36, 38, 42, 46, 41, 43, 45, 49, 51]
                         },
                         {
                             "label": "MidiVisualizerGroove2Drum",
@@ -717,9 +719,7 @@
                             "bottomRightCorner": "Lg",
                             "allowToDragOutAsMidi": true,
                             "allowToDragInMidi": false,
-                            "needsPlayhead": true,
-                            "PlayheadLoopDurationQuarterNotes": 8.0,
-                            "info": "Accompaniment Pattern Visualization"
+                            "needsPlayhead": true
                         },
                         {
                             "label": "MidiVisualizerGroove",
@@ -729,7 +729,8 @@
                             "allowToDragInMidi": true,
                             "needsPlayhead": true,
                             "PlayheadLoopDurationQuarterNotes": 8.0,
-                            "info": "Instrumental Groove Visualization"
+                            "info": "Instrumental Groove Visualization",
+                            "show_grid": true
                         }
                     ],
                     "labels": [
