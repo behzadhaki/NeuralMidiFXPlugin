@@ -22,6 +22,7 @@ private:
     double fs {44100};
     double qpm {-1};
     double playhead_pos {0};
+    bool empty_sequence_received{false};
 
 public:
     PlaybackPolicies policy;
@@ -32,6 +33,9 @@ public:
     void setSequence(const juce::MidiMessageSequence& sequence) {
         std::lock_guard<std::mutex> lock(mutex);
         sequence_to_display = sequence;
+        if (sequence_to_display.getNumEvents() == 0) {
+            empty_sequence_received = true;
+        }
     }
 
     void setFs(double fs_) {
@@ -59,7 +63,8 @@ public:
         std::lock_guard<std::mutex> lock(mutex);
         juce::MidiMessageSequence sequence_to_display_copy{sequence_to_display};
         sequence_to_display.clear();
-        if (sequence_to_display_copy.getNumEvents() > 0) {
+        if (sequence_to_display_copy.getNumEvents() > 0 || empty_sequence_received) {
+            empty_sequence_received = false;
             return sequence_to_display_copy;
         } else {
             return std::nullopt;
@@ -257,4 +262,5 @@ private:
     // MidiIO Standalone
     unique_ptr<MidiOutput> mVirtualMidiOutput;
 
+    bool shouldActStandalone{false};
 };

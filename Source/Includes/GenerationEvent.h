@@ -230,6 +230,9 @@ struct PlaybackSequence {
         channel = channel % 16 + 1; // make sure channel is between 1 and 16
         velocity = velocity > 1 ? 1 : velocity; // make sure velocity is between 0 and 1
         velocity = velocity < 0 ? 0 : velocity;
+        if (velocity<0.001) {
+            return;
+        }
         messageSequence.addEvent(MidiMessage::noteOn(channel, noteNumber, velocity), time);
         messageSequence.addEvent(MidiMessage::noteOff(channel, noteNumber, velocity), time + duration);
         messageSequence.updateMatchedPairs();

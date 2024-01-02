@@ -105,6 +105,9 @@ public:
 
     void setLength(double length) {
         if (length != disp_length) {
+            if (length <= 0) {
+                return;
+            }
             disp_length = length;
             repaint();
         }
@@ -740,7 +743,7 @@ private:
 class PlayheadVisualizer : public juce::Component {
 public:
     bool show_playhead{true};
-    juce::Colour playheadColour = juce::Colours::red;
+    juce::Colour playheadColour = juce::Colours::white;
     float playhead_pos{0};
     float disp_length{8};
     float LoopStart{-1};
@@ -1118,6 +1121,7 @@ public:
         // ---------------------
         g.fillAll(backgroundColour);
 
+
         // ---------------------
         // divide the component into 12 rows
         // Starting from C0 (MIDI note 12)
@@ -1166,10 +1170,29 @@ public:
             }
         }
 
+        // ---------------------
+        // draw grid
+        // ---------------------
+        if (hasGrid) {
+            auto num_beats = SequenceDuration / 0.25;
+            for (int i = 0; i < num_beats; ++i) {
+                auto x = i / SequenceDuration * (float)getWidth();
+                g.setColour(juce::Colours::grey);
+                if (i == 0) {
+                    g.drawLine(x, 0, x, (float)getHeight(), .4);
+                } else if (i % 4 == 0) {
+                    g.drawLine(x, 0, x, (float)getHeight(), 0.2);
+                } else {
+                    g.drawLine(x, 0, x, (float)getHeight(), 0.1);
+                }
+            }
+        }
+
     }
 
     // resizes the note components
     void resized() override {
+
         if (custom_pitches.empty()) {
             for (auto& noteComponent : noteComponents) {
                 float x = noteComponent->start_time / SequenceDuration * (float)getWidth();
@@ -1457,28 +1480,47 @@ public:
         custom_rows = row + 1;
     }
 
+    void setFixedSequenceDuration(double duration) {
+        fixed_sequence_duration = duration > 0 ? duration : -1;
+    }
+
+    void enableGrid(bool enable) {
+        hasGrid = enable;
+    }
+
 private:
     std::vector<std::unique_ptr<NoteComponent>> noteComponents;
     CrossThreadPianoRollData *crossThreadPianoRollData {nullptr};
     void setSequenceDuration() {
-        // find the last note off event
-        float max_time = 0;
-        for (auto& noteComponent : noteComponents) {
-            if (noteComponent->start_time + noteComponent->duration > max_time) {
-                max_time = noteComponent->start_time + noteComponent->duration;
+        if (fixed_sequence_duration > 0) {
+            SequenceDuration = fixed_sequence_duration*1.1f;
+            resized();
+            return;
+        } else {
+            // find the last note off event
+            float max_time = 0;
+            for (auto& noteComponent: noteComponents)
+            {
+                if (noteComponent->start_time + noteComponent->duration > max_time)
+                {
+                    max_time = noteComponent->start_time + noteComponent->duration;
+                }
             }
+            // make sure the max time is multiple of 4
+            auto remainder = float(fmod(max_time, 4));
+            if (remainder > 0)
+            {
+                max_time += 4 - remainder;
+            }
+            SequenceDuration = max_time;
+            resized();
         }
-        // make sure the max time is multiple of 4
-        auto remainder = float(fmod(max_time, 4));
-        if (remainder > 0) {
-            max_time += 4 - remainder;
-        }
-        SequenceDuration = max_time;
-        resized();
     }
     map<int, int> custom_pitches; // pitch, row
     int custom_rows = 0;
     bool isOnsetVis = false;
+    double fixed_sequence_duration = -1;
+    bool hasGrid = false;
 };
 
 class MidiVisualizer: public juce::Component, juce::Timer {
@@ -1537,6 +1579,15 @@ public:
             pianoRollComponent.setCustomPitches({0}, true);
         }
 
+        if (midiDisplayJson.contains("PlayheadLoopDurationQuarterNotes")) {
+            auto dur = midiDisplayJson["PlayheadLoopDurationQuarterNotes"].get<float>();
+            pianoRollComponent.setFixedSequenceDuration(dur);
+            playheadVisualizer.enableLooping(0, dur);
+        }
+
+        if (midiDisplayJson.contains("show_grid")) {
+            pianoRollComponent.enableGrid(midiDisplayJson["show_grid"].get<bool>());
+        }
 
         // start timer
         startTimerHz(10);

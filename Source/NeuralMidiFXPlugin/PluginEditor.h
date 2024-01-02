@@ -55,5 +55,7 @@ private:
     juce::MidiMessageSequence incoming_sequence;
     bool shouldActStandalone {false};
 
+    juce::TextButton resetToDefaultsButton;
+    unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> resetToDefaultsButtonAttachment;
 };
 

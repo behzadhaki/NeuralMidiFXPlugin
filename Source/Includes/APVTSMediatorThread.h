@@ -10,6 +10,108 @@
 
 #pragma once
 
+inline std::vector<juce::ParameterID> get_params_to_default() {
+    std::vector<std::string> params;
+
+    auto loaded_json_ = load_settings_json();
+
+    for (const auto& tabJson: loaded_json_["UI"]["Tabs"]["tabList"])
+    {
+        if (tabJson.contains("sliders")) {
+            for (const auto& sliderJson: tabJson["sliders"])
+            {
+                if (sliderJson.contains("allow_reset_to_default"))
+                {
+                    if (sliderJson["allow_reset_to_default"].get<bool>())
+                    {
+                        params.push_back(sliderJson["label"].get<std::string>());
+                    }
+                } else {
+                    params.push_back(sliderJson["label"].get<std::string>());
+                }
+            }
+        }
+
+        if (tabJson.contains("rotaries")) {
+            for (const auto& rotaryJson: tabJson["rotaries"])
+            {
+                if (rotaryJson.contains("allow_reset_to_default"))
+                {
+                    if (rotaryJson["allow_reset_to_default"].get<bool>())
+                    {
+                        params.push_back(rotaryJson["label"].get<std::string>());
+                    }
+                } else {
+                    params.push_back(rotaryJson["label"].get<std::string>());
+                }
+            }
+        }
+
+        if (tabJson.contains("buttons")) {
+            for (const auto& buttonJson: tabJson["buttons"])
+            {
+                bool isToggle = false;
+                if (buttonJson.contains("isToggle"))
+                {
+                    isToggle = buttonJson["isToggle"].get<bool>();
+                }
+
+                if (isToggle) {
+                    if (buttonJson.contains("allow_reset_to_default"))
+                    {
+                        if (buttonJson["allow_reset_to_default"].get<bool>())
+                        {
+                            params.push_back(buttonJson["label"].get<std::string>());
+                        }
+                    } else {
+                        params.push_back(buttonJson["label"].get<std::string>());
+                    }
+                }
+            }
+        }
+
+        if (tabJson.contains("hsliders")) {
+            for (const auto& hsliderJson: tabJson["hsliders"])
+            {
+                if (hsliderJson.contains("allow_reset_to_default"))
+                {
+                    if (hsliderJson["allow_reset_to_default"].get<bool>())
+                    {
+                        params.push_back(hsliderJson["label"].get<std::string>());
+                    }
+                } else {
+                    params.push_back(hsliderJson["label"].get<std::string>());
+                }
+            }
+        }
+
+        if (tabJson.contains("comboBoxes")) {
+            for (const auto& comboBoxJson: tabJson["comboBoxes"])
+            {
+                if (comboBoxJson.contains("allow_reset_to_default"))
+                {
+                    if (comboBoxJson["allow_reset_to_default"].get<bool>())
+                    {
+                        params.push_back(
+                            comboBoxJson["label"].get<std::string>());
+                    }
+                } else {
+                    params.push_back(
+                        comboBoxJson["label"].get<std::string>());
+                }
+            }
+        }
+
+    }
+
+    // parse using label2ParamID
+    std::vector<juce::ParameterID> params_juce;
+    for (const auto& param: params) {
+        params_juce.emplace_back(label2ParamID(param));
+    }
+
+    return params_juce;
+}
 
 inline std::vector<juce::ParameterID> get_preset_excluded_params() {
     std::vector<std::string> excluded_params;
@@ -45,12 +147,23 @@ inline std::vector<juce::ParameterID> get_preset_excluded_params() {
         if (tabJson.contains("buttons")) {
             for (const auto& buttonJson: tabJson["buttons"])
             {
-                if (buttonJson.contains("exclude_from_presets"))
+                bool isToggle = false;
+                if (buttonJson.contains("isToggle"))
                 {
-                    if (buttonJson["exclude_from_presets"].get<bool>())
+                    isToggle = buttonJson["isToggle"].get<bool>();
+                }
+
+                if (isToggle) {
+                    if (buttonJson.contains("exclude_from_presets"))
                     {
-                        excluded_params.push_back(buttonJson["label"].get<std::string>());
+                        if (buttonJson["exclude_from_presets"].get<bool>())
+                        {
+                            excluded_params.push_back(buttonJson["label"].get<std::string>());
+                        }
                     }
+                } else {
+                    // other buttons should be excluded from presets
+                    excluded_params.push_back(buttonJson["label"].get<std::string>());
                 }
             }
         }
@@ -206,6 +319,22 @@ public:
         int prev_selectedPreset = -1;
         while (!bExit) {
             if (APVTSPntr != nullptr) {
+                // check if reset requested
+                auto resetToDefault = APVTSPntr->getRawParameterValue(label2ParamID("ResetToDefaults__"));
+                if(resetToDefault != nullptr) {
+                    if (resetToDefault->load() > 0.5f) {
+                        // reset all parameters to default
+                        for (const auto& paramID: paramIDs2ResetToDefault) {
+                            if (APVTSPntr->getParameter(paramID.getParamID()) != nullptr) {
+                                auto param = APVTSPntr->getParameter(paramID.getParamID());
+                                param->setValueNotifyingHost(param->getDefaultValue());
+                            }
+                        }
+                        // reset the resetToDefault parameter
+                        APVTSPntr->getParameter(label2ParamID("ResetToDefaults__"))->setValueNotifyingHost(0.0f);
+                    }
+                }
+
                 if (guiParamsPntr->update()) {
                     if (APVM2DPL_GuiParams_QuePntr != nullptr) {
                         APVM2DPL_GuiParams_QuePntr->push(*guiParamsPntr);
@@ -247,9 +376,11 @@ public:
             if (xml->hasTagName(APVTSPntr->state.getType()))
             {
                 // 3.a get the existing values of the parameters that are not to be loaded
-                std::vector<float> values_not_to_load;
+                std::vector<pair<juce::ParameterID, float>> values_not_to_load;
                 for (const auto& paramID: paramIDs2Exclude) {
-                    values_not_to_load.emplace_back(APVTSPntr->getParameter(paramID.getParamID())->getValue());
+                    if (APVTSPntr->getParameter(paramID.getParamID()) != nullptr) {
+                        values_not_to_load.emplace_back(paramID.getParamID(), APVTSPntr->getParameter(paramID.getParamID())->getValue());
+                    }
                 }
 
                 // 3.b load the preset and reset the APVTS with the new preset
@@ -257,15 +388,20 @@ public:
 
                 // 3.c use the values in 3.a to reset the parameters that are not to be loaded
                 // We store all params in APVTS but just loading it when needed
-                for (int i = 0; i < paramIDs2Exclude.size(); i++) {
-                    APVTSPntr->getParameter(paramIDs2Exclude[i].getParamID())->setValueNotifyingHost(values_not_to_load[i]);
+                for (const auto& pair: values_not_to_load) {
+                    auto paramID = pair.first;
+                    auto value = pair.second;
+                    // check if the parameter is in the APVTS
+                    if (APVTSPntr->getParameter(paramID.getParamID()) != nullptr) {
+                        APVTSPntr->getParameter(paramID.getParamID())->setValueNotifyingHost(value);
+                    }
                 }
 
                 // 4. load the tensor preset data associated with the preset
                 auto filePath = xml->getStringAttribute("filePath");
                 auto tensormap = load_tensor_map(filePath.toStdString());
                 CustomPresetData->copy_from_map(tensormap);
-                CustomPresetData->printTensorMap();
+                // CustomPresetData->printTensorMap();
             }
 
         }
@@ -309,5 +445,5 @@ private:
     // ===          Pointer to APVTS hosted in the Main Processor
     // ============================================================================================================
     std::vector<ParameterID> paramIDs2Exclude {get_preset_excluded_params()};
-
+    std::vector<ParameterID> paramIDs2ResetToDefault {get_params_to_default()};
 };

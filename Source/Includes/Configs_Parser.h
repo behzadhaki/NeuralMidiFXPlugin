@@ -71,6 +71,7 @@ inline json load_settings_json() {
 
 inline json loaded_json = load_settings_json();
 
+using namespace std;
 // ---------------------------------------------------------------------------------
 inline std::vector<tab_tuple> parse_to_tabList() {
 
@@ -164,6 +165,14 @@ inline std::vector<tab_tuple> parse_to_tabList() {
     return tabList;
 }
 
+inline bool getEnableStandaloneState() {
+    if (juce::JUCEApplicationBase::isStandaloneApp()){
+        return loaded_json["StandaloneTransportPanel"]["enable"].get<bool>();
+    } else {
+        return loaded_json["StandaloneTransportPanel"]["enable"].get<bool>() && !loaded_json["StandaloneTransportPanel"]["disableInPluginMode"].get<bool>();
+    }
+}
+
 // GUI settings
 namespace UIObjects {
 
@@ -216,10 +225,6 @@ namespace UIObjects {
 
     namespace StandaloneTransportPanel
     {
-        // if you need the widget used for controlling the standalone transport
-        // set following to true
-        const bool enable = loaded_json["StandaloneTransportPanel"]["enable"];
-        const bool disableInPluginMode = loaded_json["StandaloneTransportPanel"]["disableInPluginMode"];
         // if you need to send midi out to a virtual midi cable
         // set following to true
         // NOTE: Only works on MacOs

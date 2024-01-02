@@ -67,7 +67,7 @@ void DeploymentThread::run() {
         if (APVM2DPL_Parameters_Que_ptr->getNumReady() > 0) {
             // print updated values for debugging
             gui_params = APVM2DPL_Parameters_Que_ptr
-                             ->pop(); // pop the latest parameters from the queue
+                             ->getLatestOnly(); // pop the latest parameters from the queue
             gui_params.registerAccess();                      // set the time when the parameters were accessed
 
             if (debugging_settings::DeploymentThread::print_received_gui_params) { // if set in Debugging.h
@@ -158,6 +158,8 @@ void DeploymentThread::run() {
                 showMessage(*chrono_timed_deploy.getDescription(" deploy() execution time: "));
             }
         }
+
+        CustomPresetData->resetChangeFlags();
 
         // check if notes received from a manually dropped midi file
         if (GUI2DPL_DroppedMidiFile_Que_ptr->getNumReady() > 0){

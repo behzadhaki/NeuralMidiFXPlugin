@@ -216,6 +216,14 @@ public:
         changed = true;
     }
 
+    // Reset all change flags (thread-safe)
+    void resetChangeFlags() {
+        std::lock_guard<std::mutex> lock(mutex);
+        for (auto& pair : changeFlags) {
+            pair.second = false;
+        }
+    }
+
     // Print the map (thread-safe)
     void printTensorMap() {
         std::lock_guard<std::mutex> lock(mutex);
@@ -229,8 +237,6 @@ public:
 
     // compare two CustomPresetDataDictionary
     bool operator==(CustomPresetDataDictionary other) {
-        printTensorMap();
-        other.printTensorMap();
 
         std::lock_guard<std::mutex> lock(mutex);
         std::lock_guard<std::mutex> lock2(other.mutex);

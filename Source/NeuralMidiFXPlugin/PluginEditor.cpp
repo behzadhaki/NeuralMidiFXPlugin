@@ -34,6 +34,15 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
         NeuralMidiFXPluginProcessorPointer.apvts,
         NeuralMidiFXPluginProcessorPointer.deploymentThread->CustomPresetData.get());
 
+    resetToDefaultsButton.setButtonText("Reset to Defaults");
+    resetToDefaultsButton.setToggleable(true);
+    resetToDefaultsButton.setClickingTogglesState(true);
+    resetToDefaultsButtonAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
+        NeuralMidiFXPluginProcessorPointer.apvts,
+        label2ParamID("ResetToDefaults__"),
+        resetToDefaultsButton);
+    addAndMakeVisible(resetToDefaultsButton);
+
     // shared label for hover text
     sharedHoverText = make_unique<juce::Label>();
     sharedHoverText->setJustificationType(juce::Justification::left);
@@ -54,17 +63,7 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
 
     // if standalone, add play, record, tempo, meter controls to the top
     // check if standalone mode
-    shouldActStandalone = false;
-    if (JUCEApplicationBase::isStandaloneApp()) {
-        if (UIObjects::StandaloneTransportPanel::enable) {
-            shouldActStandalone = true;
-        }
-    } else {
-        if (UIObjects::StandaloneTransportPanel::enable &&
-            !UIObjects::StandaloneTransportPanel::disableInPluginMode) {
-            shouldActStandalone = true;
-        }
-    }
+    shouldActStandalone = getEnableStandaloneState();
 
     if (shouldActStandalone) {
         tempoMeterWidget = std::make_unique<StandaloneControlsWidget>(
@@ -222,9 +221,14 @@ void NeuralMidiFXPluginEditor::paint(juce::Graphics& g)
     sharedHoverText->setFont(juce::Font(float(sharedHoverText->getHeight() * .8)));
 
     // place preset manager at the top
-    area.removeFromLeft(int(area.getWidth() * .02));
-    presetManagerWidget->setBounds(area.removeFromLeft(preset_manager_width));
-    area.removeFromLeft(int(area.getWidth() * .02));
+    auto LeftArea = area.removeFromLeft(preset_manager_width);
+    auto ResetButtonArea = LeftArea.removeFromBottom(int(LeftArea.getHeight() * .05));
+    resetToDefaultsButton.setBounds(ResetButtonArea);
+
+    auto edge = int(LeftArea.getWidth() * .02);
+    LeftArea.removeFromLeft(edge);
+    LeftArea.removeFromRight(edge);
+    presetManagerWidget->setBounds(LeftArea);
 
     // check if standalone
     if (shouldActStandalone) {
@@ -314,7 +318,6 @@ void NeuralMidiFXPluginEditor::timerCallback()
     if (sequence_to_display_ != std::nullopt) {
         sequence_to_display = *sequence_to_display_;
         newContent = true;
-
     }
 
     auto playhead_pos_ = NeuralMidiFXPluginProcessorPointer_->generationsToDisplay.getPlayheadPos();

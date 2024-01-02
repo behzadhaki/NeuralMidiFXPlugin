@@ -32,7 +32,24 @@ public:
         show_label = sliderJson_.contains("show_label") ? sliderJson_["show_label"].get<bool>() : true;
     }
 
-    void mouseMove(const juce::MouseEvent& /*event*/) override {
+    void mouseEnter(const juce::MouseEvent& /*event*/) override {
+        if (hoverText != nullptr) {
+            hoverText->setVisible(true);
+        }
+        juce::String text_;
+        if constexpr (std::is_same<ComponentType, juce::Slider>::value) {
+            text_ = label + " | " + juce::String(this->getValue(), 2) + " | " + hoverTextString;
+        } else if constexpr (std::is_same<ComponentType, juce::Label>::value) {
+            text_ = hoverTextString;
+        } else {
+            text_ = label + " | " + hoverTextString;
+        }
+        hoverText->setText(text_, juce::dontSendNotification);
+    }
+
+    void mouseDrag(const juce::MouseEvent& event) override {
+        ComponentType::mouseDrag(event);
+
         if (hoverText != nullptr) {
             hoverText->setVisible(true);
         }
@@ -51,6 +68,23 @@ public:
         if (hoverText != nullptr) {
             hoverText->setText("", juce::dontSendNotification);
         }
+    }
+
+    // mouse click
+    void mouseDown(const juce::MouseEvent& event) override {
+        ComponentType::mouseDown(event);
+        if (hoverText != nullptr) {
+            hoverText->setVisible(true);
+        }
+        juce::String text_;
+        if constexpr (std::is_same<ComponentType, juce::Slider>::value) {
+            text_ = label + " | " + juce::String(this->getValue(), 2) + " | " + hoverTextString;
+        } else if constexpr (std::is_same<ComponentType, juce::Label>::value) {
+            text_ = hoverTextString;
+        } else {
+            text_ = label + " | " + hoverTextString;
+        }
+        hoverText->setText(text_, juce::dontSendNotification);
     }
 };
 
@@ -591,10 +625,10 @@ private:
             auto [topLeftX, topLeftY] = coordinatesFromString(sliderTopLeftCorners[slider_ix]);
             auto [bottomRightX, bottomRightY] = coordinatesFromString(sliderBottomRightCorners[slider_ix]);
 
-            auto x = topLeftX - 2.0f;
-            auto y = topLeftY - 2.0f;
-            width = (bottomRightX - topLeftX) + 4.0f;
-            height = (bottomRightY - topLeftY) + 4.0f;
+            auto x = topLeftX ;
+            auto y = topLeftY ;
+            width = (bottomRightX - topLeftX) ;
+            height = (bottomRightY - topLeftY) ;
 
             comp->setBounds((int)x, (int)y, (int)width, (int)height);
 
@@ -626,10 +660,10 @@ private:
             auto [bottomRightX, bottomRightY] =
                 coordinatesFromString(rotaryBottomRightCorners[rotary_ix]);
 
-            auto x = topLeftX - 2.0f;
-            auto y = topLeftY - 2.0f;
-            width = (bottomRightX - topLeftX) + 4.0f;
-            height = (bottomRightY - topLeftY) + 4.0f;
+            auto x = topLeftX ;
+            auto y = topLeftY ;
+            width = (bottomRightX - topLeftX) ;
+            height = (bottomRightY - topLeftY) ;
 
             comp->setBounds((int)x, (int)y, (int)width, (int)height);
 
@@ -651,10 +685,10 @@ private:
             auto [topLeftX, topLeftY] = coordinatesFromString(buttonTopLeftCorners[button_ix]);
             auto [bottomRightX, bottomRightY] = coordinatesFromString(buttonBottomRightCorners[button_ix]);
 
-            auto x = topLeftX - 2.0f;
-            auto y = topLeftY - 2.0f;
-            width = (bottomRightX - topLeftX) + 4.0f;
-            height = (bottomRightY - topLeftY) + 4.0f;
+            auto x = topLeftX ;
+            auto y = topLeftY ;
+            width = (bottomRightX - topLeftX) ;
+            height = (bottomRightY - topLeftY) ;
 
             comp->setBounds((int)x, (int)y, (int)width, (int)height);
 
@@ -677,10 +711,10 @@ private:
             auto [topLeftX, topLeftY] = coordinatesFromString(comboBoxTopLeftCorners[comboBox_ix]);
             auto [bottomRightX, bottomRightY] = coordinatesFromString(comboBoxBottomRightCorners[comboBox_ix]);
 
-            auto x = topLeftX - 2.0f;
-            auto y = topLeftY - 2.0f;
-            width = (bottomRightX - topLeftX) + 4.0f;
-            height = (bottomRightY - topLeftY) + 4.0f;
+            auto x = topLeftX ;
+            auto y = topLeftY ;
+            width = (bottomRightX - topLeftX) ;
+            height = (bottomRightY - topLeftY) ;
 
             // get the label for the comboBox
             auto label = comboBoxLabelArray[comboBox_ix];
@@ -707,10 +741,10 @@ private:
             auto [topLeftX, topLeftY] = coordinatesFromString(midiDisplayTopLeftCorners[midiDisplay_ix]);
             auto [bottomRightX, bottomRightY] = coordinatesFromString(midiDisplayBottomRightCorners[midiDisplay_ix]);
 
-            auto x = topLeftX - 2.0f;
-            auto y = topLeftY - 2.0f;
-            width = (bottomRightX - topLeftX) + 4.0f;
-            height = (bottomRightY - topLeftY) + 4.0f;
+            auto x = topLeftX ;
+            auto y = topLeftY ;
+            width = (bottomRightX - topLeftX) ;
+            height = (bottomRightY - topLeftY) ;
 
             comp->setBounds((int)x, (int)y, (int)width, (int)height);
 
@@ -732,10 +766,10 @@ private:
             auto [topLeftX, topLeftY] = coordinatesFromString(audioDisplayTopLeftCorners[audioDisplay_ix]);
             auto [bottomRightX, bottomRightY] = coordinatesFromString(audioDisplayBottomRightCorners[audioDisplay_ix]);
 
-            auto x = topLeftX - 2.0f;
-            auto y = topLeftY - 2.0f;
-            width = (bottomRightX - topLeftX) + 4.0f;
-            height = (bottomRightY - topLeftY) + 4.0f;
+            auto x = topLeftX ;
+            auto y = topLeftY ;
+            width = (bottomRightX - topLeftX) ;
+            height = (bottomRightY - topLeftY) ;
 
             comp->setBounds((int)x, (int)y, (int)width, (int)height);
 
@@ -757,10 +791,10 @@ private:
             auto [topLeftX, topLeftY] = coordinatesFromString(labelsTopLeftCorners[label_ix]);
             auto [bottomRightX, bottomRightY] = coordinatesFromString(labelsBottomRightCorners[label_ix]);
 
-            auto x = topLeftX - 2.0f;
-            auto y = topLeftY - 2.0f;
-            width = (bottomRightX - topLeftX) + 4.0f;
-            height = (bottomRightY - topLeftY) + 4.0f;
+            auto x = topLeftX ;
+            auto y = topLeftY ;
+            width = (bottomRightX - topLeftX) ;
+            height = (bottomRightY - topLeftY) ;
 
             comp->setBounds((int)x, (int)y, (int)width, (int)height);
 
@@ -783,10 +817,10 @@ private:
             auto [topLeftX, topLeftY] = coordinatesFromString(triangleSlidersTopLeftCorners[triangleSliders_ix]);
             auto [bottomRightX, bottomRightY] = coordinatesFromString(triangleSlidersBottomRightCorners[triangleSliders_ix]);
 
-            auto x = topLeftX - 2.0f;
-            auto y = topLeftY - 2.0f;
-            width = (bottomRightX - topLeftX) + 4.0f;
-            height = (bottomRightY - topLeftY) + 4.0f;
+            auto x = topLeftX ;
+            auto y = topLeftY ;
+            width = (bottomRightX - topLeftX) ;
+            height = (bottomRightY - topLeftY) ;
 
             comp->setBounds((int)x, (int)y, (int)width, (int)height);
 

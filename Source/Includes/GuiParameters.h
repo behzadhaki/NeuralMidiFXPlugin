@@ -181,6 +181,7 @@ struct GuiParams {
 
             }
         }
+        cout << "[gui_params.setValueFor] Label: " << label << " not found";
         return false;
     }
 
@@ -196,6 +197,12 @@ struct GuiParams {
 
     void setChanged(bool isChanged_) {
         isChanged = isChanged_;
+
+        if (!isChanged) {
+            for (auto &parameter: Parameters) {
+                parameter.isChanged = false;
+            }
+        }
     }
 
     [[maybe_unused]] bool wasParamUpdated(const string &label) {
@@ -204,6 +211,8 @@ struct GuiParams {
                 return parameter.isChanged;
             }
         }
+        cout << "[gui_params.wasParamUpdated] Label: " << label << " not found";
+        return false;
     }
 
     [[maybe_unused]] std::vector<string> getLabelsForUpdatedParams(){
@@ -226,7 +235,7 @@ struct GuiParams {
                 }
             }
         }
-        cout << "Label: " << label << " not found";
+        cout << "[gui_params.getValueFor] Label: " << label << " not found";
         return 0;
     }
 
@@ -246,7 +255,7 @@ struct GuiParams {
                 }
             }
         }
-        cout << "Label: " << label << " not found";
+        cout << "[gui_params.wasButtonClicked] Label: " << label << " not found";
         return false;
     }
 
@@ -260,7 +269,7 @@ struct GuiParams {
                 }
             }
         }
-        cout << "Label: " << label << " not found";
+        cout << "[gui_params.isToggleButtonOn] Label: " << label << " not found";
         return false;
     }
 
@@ -272,7 +281,7 @@ struct GuiParams {
                 }
             }
         }
-        cout << "Label: " << label << " not found";
+        cout << "[gui_params.getComboBoxSelectionText] Label: " << label << " not found";
         return "";
     }
 
