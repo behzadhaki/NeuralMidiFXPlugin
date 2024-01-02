@@ -108,7 +108,9 @@ inline std::vector<juce::ParameterID> get_params_to_default() {
     std::vector<juce::ParameterID> params_juce;
     for (const auto& param: params) {
         params_juce.emplace_back(label2ParamID(param));
+        cout << "param: " << param << endl;
     }
+
 
     return params_juce;
 }

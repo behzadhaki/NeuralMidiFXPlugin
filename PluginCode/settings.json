@@ -169,7 +169,8 @@
                             "bottomRightCorner": "Ro",
                             "show_label": false,
                             "info": "Amount of uncertainty in sampling the generations",
-                            "exclude_from_presets": true
+                            "exclude_from_presets": true,
+                            "allow_reset_to_default": false
                         },
                         {
                             "label": "Groove Velocity",
@@ -613,7 +614,8 @@
                             "topLeftCorner": "Nk",
                             "bottomRightCorner": "Ro",
                             "show_label": false,
-                            "info": "Amount of uncertainty in sampling the generations"
+                            "info": "Amount of uncertainty in sampling the generations",
+                            "allow_reset_to_default": false
                         },
                         {
                             "label": "Groove Velocity",
