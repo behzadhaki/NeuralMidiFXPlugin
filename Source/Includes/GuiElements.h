@@ -11,6 +11,8 @@
 #include "MidiDisplayWidget.h"
 #include "AudioDisplayWidget.h"
 #include "TriangleSliders.h"
+#include "ImageButton.h"
+#include "LongPressButton.h"
 
 using namespace std;
 
@@ -32,7 +34,24 @@ public:
         show_label = sliderJson_.contains("show_label") ? sliderJson_["show_label"].get<bool>() : true;
     }
 
-    void mouseMove(const juce::MouseEvent& /*event*/) override {
+    void mouseEnter(const juce::MouseEvent& /*event*/) override {
+        if (hoverText != nullptr) {
+            hoverText->setVisible(true);
+        }
+        juce::String text_;
+        if constexpr (std::is_same<ComponentType, juce::Slider>::value) {
+            text_ = label + " | " + juce::String(this->getValue(), 2) + " | " + hoverTextString;
+        } else if constexpr (std::is_same<ComponentType, juce::Label>::value) {
+            text_ = hoverTextString;
+        } else {
+            text_ = label + " | " + hoverTextString;
+        }
+        hoverText->setText(text_, juce::dontSendNotification);
+    }
+
+    void mouseDrag(const juce::MouseEvent& event) override {
+        ComponentType::mouseDrag(event);
+
         if (hoverText != nullptr) {
             hoverText->setVisible(true);
         }
@@ -52,16 +71,34 @@ public:
             hoverText->setText("", juce::dontSendNotification);
         }
     }
+
+    // mouse click
+    void mouseDown(const juce::MouseEvent& event) override {
+        ComponentType::mouseDown(event);
+        if (hoverText != nullptr) {
+            hoverText->setVisible(true);
+        }
+        juce::String text_;
+        if constexpr (std::is_same<ComponentType, juce::Slider>::value) {
+            text_ = label + " | " + juce::String(this->getValue(), 2) + " | " + hoverTextString;
+        } else if constexpr (std::is_same<ComponentType, juce::Label>::value) {
+            text_ = hoverTextString;
+        } else {
+            text_ = label + " | " + hoverTextString;
+        }
+        hoverText->setText(text_, juce::dontSendNotification);
+    }
 };
 
 // ==================== GUI ELEMENTS ====================
 
 // Creates the layout for a single tab
-class ParameterComponent : public juce::Button::Listener,
+class TabComponent
+    : public juce::Button::Listener,
                            public juce::Component {
 public:
 
-    explicit ParameterComponent(tab_tuple tabTuple, juce::Label *sharedHoverText_ = nullptr) {
+    explicit TabComponent(tab_tuple tabTuple, juce::Label *sharedHoverText_ = nullptr) {
         setInterceptsMouseClicks(false, true);
 
         sharedHoverText = sharedHoverText_;
@@ -78,6 +115,7 @@ public:
         labelsList = std::get<8>(tabTuple);
         linesList = std::get<9>(tabTuple);
         triangleSlidersList = std::get<10>(tabTuple);
+        imageButtonList = std::get<11>(tabTuple);
 
         numButtons = buttonsList.size();
     }
@@ -156,6 +194,7 @@ public:
         for (const auto &buttonJson: buttonsList) {
 
             auto textButton = generateButton(buttonJson);
+
             auto isToggleable = buttonJson["isToggle"].get<bool>();
             // only need a listener for buttons that are not connected to APVTS
 
@@ -163,6 +202,11 @@ public:
 
             if (!isToggleable) {
                 textButton->addListener(this);
+                // see if json has default value
+                if (buttonJson.contains("default")) {
+                    auto param_pntr = apvtsPointer->getParameter(paramID);
+                    param_pntr->setValueNotifyingHost(buttonJson["default"].get<float>());
+                }
             } else {
             buttonAttachmentArray.push_back(std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
                     *apvtsPointer, paramID, *textButton));
@@ -173,6 +217,29 @@ public:
             buttonTopLeftCorners.emplace_back(buttonJson["topLeftCorner"].get<std::string>());
             buttonBottomRightCorners.emplace_back(buttonJson["bottomRightCorner"].get<std::string>());
             addAndMakeVisible(textButton);
+        }
+
+        for (const auto &imageButtonJson: imageButtonList){
+            CustomJsonImageButton*newImageButton = generateImageButton(imageButtonJson);
+
+            imageButtonTopLeftCorners.emplace_back(imageButtonJson["topLeftCorner"].get<std::string>());
+            imageButtonBottomRightCorners.emplace_back(imageButtonJson["bottomRightCorner"].get<std::string>());
+            imageButtonArray.add(newImageButton);
+            auto paramID = label2ParamID(imageButtonJson["label"].get<std::string>());
+            imageButtonParameterIDs.emplace_back(paramID);
+            if (apvtsPointer->getParameter(paramID) == nullptr) {
+                cout << "Error: Parameter " << paramID << " not found in APVTS" << endl;
+            }
+            if (imageButtonJson.contains("isToggle") && imageButtonJson["isToggle"].get<bool>()) {
+                newImageButton->setToggleable(true);
+                buttonAttachmentArray.push_back(std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
+                    *apvtsPointer, paramID, *newImageButton));
+            } else {
+                newImageButton->setToggleable(false);
+                newImageButton->addListener(this);
+            }
+
+            addAndMakeVisible(newImageButton);
         }
 
         for (const auto &sliderJson: hslidersList) {
@@ -250,6 +317,9 @@ public:
         // TriangleSliders
         resizeTriangleSliders();
 
+        // ImageButtons
+        resizeImageButtons();
+
         repaint();
     }
 
@@ -325,11 +395,24 @@ public:
     void buttonClicked(juce::Button *button) override {
         // only need to increment button push count when
         // button is not toggleable
-        if (button -> isToggleable()) { return; }
+        if (button -> isToggleable()) {
+            cout << "[GuiElements.h] WARNING!! Button is toggleable, should not reach here, this method is for trigger buttons only" << endl;
+            return;
+        }
         size_t count = 0;
         for (auto b_ : buttonArray) {
             if (b_ == button) {
                 auto param_pntr = apvtsPointer->getRawParameterValue(buttonParameterIDs[count]);
+                *param_pntr = (*param_pntr) + 1;
+                break;
+            }
+            count++;
+        }
+
+        count = 0;
+        for (auto b_: imageButtonArray) {
+            if (b_ == button) {
+                auto param_pntr = apvtsPointer->getRawParameterValue(imageButtonParameterIDs[count]);
                 *param_pntr = (*param_pntr) + 1;
                 break;
             }
@@ -340,7 +423,9 @@ public:
     juce::OwnedArray<ComponentWithHoverText<juce::Slider>> sliderArray;
     juce::OwnedArray<ComponentWithHoverText<juce::Slider>> rotaryArray;
     juce::OwnedArray<ComponentWithHoverText<juce::TextButton>> buttonArray;
+    juce::OwnedArray<CustomJsonImageButton> imageButtonArray;
     std::vector<juce::String> buttonParameterIDs;
+    std::vector<juce::String> imageButtonParameterIDs;
 
     juce::OwnedArray<ComponentWithHoverText<juce::ComboBox>> comboBoxArray;
     juce::OwnedArray<juce::Label> comboBoxLabelArray;
@@ -366,6 +451,8 @@ private:
     std::vector<std::string> rotaryBottomRightCorners;
     std::vector<std::string> buttonTopLeftCorners;
     std::vector<std::string> buttonBottomRightCorners;
+    std::vector<std::string> imageButtonTopLeftCorners;
+    std::vector<std::string> imageButtonBottomRightCorners;
     std::vector<std::string> comboBoxTopLeftCorners;
     std::vector<std::string> comboBoxBottomRightCorners;
     std::vector<std::string> midiDisplayTopLeftCorners;
@@ -409,6 +496,7 @@ private:
     labels_list labelsList;
     lines_list linesList;
     triangleSliders_list triangleSlidersList;
+    imageButton_list imageButtonList;
 
     size_t numButtons;
 
@@ -436,7 +524,7 @@ private:
         if (showLabel) {
             newSlider->setTextBoxStyle(juce::Slider::TextEntryBoxPosition::TextBoxBelow,
                                        true,
-                                       newSlider->getTextBoxWidth(),
+                                       newSlider->getTextBoxWidth()*2,
                                        int(newSlider->getHeight()*.2));
             newSlider->setColour(juce::Slider::textBoxBackgroundColourId, juce::Colours::darkgrey);
             newSlider->setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::black);
@@ -445,7 +533,7 @@ private:
             auto name = sliderJson_["label"].get<std::string>();
             juce::String str = juce::String(" ") + juce::String(name);
             newSlider->setTextValueSuffix(str);
-            newSlider->setNumDecimalPlacesToDisplay(2);
+            newSlider->setNumDecimalPlacesToDisplay(1);
 
         } else {
             newSlider->setTextBoxStyle(juce::Slider::TextEntryBoxPosition::NoTextBox, true, 0, 0);
@@ -563,6 +651,12 @@ private:
         return newTriangleSliders;
     }
 
+    CustomJsonImageButton*generateImageButton(json imageButtonJson) {
+        auto *newImageButton = new CustomJsonImageButton {
+            imageButtonJson, sharedHoverText};
+        return newImageButton;
+    }
+
     juce::Label *generateLabel(json labelJson) {
         auto *newLabel = new ComponentWithHoverText<juce::Label>;
         newLabel->init(sharedHoverText,
@@ -591,10 +685,10 @@ private:
             auto [topLeftX, topLeftY] = coordinatesFromString(sliderTopLeftCorners[slider_ix]);
             auto [bottomRightX, bottomRightY] = coordinatesFromString(sliderBottomRightCorners[slider_ix]);
 
-            auto x = topLeftX - 2.0f;
-            auto y = topLeftY - 2.0f;
-            width = (bottomRightX - topLeftX) + 4.0f;
-            height = (bottomRightY - topLeftY) + 4.0f;
+            auto x = topLeftX ;
+            auto y = topLeftY ;
+            width = (bottomRightX - topLeftX) ;
+            height = (bottomRightY - topLeftY) ;
 
             comp->setBounds((int)x, (int)y, (int)width, (int)height);
 
@@ -626,10 +720,10 @@ private:
             auto [bottomRightX, bottomRightY] =
                 coordinatesFromString(rotaryBottomRightCorners[rotary_ix]);
 
-            auto x = topLeftX - 2.0f;
-            auto y = topLeftY - 2.0f;
-            width = (bottomRightX - topLeftX) + 4.0f;
-            height = (bottomRightY - topLeftY) + 4.0f;
+            auto x = topLeftX ;
+            auto y = topLeftY ;
+            width = (bottomRightX - topLeftX) ;
+            height = (bottomRightY - topLeftY) ;
 
             comp->setBounds((int)x, (int)y, (int)width, (int)height);
 
@@ -651,10 +745,10 @@ private:
             auto [topLeftX, topLeftY] = coordinatesFromString(buttonTopLeftCorners[button_ix]);
             auto [bottomRightX, bottomRightY] = coordinatesFromString(buttonBottomRightCorners[button_ix]);
 
-            auto x = topLeftX - 2.0f;
-            auto y = topLeftY - 2.0f;
-            width = (bottomRightX - topLeftX) + 4.0f;
-            height = (bottomRightY - topLeftY) + 4.0f;
+            auto x = topLeftX ;
+            auto y = topLeftY ;
+            width = (bottomRightX - topLeftX) ;
+            height = (bottomRightY - topLeftY) ;
 
             comp->setBounds((int)x, (int)y, (int)width, (int)height);
 
@@ -677,10 +771,10 @@ private:
             auto [topLeftX, topLeftY] = coordinatesFromString(comboBoxTopLeftCorners[comboBox_ix]);
             auto [bottomRightX, bottomRightY] = coordinatesFromString(comboBoxBottomRightCorners[comboBox_ix]);
 
-            auto x = topLeftX - 2.0f;
-            auto y = topLeftY - 2.0f;
-            width = (bottomRightX - topLeftX) + 4.0f;
-            height = (bottomRightY - topLeftY) + 4.0f;
+            auto x = topLeftX ;
+            auto y = topLeftY ;
+            width = (bottomRightX - topLeftX) ;
+            height = (bottomRightY - topLeftY) ;
 
             // get the label for the comboBox
             auto label = comboBoxLabelArray[comboBox_ix];
@@ -707,10 +801,10 @@ private:
             auto [topLeftX, topLeftY] = coordinatesFromString(midiDisplayTopLeftCorners[midiDisplay_ix]);
             auto [bottomRightX, bottomRightY] = coordinatesFromString(midiDisplayBottomRightCorners[midiDisplay_ix]);
 
-            auto x = topLeftX - 2.0f;
-            auto y = topLeftY - 2.0f;
-            width = (bottomRightX - topLeftX) + 4.0f;
-            height = (bottomRightY - topLeftY) + 4.0f;
+            auto x = topLeftX ;
+            auto y = topLeftY ;
+            width = (bottomRightX - topLeftX) ;
+            height = (bottomRightY - topLeftY) ;
 
             comp->setBounds((int)x, (int)y, (int)width, (int)height);
 
@@ -732,10 +826,10 @@ private:
             auto [topLeftX, topLeftY] = coordinatesFromString(audioDisplayTopLeftCorners[audioDisplay_ix]);
             auto [bottomRightX, bottomRightY] = coordinatesFromString(audioDisplayBottomRightCorners[audioDisplay_ix]);
 
-            auto x = topLeftX - 2.0f;
-            auto y = topLeftY - 2.0f;
-            width = (bottomRightX - topLeftX) + 4.0f;
-            height = (bottomRightY - topLeftY) + 4.0f;
+            auto x = topLeftX ;
+            auto y = topLeftY ;
+            width = (bottomRightX - topLeftX) ;
+            height = (bottomRightY - topLeftY) ;
 
             comp->setBounds((int)x, (int)y, (int)width, (int)height);
 
@@ -757,10 +851,10 @@ private:
             auto [topLeftX, topLeftY] = coordinatesFromString(labelsTopLeftCorners[label_ix]);
             auto [bottomRightX, bottomRightY] = coordinatesFromString(labelsBottomRightCorners[label_ix]);
 
-            auto x = topLeftX - 2.0f;
-            auto y = topLeftY - 2.0f;
-            width = (bottomRightX - topLeftX) + 4.0f;
-            height = (bottomRightY - topLeftY) + 4.0f;
+            auto x = topLeftX ;
+            auto y = topLeftY ;
+            width = (bottomRightX - topLeftX) ;
+            height = (bottomRightY - topLeftY) ;
 
             comp->setBounds((int)x, (int)y, (int)width, (int)height);
 
@@ -783,10 +877,10 @@ private:
             auto [topLeftX, topLeftY] = coordinatesFromString(triangleSlidersTopLeftCorners[triangleSliders_ix]);
             auto [bottomRightX, bottomRightY] = coordinatesFromString(triangleSlidersBottomRightCorners[triangleSliders_ix]);
 
-            auto x = topLeftX - 2.0f;
-            auto y = topLeftY - 2.0f;
-            width = (bottomRightX - topLeftX) + 4.0f;
-            height = (bottomRightY - topLeftY) + 4.0f;
+            auto x = topLeftX ;
+            auto y = topLeftY ;
+            width = (bottomRightX - topLeftX) ;
+            height = (bottomRightY - topLeftY) ;
 
             comp->setBounds((int)x, (int)y, (int)width, (int)height);
 
@@ -800,6 +894,31 @@ private:
             triangleSliders_ix++;
         }
 
+    }
+
+    void resizeImageButtons() {
+        int imageButton_ix = 0;
+        for (auto *comp: imageButtonArray) {
+            auto [topLeftX, topLeftY] = coordinatesFromString(imageButtonTopLeftCorners[imageButton_ix]);
+            auto [bottomRightX, bottomRightY] = coordinatesFromString(imageButtonBottomRightCorners[imageButton_ix]);
+
+            auto x = topLeftX ;
+            auto y = topLeftY ;
+            width = (bottomRightX - topLeftX) ;
+            height = (bottomRightY - topLeftY) ;
+
+            comp->setBounds((int)x, (int)y, (int)width, (int)height);
+
+            if (UIObjects::Tabs::draw_borders_for_components) {
+                string tl_label = imageButtonTopLeftCorners[imageButton_ix];
+                string br_label = imageButtonBottomRightCorners[imageButton_ix];
+                auto border = std::tuple<float, float, float, float, string, string>(
+                    x, y, width, height, tl_label, br_label);
+                componentBorders.emplace_back(border);
+            }
+
+            imageButton_ix++;
+        }
     }
 
     std::pair<float, float> coordinatesFromString(const std::string &coordinate) {

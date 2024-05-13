@@ -33,6 +33,24 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
     presetManagerWidget = std::make_unique<PresetTableComponent>(
         NeuralMidiFXPluginProcessorPointer.apvts,
         NeuralMidiFXPluginProcessorPointer.deploymentThread->CustomPresetData.get());
+    // add preset manager tab
+    addAndMakeVisible(*presetManagerWidget);
+    
+    resetToDefaultsButton = std::make_unique<LongPressImageButton>(
+        "DefaultNotPressed.png",
+        "DefaultPressed.png",
+        &NeuralMidiFXPluginProcessorPointer.apvts,
+        "ResetToDefaults__",
+        2000);
+    
+    /*resetToDefaultsButton->setButtonText("Reset to Defaults");
+    resetToDefaultsButton->setToggleable(true);
+    resetToDefaultsButton->setClickingTogglesState(true);*/
+    /*resetToDefaultsButtonAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
+        NeuralMidiFXPluginProcessorPointer.apvts,
+        label2ParamID("ResetToDefaults__"),
+        *resetToDefaultsButton);*/
+    addAndMakeVisible(*resetToDefaultsButton);
 
     // shared label for hover text
     sharedHoverText = make_unique<juce::Label>();
@@ -54,17 +72,7 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
 
     // if standalone, add play, record, tempo, meter controls to the top
     // check if standalone mode
-    shouldActStandalone = false;
-    if (JUCEApplicationBase::isStandaloneApp()) {
-        if (UIObjects::StandaloneTransportPanel::enable) {
-            shouldActStandalone = true;
-        }
-    } else {
-        if (UIObjects::StandaloneTransportPanel::enable &&
-            !UIObjects::StandaloneTransportPanel::disableInPluginMode) {
-            shouldActStandalone = true;
-        }
-    }
+    shouldActStandalone = getEnableStandaloneState();
 
     if (shouldActStandalone) {
         tempoMeterWidget = std::make_unique<StandaloneControlsWidget>(
@@ -79,22 +87,19 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
         currentTab = UIObjects::Tabs::tabList[i];
         tabName = std::get<0>(currentTab);
 
-        paramComponentPtr = new ParameterComponent(currentTab, sharedHoverText.get());
+        tabComponentPtr = new TabComponent(currentTab, sharedHoverText.get());
 
-        paramComponentVector.push_back(paramComponentPtr);
-        addAndMakeVisible(*paramComponentPtr);
-        paramComponentPtr->generateGuiElements(
+        paramComponentVector.push_back(tabComponentPtr);
+        addAndMakeVisible(*tabComponentPtr);
+        tabComponentPtr->generateGuiElements(
             getLocalBounds(), &NeuralMidiFXPluginProcessorPointer_->apvts);
+        for (auto & mV : tabComponentPtr->sliderArray)
+        {
+            mV->setLookAndFeel(myLookAndFeel.get());
+        }
 
-        tabs.addTab(tabName, juce::Colours::lightgrey,
-                    paramComponentPtr, true);
+        tabs.addTab(tabName, juce::Colours::lightgrey, tabComponentPtr, true);
     }
-
-    // add preset manager tab
-    addAndMakeVisible(*presetManagerWidget);
-//    tabs.addTab("Preset Manager", juce::Colours::lightgrey,
-//                &presetManagerWidget, true);
-
 
     addAndMakeVisible(tabs);
 
@@ -169,8 +174,6 @@ NeuralMidiFXPluginEditor::NeuralMidiFXPluginEditor(NeuralMidiFXPluginProcessor& 
         }
     }
 
-//    getLookAndFeel().setColour(juce::Slider::thumbColourId, juce::Colours::blueviolet);
-//    getLookAndFeel().setColour(juce::Slider::trackColourId, juce::Colours::blueviolet);
     resized();
 }
 
@@ -207,7 +210,7 @@ void NeuralMidiFXPluginEditor::resized()
 
 void NeuralMidiFXPluginEditor::paint(juce::Graphics& g)
 {
-    g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
+    // g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
 
     auto area = getLocalBounds();
 
@@ -222,9 +225,14 @@ void NeuralMidiFXPluginEditor::paint(juce::Graphics& g)
     sharedHoverText->setFont(juce::Font(float(sharedHoverText->getHeight() * .8)));
 
     // place preset manager at the top
-    area.removeFromLeft(int(area.getWidth() * .02));
-    presetManagerWidget->setBounds(area.removeFromLeft(preset_manager_width));
-    area.removeFromLeft(int(area.getWidth() * .02));
+    auto LeftArea = area.removeFromLeft(preset_manager_width);
+    auto ResetButtonArea = LeftArea.removeFromBottom(int(LeftArea.getHeight() * .05));
+    resetToDefaultsButton->setBounds(ResetButtonArea);
+
+    auto edge = int(LeftArea.getWidth() * .02);
+    LeftArea.removeFromLeft(edge);
+    LeftArea.removeFromRight(edge);
+    presetManagerWidget->setBounds(LeftArea);
 
     // check if standalone
     if (shouldActStandalone) {
@@ -314,7 +322,6 @@ void NeuralMidiFXPluginEditor::timerCallback()
     if (sequence_to_display_ != std::nullopt) {
         sequence_to_display = *sequence_to_display_;
         newContent = true;
-
     }
 
     auto playhead_pos_ = NeuralMidiFXPluginProcessorPointer_->generationsToDisplay.getPlayheadPos();
@@ -408,7 +415,6 @@ void NeuralMidiFXPluginEditor::timerCallback()
             outputPianoRoll->repaint();
         }
 
-       repaint();
     }
 
 }

@@ -42,11 +42,12 @@ using audioDisplay_list = std::vector<json>;
 using labels_list = std::vector<json>;
 using lines_list = std::vector<json>;
 using triangleSliders_list = std::vector<json>;
+using imageButton_list = std::vector<json>;
 
 using tab_tuple = std::tuple<
     std::string, slider_list, rotary_list, button_list, hslider_list,
     comboBox_list, midiDisplay_list, audioDisplay_list, labels_list,
-    lines_list, triangleSliders_list>;
+    lines_list, triangleSliders_list, imageButton_list>;
 
 inline json load_settings_json() {
 
@@ -71,6 +72,7 @@ inline json load_settings_json() {
 
 inline json loaded_json = load_settings_json();
 
+using namespace std;
 // ---------------------------------------------------------------------------------
 inline std::vector<tab_tuple> parse_to_tabList() {
 
@@ -92,6 +94,7 @@ inline std::vector<tab_tuple> parse_to_tabList() {
         labels_list tabLabels;
         lines_list tabLines;
         triangleSliders_list tabtriangleSliders;
+        imageButton_list tabImageButtons;
 
         // check if sliders exist
         if (tabJson.contains("sliders")) {
@@ -116,7 +119,11 @@ inline std::vector<tab_tuple> parse_to_tabList() {
         // check if buttons exist
         if (tabJson.contains("buttons")) {
             for (const auto& buttonJson: tabJson["buttons"]) {
-                tabButtons.push_back(buttonJson);
+                if (buttonJson.contains("image")) {
+                    tabImageButtons.push_back(buttonJson);
+                } else {
+                    tabButtons.push_back(buttonJson);
+                }
             }
         }
 
@@ -156,12 +163,21 @@ inline std::vector<tab_tuple> parse_to_tabList() {
                 tabtriangleSliders.push_back(triangleSlidersJson);
             }
         }
-        tab_tuple tabTuple = {tabName, tabSliders, tabRotaries, tabButtons, tabhsliders, tabComboBoxes, tabMidiDisplays, tabAudioDisplays, tabLabels, tabLines, tabtriangleSliders};
+
+        tab_tuple tabTuple = {tabName, tabSliders, tabRotaries, tabButtons, tabhsliders, tabComboBoxes, tabMidiDisplays, tabAudioDisplays, tabLabels, tabLines, tabtriangleSliders, tabImageButtons};
         tabList.push_back(tabTuple);
 
     }
 
     return tabList;
+}
+
+inline bool getEnableStandaloneState() {
+    if (juce::JUCEApplicationBase::isStandaloneApp()){
+        return loaded_json["StandaloneTransportPanel"]["enable"].get<bool>();
+    } else {
+        return loaded_json["StandaloneTransportPanel"]["enable"].get<bool>() && !loaded_json["StandaloneTransportPanel"]["disableInPluginMode"].get<bool>();
+    }
 }
 
 // GUI settings
@@ -216,10 +232,6 @@ namespace UIObjects {
 
     namespace StandaloneTransportPanel
     {
-        // if you need the widget used for controlling the standalone transport
-        // set following to true
-        const bool enable = loaded_json["StandaloneTransportPanel"]["enable"];
-        const bool disableInPluginMode = loaded_json["StandaloneTransportPanel"]["disableInPluginMode"];
         // if you need to send midi out to a virtual midi cable
         // set following to true
         // NOTE: Only works on MacOs

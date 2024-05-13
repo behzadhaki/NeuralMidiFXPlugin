@@ -70,10 +70,10 @@ public:
         addAndMakeVisible(recordButton);
     }
 
-    void paint(juce::Graphics& g) override {
-        // Custom drawing code (if needed)
-        g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
-    }
+//    void paint(juce::Graphics& g) override {
+//        // Custom drawing code (if needed)
+//        g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
+//    }
 
     void resized() override {
         // single row

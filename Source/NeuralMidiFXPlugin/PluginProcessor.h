@@ -9,7 +9,6 @@
 #include "../Includes/LockFreeQueue.h"
 #include "../Includes/GenerationEvent.h"
 #include "../Includes/APVTSMediatorThread.h"
-#include <chrono>
 #include <mutex>
 
 // #include "gui/CustomGuiTextEditors.h"
@@ -22,6 +21,7 @@ private:
     double fs {44100};
     double qpm {-1};
     double playhead_pos {0};
+    bool empty_sequence_received{false};
 
 public:
     PlaybackPolicies policy;
@@ -32,6 +32,9 @@ public:
     void setSequence(const juce::MidiMessageSequence& sequence) {
         std::lock_guard<std::mutex> lock(mutex);
         sequence_to_display = sequence;
+        if (sequence_to_display.getNumEvents() == 0) {
+            empty_sequence_received = true;
+        }
     }
 
     void setFs(double fs_) {
@@ -59,7 +62,8 @@ public:
         std::lock_guard<std::mutex> lock(mutex);
         juce::MidiMessageSequence sequence_to_display_copy{sequence_to_display};
         sequence_to_display.clear();
-        if (sequence_to_display_copy.getNumEvents() > 0) {
+        if (sequence_to_display_copy.getNumEvents() > 0 || empty_sequence_received) {
+            empty_sequence_received = false;
             return sequence_to_display_copy;
         } else {
             return std::nullopt;
@@ -104,62 +108,50 @@ struct StandAloneParams {
     double TimeInSeconds{0};
     double PpqPosition{0};
 
-    juce::AudioProcessorValueTreeState* apvts;
+    StaticLockFreeQueue<vector<float>, queue_settings::APVM_que_size>* APVTM2NMP_StandaloneParameters_Que_ptr{};
 
+    explicit StandAloneParams(juce::AudioProcessorValueTreeState* apvtsPntr,
+                              StaticLockFreeQueue<vector<float>, queue_settings::APVM_que_size>* APVTM2NMP_StandaloneParameters_Que_ptr_) {
+        APVTM2NMP_StandaloneParameters_Que_ptr = APVTM2NMP_StandaloneParameters_Que_ptr_;
+        // initialize
+        qpm = *apvtsPntr->getRawParameterValue(label2ParamID("TempoStandalone"));
+        is_playing = int(*apvtsPntr->getRawParameterValue(label2ParamID("IsPlayingStandalone")));
+        is_recording = int(*apvtsPntr->getRawParameterValue(label2ParamID("IsRecordingStandalone")));
+        denominator = int(*apvtsPntr->getRawParameterValue(label2ParamID("TimeSigDenominatorStandalone")));
+        numerator = int(*apvtsPntr->getRawParameterValue(label2ParamID("TimeSigNumeratorStandalone")));
 
-    explicit StandAloneParams(juce::AudioProcessorValueTreeState* apvtsPntr) {
-        apvts = apvtsPntr;
-        qpm = *apvts->getRawParameterValue(label2ParamID("TempoStandalone"));
-        is_playing = int(*apvts->getRawParameterValue(label2ParamID("IsPlayingStandalone")));
-        is_recording = int(*apvts->getRawParameterValue(label2ParamID("IsRecordingStandalone")));
-        denominator = int(*apvts->getRawParameterValue(label2ParamID("TimeSigDenominatorStandalone")));
-        numerator = int(*apvts->getRawParameterValue(label2ParamID("TimeSigNumeratorStandalone")));
     }
 
     // call update at the beginning of each processBlock
     bool update() {
         bool changed = false;
 
-        float new_qpm = *apvts->getRawParameterValue(label2ParamID("TempoStandalone"));
-        if (new_qpm != qpm) {
-            qpm = new_qpm;
+        if (APVTM2NMP_StandaloneParameters_Que_ptr->getNumReady() > 0) {
+            vector<float> new_params = APVTM2NMP_StandaloneParameters_Que_ptr->getLatestOnly();
+            qpm = new_params[0];
+            is_playing = int(new_params[1]);
+            is_recording = int(new_params[2]);
+            denominator = int(new_params[3]);
+            numerator = int(new_params[4]);
             changed = true;
         }
-        int new_is_playing = int(*apvts->getRawParameterValue(label2ParamID("IsPlayingStandalone")));
-        if (new_is_playing != is_playing) {
-            is_playing = new_is_playing;
-            changed = true;
-        }
-        int new_is_recording = int(*apvts->getRawParameterValue(label2ParamID("IsRecordingStandalone")));
-        if (new_is_recording != is_recording) {
-            is_recording = new_is_recording;
-            changed = true;
-        }
-        int new_denominator = int(*apvts->getRawParameterValue(label2ParamID("TimeSigDenominatorStandalone")));
-        if (new_denominator != denominator) {
-            denominator = new_denominator;
-            changed = true;
-        }
-        int new_numerator = int(*apvts->getRawParameterValue(label2ParamID("TimeSigNumeratorStandalone")));
-        if (new_numerator != numerator) {
-            numerator = new_numerator;
-            changed = true;
-        }
+
         return changed;
     }
 
     // call this after setting the PositionInfo data
     void PreparePlayheadForNextFrame(int64_t buffer_size, double fs) {
         if (is_playing) {
-            TimeInSamples += buffer_size;
-            TimeInSeconds += (double) buffer_size / fs;
-            PpqPosition += (double) buffer_size / fs * qpm / 60;
+            TimeInSamples += (buffer_size);
+            TimeInSeconds += ((double) buffer_size / fs);
+            PpqPosition += ((double) buffer_size / fs * qpm / 60);
         } else {
             TimeInSamples = 0;
             TimeInSeconds = 0;
             PpqPosition = 0;
         }
     }
+
 };
 
 class NeuralMidiFXPluginProcessor : public PluginHelpers::ProcessorBase {
@@ -175,16 +167,18 @@ public:
     juce::AudioProcessorEditor* createEditor() override;
 
     // Queues
-    unique_ptr<LockFreeQueue<EventFromHost, queue_settings::NMP2DPL_que_size>> NMP2DPL_Event_Que;
-    unique_ptr<LockFreeQueue<GenerationEvent, queue_settings::DPL2NMP_que_size>> DPL2NMP_GenerationEvent_Que;
-    unique_ptr<LockFreeQueue<juce::MidiMessageSequence, 32>> NMP2GUI_IncomingMessageSequence;
+    unique_ptr<StaticLockFreeQueue<EventFromHost, queue_settings::NMP2DPL_que_size>> NMP2DPL_Event_Que;
+    unique_ptr<StaticLockFreeQueue<GenerationEvent, queue_settings::DPL2NMP_que_size>> DPL2NMP_GenerationEvent_Que;
+    unique_ptr<StaticLockFreeQueue<juce::MidiMessageSequence, 32>> NMP2GUI_IncomingMessageSequence;
 
     // APVTS Queues
-    unique_ptr<LockFreeQueue<GuiParams, queue_settings::APVM_que_size>> APVM2DPL_GuiParams_Que;
+    unique_ptr<StaticLockFreeQueue<GuiParams, queue_settings::APVM_que_size>> APVM2DPL_GuiParams_Que;
+    unique_ptr<StaticLockFreeQueue<vector<float>, queue_settings::APVM_que_size>>
+        APVTM2NMP_StandaloneParameters_Que;
 
     // Drag/Drop Midi Queues
-    unique_ptr<LockFreeQueue<juce::MidiFile, 4>> GUI2DPL_DroppedMidiFile_Que;
-    unique_ptr<LockFreeQueue<juce::MidiFile, 4>> DPL2GUI_GenerationMidiFile_Que;
+    unique_ptr<StaticLockFreeQueue<juce::MidiFile, 4>> GUI2DPL_DroppedMidiFile_Que;
+    unique_ptr<StaticLockFreeQueue<juce::MidiFile, 4>> DPL2GUI_GenerationMidiFile_Que;
 
     // Threads used for generating patterns in the background
     shared_ptr<PluginDeploymentThread> deploymentThread;
@@ -250,11 +244,15 @@ private:
             int buffSize);
 
 
-
     // utility methods
     static void PrintMessage(const std::string& input);
 
     // MidiIO Standalone
     unique_ptr<MidiOutput> mVirtualMidiOutput;
 
+    bool shouldActStandalone{false};
+    AudioPlayHead::TimeSignature timeSig;
+
+    EventFromHost eventFromHost{};
+    BufferMetaData bufferMetaData{};
 };

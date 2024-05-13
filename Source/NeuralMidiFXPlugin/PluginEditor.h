@@ -5,8 +5,10 @@
 #include "../Includes/MidiDisplayWidget.h"
 #include "../Includes/PresetManagerWidget.h"
 #include "../Includes/StandaloneControlsWidget.h"
+#include "../Includes/CustomLooksAndFeels.h"
 
 using namespace std;
+
 
 class NeuralMidiFXPluginEditor : public juce::AudioProcessorEditor,
                                  public juce::Timer
@@ -19,12 +21,14 @@ public:
     void resized() override;
     void timerCallback() override;
 
+    unique_ptr<MyCustomLookAndFeel> myLookAndFeel = make_unique<MyCustomLookAndFeel>();
+
     juce::TabbedComponent tabs;
 
     const int numTabs = (int) UIObjects::Tabs::tabList.size();
 
-    ParameterComponent* paramComponentPtr;
-    std::vector<ParameterComponent*> paramComponentVector;
+    TabComponent* tabComponentPtr;
+    std::vector<TabComponent*> paramComponentVector;
 
     unique_ptr<InputMidiPianoRollComponent> inputPianoRoll{nullptr};
     unique_ptr<OutputMidiPianoRollComponent> outputPianoRoll{nullptr};
@@ -48,12 +52,13 @@ private:
     double playhead_pos{};
     PlaybackPolicies play_policy;
     juce::MidiMessageSequence sequence_to_display;
-    LockFreeQueue<juce::MidiMessageSequence, 32>* NMP2GUI_IncomingMessageSequence;
+    StaticLockFreeQueue<juce::MidiMessageSequence, 32>* NMP2GUI_IncomingMessageSequence;
     bool LoopingEnabled {false};
     double LoopStart {0};
     double LoopEnd {0};
     juce::MidiMessageSequence incoming_sequence;
     bool shouldActStandalone {false};
 
+    unique_ptr<LongPressImageButton> resetToDefaultsButton;
 };
 

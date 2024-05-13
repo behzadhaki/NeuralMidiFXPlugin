@@ -6,7 +6,7 @@
 
 #include "shared_plugin_helpers/shared_plugin_helpers.h"
 #include "GuiParameters.h"
-#include "chrono_timer.h"
+
 #include <utility>
 #include <mutex>
 
@@ -180,7 +180,7 @@ struct BufferMetaData {
 
     BufferMetaData() = default;
 
-    BufferMetaData(juce::Optional<juce::AudioPlayHead::PositionInfo> Pinfo,
+    void update(juce::Optional<juce::AudioPlayHead::PositionInfo> Pinfo,
                    double sample_rate_, int64_t buffer_size_in_samples_) {
         if (Pinfo) {
             qpm = Pinfo->getBpm() ? *Pinfo->getBpm() : -1;
@@ -301,30 +301,26 @@ class EventFromHost
 public:
     EventFromHost() = default;
 
-    EventFromHost(juce::Optional<juce::AudioPlayHead::PositionInfo> Pinfo,
+    void update(juce::Optional<juce::AudioPlayHead::PositionInfo> Pinfo,
           double sample_rate_, int64_t buffer_size_in_samples_, bool isFirstFrame) {
-
-        chrono_timed.registerStartTime();
 
         type = isFirstFrame ? 1 : 2;
 
-        bufferMetaData = BufferMetaData(Pinfo, sample_rate_, buffer_size_in_samples_);
+        bufferMetaData.update(Pinfo, sample_rate_, buffer_size_in_samples_);
 
         time_in_samples = bufferMetaData.time_in_samples;
         time_in_seconds = bufferMetaData.time_in_seconds;
         time_in_ppq = bufferMetaData.time_in_ppq;
     }
 
-    EventFromHost(juce::Optional<juce::AudioPlayHead::PositionInfo> Pinfo, double sample_rate_,
+    void update(juce::Optional<juce::AudioPlayHead::PositionInfo> Pinfo, double sample_rate_,
           int64_t buffer_size_in_samples_, juce::MidiMessage &message_) {
-
-        chrono_timed.registerStartTime();
 
         type = 10;
         message = std::move(message_);
         message.getDescription();
 
-        bufferMetaData = BufferMetaData(Pinfo, sample_rate_, buffer_size_in_samples_);
+        bufferMetaData.update(Pinfo, sample_rate_, buffer_size_in_samples_);
 
         if (Pinfo) {
             auto frame_start_time_in_samples = bufferMetaData.time_in_samples;
@@ -517,14 +513,10 @@ public:
             }
         }
 
-        if (chrono_timed.isValid()) {
-            ss << *chrono_timed.getDescription(" | CreationToConsumption Delay: ");
-        }
-
         if (ss.str().length() > 3) {
             return ss;
         } else {
-            return {};
+            return ss;
         }
     }
 
@@ -553,14 +545,11 @@ public:
         ss << " | time_in_seconds: " << time_in_seconds;
         ss << " | time_in_ppq: " << time_in_ppq;
 
-        if (chrono_timed.isValid()) {
-            ss << *chrono_timed.getDescription(" | CreationToConsumption Delay: ");
-        }
 
         if (ss.str().length() > 3) {
             return ss;
         } else {
-            return {};
+            return ss;
         }
 
     }
@@ -615,7 +604,6 @@ public:
 
     [[maybe_unused]] [[nodiscard]] BufferMetaData getBufferMetaData() const { return bufferMetaData; }
 
-    void registerAccess() { chrono_timed.registerEndTime(); }
 
 private:
     int type{0};
@@ -629,10 +617,7 @@ private:
     double time_in_seconds{-1};
     double time_in_ppq{-1};
 
-    // uses chrono::system_clock to time events (for debugging only)
-    // don't use this for anything else than debugging.
-    // used to keep track of when the object was created && when it was accessed
-    chrono_timer chrono_timed;
+
 };
 
 
@@ -644,7 +629,6 @@ public:
 
     MidiFileEvent(juce::MidiMessage &message_, bool isFirstEvent_, bool isLastEvent_) {
 
-        chrono_timed.registerStartTime();
 
         message = std::move(message_);
         message.getDescription();
@@ -709,14 +693,11 @@ public:
         ss << " | time_in_seconds: " << time_in_seconds;
         if (isFirstMessage()) { ss << " | First Message"; }
         if (isLastMessage()) { ss << " | Last Message"; }
-        if (chrono_timed.isValid()) {
-            ss << *chrono_timed.getDescription(" | CreationToConsumption Delay: ");
-        }
 
         if (ss.str().length() > 1) {
             return ss;
         } else {
-            return {};
+            return ss;
         }
     }
 
@@ -729,14 +710,11 @@ public:
 
         if (isFirstMessage()) { ss << " | First Message"; }
         if (isLastMessage()) { ss << " | Last Message"; }
-        if (chrono_timed.isValid()) {
-            ss << *chrono_timed.getDescription(" | CreationToConsumption Delay: ");
-        }
 
         if (ss.str().length() > 1) {
             return ss;
         } else {
-            return {};
+            return ss;
         }
     }
 
@@ -775,8 +753,6 @@ public:
         return time_in_ppq - e.time_in_ppq;
     }
 
-    [[maybe_unused]] void registerAccess() { chrono_timed.registerEndTime(); }
-
 private:
 
     juce::MidiMessage message{};
@@ -805,10 +781,6 @@ private:
     bool _isFirstEvent{false};
     bool _isLastEvent{false};
 
-    // uses chrono::system_clock to time events (for debugging only)
-    // don't use this for anything else than debugging.
-    // used to keep track of when the object was created && when it was accessed
-    chrono_timer chrono_timed;
 };
 
 

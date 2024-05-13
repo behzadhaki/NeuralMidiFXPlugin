@@ -227,9 +227,16 @@ struct PlaybackSequence {
 
     // automatically creates note-on and note-off events for a note with a given duration
     [[maybe_unused]] void addNoteWithDuration(int channel, int noteNumber, float velocity, double time, double duration) {
-        channel = channel % 16 + 1; // make sure channel is between 1 and 16
+        if (channel <= 0.9) {
+            channel = 1;
+        } else if (channel >= 16.1) {
+            channel = 16;
+        }
         velocity = velocity > 1 ? 1 : velocity; // make sure velocity is between 0 and 1
         velocity = velocity < 0 ? 0 : velocity;
+        if (velocity<0.001) {
+            return;
+        }
         messageSequence.addEvent(MidiMessage::noteOn(channel, noteNumber, velocity), time);
         messageSequence.addEvent(MidiMessage::noteOff(channel, noteNumber, velocity), time + duration);
         messageSequence.updateMatchedPairs();
@@ -328,13 +335,11 @@ struct GenerationEvent {
     GenerationEvent() = default;
 
     explicit GenerationEvent(PlaybackPolicies nse) {
-        timer.registerStartTime();
         type = 1;
         playbackPolicies = nse;
     }
 
     explicit GenerationEvent(PlaybackSequence ps) {
-        timer.registerStartTime();
         type = 2;
         playbackSequence = ps;
     }
@@ -352,8 +357,5 @@ private:
     PlaybackPolicies playbackPolicies {};
     PlaybackSequence playbackSequence {};
 
-    // uses chrono::system_clock to time events (for debugging only)
-    // don't use this for anything else than debugging.
-    // used to keep track of when the object was created and when it was accessed
-    chrono_timer timer;
+
 };

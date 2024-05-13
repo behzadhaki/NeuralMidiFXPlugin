@@ -35,13 +35,20 @@ public:
             juce::AudioProcessorValueTreeState::SliderAttachment>(
             *apvtsPntr, sl_c_param, DistanceFromCSlider);
 
+        // IsBeingDraggedSlider Attachment and don't display the slider
+        string label = triangleSlidersJson["label"].get<std::string>();
+        auto is_being_dragged_param = label2ParamID(label + "_IsDragged");
+        IsBeingDraggedSliderAttachment = std::make_unique<
+            juce::AudioProcessorValueTreeState::SliderAttachment>(
+            *apvtsPntr, is_being_dragged_param, IsBeingDraggedSlider);
+
         // listen to the sliders
         DistanceFromASlider.addListener(this);
         DistanceFromCSlider.addListener(this);
 
         // set the slider values
-        checkSliderValues();
-        updateCircleCentre();
+        /*checkSliderValues();*/
+        /*updateCircleCentre();*/
         repaint();
     }
 
@@ -207,6 +214,13 @@ public:
 
     void mouseDrag(const juce::MouseEvent& event) override
     {
+        if (!mousePressStartedInside) {
+            return;
+        }
+
+        // set is being dragged
+        IsBeingDraggedSlider.setValue(1.0f);
+
         // Update the position of the circle
         circleCentre = event.position;
         if (!isInsideTriangle(circleCentre)) {
@@ -220,8 +234,24 @@ public:
         updateInfoText();
     }
 
+    void mouseDown(const juce::MouseEvent& event) override
+    {
+        if (!isPointInTriangle(event.position.x, event.position.y)) {
+            mousePressStartedInside = false;
+        } else {
+            mousePressStartedInside = true;
+        }
+    }
+
     void mouseUp(const juce::MouseEvent& event) override
     {
+        if (!mousePressStartedInside) {
+            return;
+        }
+
+        // set is being dragged
+        IsBeingDraggedSlider.setValue(0.0f);
+
         if (!isPointInTriangle(event.position.x, event.position.y)) {
             return ;
         }
@@ -351,10 +381,12 @@ private:
     juce::Label *sharedInfoLabel;
     juce::Point<float> circleCentre;
     const float circleRadius = 5.0f;
+    bool mousePressStartedInside = false;
 
     // Sliders
     juce::Slider DistanceFromASlider;
     juce::Slider DistanceFromCSlider;
+    juce::Slider IsBeingDraggedSlider;
 
     // prev slider values
     double prevDistanceFromASliderValue = -10.0f;
@@ -365,6 +397,7 @@ private:
 
     unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> DistanceFromASliderAttachment;
     unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> DistanceFromCSliderAttachment;
+    unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> IsBeingDraggedSliderAttachment;
 
     juce::Point<float> A;  // Lower left corner
     juce::Point<float> B; // Lower right corner

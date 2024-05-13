@@ -10,7 +10,7 @@
 #include "../Includes/LockFreeQueue.h"
 #include "../Includes/Configs_Model.h"
 #include "../Includes/colored_cout.h"
-#include "../Includes/chrono_timer.h"
+
 #include "../Includes/GenerationEvent.h"
 #include "../Includes/TorchScriptAndPresetLoaders.h"
 //#include "PluginCode/DeploymentData.h"
@@ -30,10 +30,10 @@ public:
     // ---         Step 2 . give access to resources needed to communicate with other threads
     // ------------------------------------------------------------------------------------------------------------
     void startThreadUsingProvidedResources(
-        LockFreeQueue<EventFromHost, queue_settings::NMP2DPL_que_size> *NMP2DPL_Event_Que_ptr_,
-        LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2NMD_Parameters_Que_ptr_,
-        LockFreeQueue<GenerationEvent, queue_settings::DPL2NMP_que_size> *DPL2NMP_GenerationEvent_Que_ptr_,
-        LockFreeQueue<juce::MidiFile, 4>* GUI2DPL_DroppedMidiFile_Que_ptr_,
+        StaticLockFreeQueue<EventFromHost, queue_settings::NMP2DPL_que_size> *NMP2DPL_Event_Que_ptr_,
+        StaticLockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2NMD_Parameters_Que_ptr_,
+        StaticLockFreeQueue<GenerationEvent, queue_settings::DPL2NMP_que_size> *DPL2NMP_GenerationEvent_Que_ptr_,
+        StaticLockFreeQueue<juce::MidiFile, 4>* GUI2DPL_DroppedMidiFile_Que_ptr_,
         RealTimePlaybackInfo *realtimePlaybackInfo_ptr_,
         MidiVisualizersData* visualizerData_ptr_,
         AudioVisualizersData* audioVisualizersData_ptr_);
@@ -96,11 +96,11 @@ protected:
     // ============================================================================================================
     // ===          I/O Queues for Receiving/Sending Data
     // ============================================================================================================
-    LockFreeQueue<EventFromHost, queue_settings::NMP2DPL_que_size> *NMP2DPL_Event_Que_ptr{};
-    LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *
+    StaticLockFreeQueue<EventFromHost, queue_settings::NMP2DPL_que_size> *NMP2DPL_Event_Que_ptr{};
+    StaticLockFreeQueue<GuiParams, queue_settings::APVM_que_size> *
         APVM2DPL_Parameters_Que_ptr {};
-    LockFreeQueue<GenerationEvent, queue_settings::DPL2NMP_que_size> *DPL2NMP_GenerationEvent_Que_ptr{};
-    LockFreeQueue<juce::MidiFile, 4>* GUI2DPL_DroppedMidiFile_Que_ptr{};
+    StaticLockFreeQueue<GenerationEvent, queue_settings::DPL2NMP_que_size> *DPL2NMP_GenerationEvent_Que_ptr{};
+    StaticLockFreeQueue<juce::MidiFile, 4>* GUI2DPL_DroppedMidiFile_Que_ptr{};
     RealTimePlaybackInfo *realtimePlaybackInfo{};
     // ============================================================================================================
 

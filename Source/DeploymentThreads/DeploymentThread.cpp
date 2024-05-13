@@ -9,10 +9,10 @@ DeploymentThread::DeploymentThread(): juce::Thread("BackgroundDPLThread") {
 }
 
 void DeploymentThread::startThreadUsingProvidedResources(
-    LockFreeQueue<EventFromHost, queue_settings::NMP2DPL_que_size> *NMP2DPL_Event_Que_ptr_,
-    LockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2NMD_Parameters_Que_ptr_,
-    LockFreeQueue<GenerationEvent, queue_settings::DPL2NMP_que_size> *DPL2NMP_GenerationEvent_Que_ptr_,
-    LockFreeQueue<juce::MidiFile, 4>* GUI2DPL_DroppedMidiFile_Que_ptr_,
+    StaticLockFreeQueue<EventFromHost, queue_settings::NMP2DPL_que_size> *NMP2DPL_Event_Que_ptr_,
+    StaticLockFreeQueue<GuiParams, queue_settings::APVM_que_size> *APVM2NMD_Parameters_Que_ptr_,
+    StaticLockFreeQueue<GenerationEvent, queue_settings::DPL2NMP_que_size> *DPL2NMP_GenerationEvent_Que_ptr_,
+    StaticLockFreeQueue<juce::MidiFile, 4>* GUI2DPL_DroppedMidiFile_Que_ptr_,
     RealTimePlaybackInfo *realtimePlaybackInfo_ptr_,
     MidiVisualizersData* visualizerData_ptr_,
     AudioVisualizersData* audioVisualizersData_ptr_)
@@ -50,17 +50,15 @@ void DeploymentThread::run() {
 
     double events_received_count = 0;
 
-    chrono_timer chrono_timed_deploy;
-    chrono_timer chrono_timed_consecutive_pushes;
-    chrono_timed_consecutive_pushes.registerStartTime();
     std::optional<EventFromHost> new_event_from_DAW {};
     std::optional<MidiFileEvent> new_midi_event_dropped_manually {};
     bool shouldSendNewPlaybackPolicy;
     bool shouldSendNewPlaybackSequence;
     bool midiFileDroppedOnVisualizer;
-
+    int cyclesToIgnoreTriggerButtons = -1; // when a preset is loaded we disable the trigger buttons for two iterations two ensure the preset doesn't trigger these buttons
     int cnt{0};
 
+    cout << "Deployment Thread is running..." << endl;
     while (!bExit) {
 
         if (readyToStop) { break; } // check if thread is ready to be stopped
@@ -68,8 +66,8 @@ void DeploymentThread::run() {
             // print updated values for debugging
             gui_params = APVM2DPL_Parameters_Que_ptr
                              ->pop(); // pop the latest parameters from the queue
-            gui_params.registerAccess();                      // set the time when the parameters were accessed
 
+            cnt++;
             if (debugging_settings::DeploymentThread::print_received_gui_params) { // if set in Debugging.h
                 showMessage(gui_params.getDescriptionOfUpdatedParams());
             }
@@ -80,8 +78,6 @@ void DeploymentThread::run() {
 
         if (NMP2DPL_Event_Que_ptr->getNumReady() > 0) {
             new_event_from_DAW = NMP2DPL_Event_Que_ptr->pop();      // get the next available event
-            new_event_from_DAW
-                ->registerAccess();                    // set the time when the event was accessed
 
             events_received_count++;
 
@@ -127,7 +123,16 @@ void DeploymentThread::run() {
 
         if (new_event_from_DAW.has_value() || gui_params.changed() || newPresAvail || midiFileDroppedOnVisualizer || audioFileDroppedOnVisualizer) {
             new_midi_event_dropped_manually = std::nullopt;
-            chrono_timed_deploy.registerStartTime();
+
+            if (newPresAvail) {
+                cyclesToIgnoreTriggerButtons = 2;
+            }
+            if (cyclesToIgnoreTriggerButtons >= 0) {
+                cyclesToIgnoreTriggerButtons--;
+                gui_params.ignoreTriggerButtons();
+            }
+
+
             auto status = deploy(
                 new_midi_event_dropped_manually, new_event_from_DAW,
                 gui_params.changed(), newPresAvail,
@@ -151,12 +156,11 @@ void DeploymentThread::run() {
                 cnt++;
             }
 
-            chrono_timed_deploy.registerEndTime();
+        }
 
-            if (debugging_settings::DeploymentThread::print_deploy_method_time &&
-                chrono_timed_deploy.isValid()) { // if set in Debugging.h
-                showMessage(*chrono_timed_deploy.getDescription(" deploy() execution time: "));
-            }
+        if (newPresAvail) {
+            // notify that the preset has been loaded
+            CustomPresetData->resetChangeFlags();
         }
 
         // check if notes received from a manually dropped midi file
@@ -298,7 +302,8 @@ bool DeploymentThread::load(const std::string& model_name_)
     if (myFile.is_open()) {
         cout << "Model file found at: " + model_path << " -- Trying to load model..." << endl;
         myFile.close();
-        model = torch::jit::load(model_path);
+        model = torch::jit::load(model_path, torch::kCPU);
+        model.eval();
         isModelLoaded = true;
         myFile.close();
         return true;

@@ -45,7 +45,7 @@ inline torch::jit::Module load_processing_script(const std::string& script_name)
 }
 
 inline void save_tensor_map(const std::map<std::string, torch::Tensor>& m, const std::string& file_name) {
-    std::string fp = stripQuotes(default_preset_dir) + path_separator + file_name;
+    const std::string& fp = file_name;
     std::ofstream out_file(fp, std::ios::out | std::ios::binary);
 
     for (const auto& pair : m) {
@@ -164,6 +164,7 @@ public:
         return items;
     }
 
+
     // Method to update the map (thread-safe)
     void tensor(const std::string& tensorLabel, const torch::Tensor& tensor) {
         std::lock_guard<std::mutex> lock(mutex);
@@ -216,6 +217,22 @@ public:
         changed = true;
     }
 
+    void forceAllToChanged() {
+        std::lock_guard<std::mutex> lock(mutex);
+        for (auto& pair : changeFlags) {
+            pair.second = true;
+        }
+        changed = true;
+    }
+
+    // Reset all change flags (thread-safe)
+    void resetChangeFlags() {
+        std::lock_guard<std::mutex> lock(mutex);
+        for (auto& pair : changeFlags) {
+            pair.second = false;
+        }
+    }
+
     // Print the map (thread-safe)
     void printTensorMap() {
         std::lock_guard<std::mutex> lock(mutex);
@@ -229,8 +246,6 @@ public:
 
     // compare two CustomPresetDataDictionary
     bool operator==(CustomPresetDataDictionary other) {
-        printTensorMap();
-        other.printTensorMap();
 
         std::lock_guard<std::mutex> lock(mutex);
         std::lock_guard<std::mutex> lock2(other.mutex);

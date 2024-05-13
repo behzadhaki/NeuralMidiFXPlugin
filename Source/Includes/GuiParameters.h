@@ -6,7 +6,7 @@
 // #include <utility>
 
 #include "Configs_Parser.h"
-#include "chrono_timer.h"
+
 #include <torch/script.h> // One-stop header.
 
 #include <utility>
@@ -38,6 +38,7 @@ struct param {
     bool isToggle{false};           // for buttons
     bool isChanged{false};
     bool isComboBox{false};         // for comboBoxes
+    bool isDraggedFlag{false};      // for triangle sliders
     vector<string> comboBoxOptions{};
 
     param() = default;
@@ -83,6 +84,31 @@ struct param {
         isToggle = button_json["isToggle"].get<bool>();
         isChanged = isToggle; // only true if isToggle.
         // We don't want to trigger the button if it's not a toggle
+        if (isToggle) {
+            if (button_json.contains("default")) {
+                defaultVal = button_json["default"].get<double>();
+                value = *defaultVal;
+            }
+        }
+    }
+
+    void InitializeToggleButton(json button_json) {
+        label = button_json["label"].get<std::string>();
+        value = 0;
+        paramID = label2ParamID(label);
+        min = std::nullopt;
+        max = std::nullopt;
+        defaultVal = 0;
+        isSlider = false;
+        isRotary = false;
+        isButton = true;
+        isToggle = true;
+        isChanged = isToggle; // only true if isToggle.
+        // We don't want to trigger the button if it's not a toggle
+        if (button_json.contains("default")) {
+            defaultVal = button_json["default"].get<double>();
+            value = *defaultVal;
+        }
     }
 
     void InitializeCombobox(json comboBox_json) {
@@ -104,12 +130,13 @@ struct param {
     bool update(juce::AudioProcessorValueTreeState *apvts) {
         auto new_val_ptr = apvts->getRawParameterValue(paramID);
 
-        if (value != *new_val_ptr) {
+        if (abs(value - *new_val_ptr) > 0.0001) {
             value = *new_val_ptr;
             isChanged = true;
         } else {
             isChanged = false;
         }
+
         return isChanged;
     }
 
@@ -145,12 +172,13 @@ struct GuiParams {
         apvtsPntr = apvtsPntr_;
         for (auto &parameter: Parameters) {
             parameter.update(apvtsPntr_);
+            if (! (parameter.isButton && !parameter.isToggle)) {
+                parameter.isChanged = true; // make sure on construction, all params are set to changed (except buttons that need to be manually clicked)
+            }
         }
-        setAllChanged();
     }
 
     bool update() {
-        chrono_timed.registerStartTime();
         isChanged = false;
         for (auto &parameter: Parameters) {
             if (parameter.update(apvtsPntr)) {
@@ -160,9 +188,16 @@ struct GuiParams {
         return isChanged;
     }
 
+    void ignoreTriggerButtons() {
+        for (auto &parameter: Parameters) {
+            if (parameter.isButton && !parameter.isToggle) {
+                parameter.isChanged = false;
+            }
+        }
+    }
+
     // set the value of a slider, rotary, toggleable button, or comboBox GuiParam
     bool setValueFor(const string &label, float newValue) {
-        chrono_timed.registerStartTime();
         isChanged = false;
         for (auto &parameter: Parameters) {
             if (parameter.paramID == label2ParamID(label)) {
@@ -173,21 +208,27 @@ struct GuiParams {
                     // use APVTS to update the value
                     auto  myParameter = apvtsPntr->getParameter(parameter.paramID);
 
-                    if (myParameter != nullptr) {
+                    if (myParameter != nullptr && myParameter->getValue() != newValue) {
                         myParameter->setValueNotifyingHost(newValue);
                         return true;
+                    } else {
+                        return false; // param exists but unchanged
                     }
                 }
-
             }
         }
+
+        cout << "[gui_params.setValueFor] Label: " << label << " not found" << endl;
         return false;
     }
 
     void print() {
+        cout << "----- GuiParams: " << endl;
         for (auto &parameter: Parameters) {
-            cout << parameter.label << " " << parameter.value << endl;
+            cout << parameter.label << " " << parameter.value << " isChanged: " << bool2string(parameter.isChanged)
+                 << endl;
         }
+        cout << "-----" << endl;
     }
 
     [[nodiscard]] bool changed() const {
@@ -196,6 +237,12 @@ struct GuiParams {
 
     void setChanged(bool isChanged_) {
         isChanged = isChanged_;
+
+        if (!isChanged) {
+            for (auto &parameter: Parameters) {
+                parameter.isChanged = false;
+            }
+        }
     }
 
     [[maybe_unused]] bool wasParamUpdated(const string &label) {
@@ -204,6 +251,8 @@ struct GuiParams {
                 return parameter.isChanged;
             }
         }
+        cout << "[gui_params.wasParamUpdated] Label: " << label << " not found";
+        return false;
     }
 
     [[maybe_unused]] std::vector<string> getLabelsForUpdatedParams(){
@@ -226,7 +275,6 @@ struct GuiParams {
                 }
             }
         }
-        cout << "Label: " << label << " not found";
         return 0;
     }
 
@@ -246,7 +294,7 @@ struct GuiParams {
                 }
             }
         }
-        cout << "Label: " << label << " not found";
+        cout << "[gui_params.wasButtonClicked] Label: " << label << " not found";
         return false;
     }
 
@@ -260,7 +308,20 @@ struct GuiParams {
                 }
             }
         }
-        cout << "Label: " << label << " not found";
+        cout << "[gui_params.isToggleButtonOn] Label: " << label << " not found";
+        return false;
+    }
+
+    bool isTriangleSliderDragged(const string &label) {
+        auto full_label = label+"_IsDragged";
+        for (auto &parameter: Parameters) {
+            if (parameter.paramID == label2ParamID(full_label)) {
+                if (parameter.isDraggedFlag) {
+                    return bool(parameter.value);
+                }
+            }
+        }
+        cout << "[gui_params.isTriangleSliderDragged] Label: " << label << " not found";
         return false;
     }
 
@@ -272,7 +333,7 @@ struct GuiParams {
                 }
             }
         }
-        cout << "Label: " << label << " not found";
+        cout << "[gui_params.getComboBoxSelectionText] Label: " << label << " not found";
         return "";
     }
 
@@ -293,25 +354,14 @@ struct GuiParams {
                 ss << " | ComboBox:  `" << parameter.label << "` :" << parameter.value << " (" << getComboBoxSelectionText(parameter.label) << ")";
             }
         }
-        if (chrono_timed.isValid()) {
-            ss << *chrono_timed.getDescription(", ReceptionFromHostToAccess Delay: ") << std::endl;
-        } else {
-            ss << std::endl;
-        }
+
         return ss.str();
     }
-
-    void registerAccess() { chrono_timed.registerEndTime(); }
 
 private:
     vector<param> Parameters;
     bool isChanged = true;
     juce::AudioProcessorValueTreeState *apvtsPntr{};
-
-    // uses chrono::system_clock to time parameter arrival to consumption (for debugging only)
-    // don't use this for anything else than debugging.
-    // used to keep track of when the object was created && when it was accessed
-    chrono_timer chrono_timed;
 
     [[nodiscard]] bool assertLabelIsUnique(const string &label_) {
         for (const auto &previous_param: Parameters) {
@@ -334,7 +384,6 @@ private:
     }
 
     void construct() {
-        chrono_timed.registerStartTime();
 
         auto tabList = UIObjects::Tabs::tabList;
 
@@ -346,6 +395,7 @@ private:
             auto vslidersList = std::get<4>(tab_list);
             auto comboBoxesList = std::get<5>(tab_list);
             auto triangleSlidersList = std::get<10>(tab_list);
+            auto imageButtonsList = std::get<11>(tab_list);
 
             for (const auto &slider_json: slidersList) {
                 auto label = slider_json["label"].get<std::string>();
@@ -395,6 +445,7 @@ private:
             for (const auto &triangleSlider_json: triangleSlidersList) {
                 std::string DistanceFromBottomLeftCornerSlider = triangleSlider_json["DistanceFromBottomLeftCornerSlider"].get<std::string>();
                 std::string HeightSlider = triangleSlider_json["HeightSlider"].get<std::string>();
+                std::string IsDragged = triangleSlider_json["label"].get<std::string>()+"_IsDragged";
 
                 if (assertLabelIsUnique(DistanceFromBottomLeftCornerSlider)) {
                     auto param_ = param();
@@ -406,6 +457,32 @@ private:
                     auto param_ = param();
                     param_.initializeTriangleSlider(HeightSlider, 0.5, 0, 1);
                     Parameters.emplace_back(param_);
+                }
+
+                if (assertLabelIsUnique(IsDragged)) {
+                    auto param_ = param();
+                    param_.isDraggedFlag = true;
+                    param_.label = IsDragged;
+                    param_.paramID = label2ParamID(IsDragged);
+                    Parameters.emplace_back(param_);
+                }
+
+            }
+
+            for (const auto &imageButton_json: imageButtonsList) {
+                // same as toggle button
+                std::string label = imageButton_json["label"].get<std::string>();
+                if (assertLabelIsUnique(label)) {
+                    if (imageButton_json.contains("isToggle") && imageButton_json["isToggle"].get<bool>()) {
+                        auto param_ = param();
+                        param_.InitializeToggleButton(imageButton_json);
+                        Parameters.emplace_back(param_);
+                    } else {
+                        auto param_ = param();
+                        param_.InitializeButton(imageButton_json);
+                        Parameters.emplace_back(param_);
+                    }
+
                 }
 
             }
